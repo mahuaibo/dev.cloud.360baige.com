@@ -11,7 +11,7 @@ func init() {
 	log.SetLogger(logs.AdapterConsole)
 	log.Debug("filter run start")
 
-	beego.InsertFilter("/v1/object/*",beego.BeforeRouter, UrlManager)
+	beego.InsertFilter("/v1/company/*",beego.BeforeRouter, UrlOriginManager)
 	beego.InsertFilter("/v1/user/*",beego.BeforeRouter, UrlOriginManager)
 
 	log.Debug("filter run end")
@@ -31,5 +31,4 @@ var UrlOriginManager = func(ctx *context.Context) {
 		w.Header().Add("Access-Control-Allow-Headers", "x-requested-with,content-type")
 		w.Header().Add("Access-Control-Allow-Credentials", "true")
 	}
-	//ctx.Redirect(302, "/v1/user")
 }
