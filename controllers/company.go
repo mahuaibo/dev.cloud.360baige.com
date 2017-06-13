@@ -16,7 +16,8 @@ type CompanyController struct {
 // @Failure 400 {"code":400,"message":"..."}
 // @router /detail [get]
 func (c *CompanyController) Detail() {
-
+	c.Data["json"] = ""
+	c.ServeJSON()
 }
 
 // @Title 企业信息修改
