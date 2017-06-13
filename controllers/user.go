@@ -3,8 +3,9 @@ package controllers
 import (
 	"github.com/astaxie/beego"
 	"dev.cloud.360baige.com/rpc/client"
+	"dev.cloud.360baige.com/models/response"
+	"dev.cloud.360baige.com/models/constant"
 	"dev.model.360baige.com/models"
-	"fmt"
 	"time"
 )
 
@@ -12,10 +13,58 @@ type UserController struct {
 	beego.Controller
 }
 
-type Response struct {
-	Code    string        `json:"code"`
-	Messgae string        `json:"messgae"`
-	Data    interface{}   `json:"data,omitempty"`
+// @Title 注册账号接口
+// @Description 注册账号接口
+// @Param	page		path 	int	true		"分页页码"
+// @Param	rows		path 	int	true		"展示条数"
+// @Success 200 {object} models.logger
+// @Failure 403 :uid is empty
+// @router /register [post]
+func (c *UserController) Register() {
+	// 获取参数 和 准备参数
+	username := c.GetString("Username")      // 用户名
+	password := c.GetString("Password")      //密码
+	var reply models.User                    // rpc 返回参数
+	response := response.Response{}          //http 返回体
+	timestamp := time.Now().UnixNano() / 1e6 //操作时间戳
+	args := &models.User{ //新增用户参数
+		CreateTime:  timestamp,
+		UpdateTime:  timestamp,
+		Username:    username,
+		Password:    password,
+		Status:      constant.UserStatusValid,
+		AccessToken: "",
+		ExpireIn:    0,
+
+	}
+	//
+	err := client.Call("http://127.0.0.1:2379", "User", "AddUser", args, &reply)
+
+	if err != nil {
+		response.Code = constant.ResponseSystemErr
+		response.Messgae = err.Error()
+		c.Data["json"] = response
+		c.ServeJSON()
+	}
+
+	if reply.Id == 0 {
+		response.Code = constant.ResponseLogicErr
+		response.Messgae = "用户新增失败"
+		c.Data["json"] = response
+		c.ServeJSON()
+	}
+
+	resUser := models.User{
+		Id:          reply.Id,
+		Username:    reply.Username,
+		AccessToken: reply.AccessToken,
+		ExpireIn:    reply.ExpireIn,
+	}
+	response.Code = constant.ResponseNormal
+	response.Messgae = "登录成功"
+	response.Data = resUser
+	c.Data["json"] = response
+	c.ServeJSON()
 }
 
 // @Title 登录接口
@@ -28,22 +77,22 @@ type Response struct {
 func (c *UserController) Login() {
 	username := c.GetString("Username")
 	password := c.GetString("Password")
-	response := Response{}
+	response := response.Response{}
 	var reply models.User
 	args := &models.User{
 		Username: username,
 	}
-	err := client.Call("http://127.0.0.1:2379", "User", "GetOneByUsername", args, &reply)
+	err := client.Call("http://127.0.0.1:2379", "User", "FindUserByUsername", args, &reply)
 	if err != nil {
 		// 返回错误信息
-		response.Code = "500"
+		response.Code = constant.ResponseSystemErr
 		response.Messgae = err.Error()
 		c.Data["json"] = response
 		c.ServeJSON()
 	}
 	if reply.Password != password {
 		// 返回错误信息
-		response.Code = "400"
+		response.Code = constant.ResponseLogicErr
 		response.Messgae = "用户名或密码错误"
 		c.Data["json"] = response
 		c.ServeJSON()
@@ -55,7 +104,7 @@ func (c *UserController) Login() {
 		AccessToken: reply.AccessToken,
 		ExpireIn:    reply.ExpireIn,
 	}
-	response.Code = "200"
+	response.Code = constant.ResponseNormal
 	response.Messgae = "登录成功"
 	response.Data = resUser
 	c.Data["json"] = response
@@ -65,23 +114,135 @@ func (c *UserController) Login() {
 // @Title 退出接口
 // @Description 退出接口
 // @Success 200 {"code":200,"messgae":"ok"}
-// @Param   Username     query   string true       "用户名"
+// @Param   Id     query   string true       "用户名"
 // @Param   AccessToken     query   string true       "访问令牌"
 // @Failure 400 {"code":400,"message":"..."}
 // @router /logout [post]
 func (c *UserController) Logout() {
+	id, _ := c.GetInt64("Id")
+	accessToken := c.GetString("AccessToken")
 	var reply models.User
+	response := response.Response{}
 	args := &models.User{
-		Username:    c.GetString("Username"),
-		AccessToken: c.GetString("AccessToken"),
+		Id: id,
 	}
-	err := client.Call("http://127.0.0.1:2379", "User", "Logout", args, &reply)
-	fmt.Println(reply, err)
-	if err == nil {
-		c.Data["json"] = reply
-	} else {
-		c.Data["json"] = err
+	err := client.Call("http://127.0.0.1:2379", "User", "FindUserById", args, &reply)
+	if err != nil {
+		// 返回错误信息
+		response.Code = constant.ResponseSystemErr
+		response.Messgae = err.Error()
+		c.Data["json"] = response
+		c.ServeJSON()
 	}
+
+	if reply.AccessToken != accessToken {
+		response.Code = constant.ResponseLogicErr
+		response.Messgae = "访问令牌无效"
+		c.Data["json"] = response
+		c.ServeJSON()
+	}
+
+	response.Code = constant.ResponseNormal
+	response.Messgae = "退出成功"
+	c.Data["json"] = response
+	c.ServeJSON()
+}
+
+// @Title 用户注销接口
+// @Description 用户注销接口
+// @Success 200 {"code":200,"messgae":"ok", "data":{ ... ... }}
+// @Param   Id     query   string true       "用户ID"
+// @Param   AccessToken     query   string true       "访问令牌"
+// @Failure 400 {"code":400,"message":"..."}
+// @router /cancel [post]
+func (c *UserController) Cancel() {
+	id, _ := c.GetInt64("Id")
+	accessToken := c.GetString("AccessToken")
+	var reply models.User
+	response := response.Response{}
+	args := &models.User{
+		Id: id,
+	}
+	err := client.Call("http://127.0.0.1:2379", "User", "FindUserById", args, &reply)
+	if err != nil {
+		// 返回错误信息
+		response.Code = constant.ResponseSystemErr
+		response.Messgae = err.Error()
+		c.Data["json"] = response
+		c.ServeJSON()
+	}
+
+	if reply.AccessToken != accessToken {
+		response.Code = constant.ResponseLogicErr
+		response.Messgae = "访问令牌无效"
+		c.Data["json"] = response
+		c.ServeJSON()
+	}
+	timestamp := time.Now().UnixNano() / 1e6
+	reply.Status = constant.UserStatusInValid
+	reply.UpdateTime = timestamp
+	err = client.Call("http://127.0.0.1:2379", "User", "UpdateUserById", reply, nil)
+
+	if err != nil {
+		// 返回错误信息
+		response.Code = constant.ResponseSystemErr
+		response.Messgae = err.Error()
+		c.Data["json"] = response
+		c.ServeJSON()
+	}
+
+	response.Code = constant.ResponseNormal
+	response.Messgae = "用户注销成功"
+	c.Data["json"] = response
+	c.ServeJSON()
+}
+
+// @Title 账号激活接口
+// @Description 账号激活接口
+// @Success 200 {"code":200,"messgae":"ok", "data":{ ... ... }}
+// @Param   Id     query   string true       "用户ID"
+// @Param   AccessToken     query   string true       "访问令牌"
+// @Failure 400 {"code":400,"message":"..."}
+// @router /activation/:username [get]
+func (c *UserController) Activation() {
+	id, _ := c.GetInt64("Id")
+	accessToken := c.GetString("AccessToken")
+	var reply models.User
+	response := response.Response{}
+	args := &models.User{
+		Id: id,
+	}
+	err := client.Call("http://127.0.0.1:2379", "User", "FindUserById", args, &reply)
+	if err != nil {
+		// 返回错误信息
+		response.Code = constant.ResponseSystemErr
+		response.Messgae = err.Error()
+		c.Data["json"] = response
+		c.ServeJSON()
+	}
+
+	if reply.AccessToken != accessToken {
+		response.Code = constant.ResponseLogicErr
+		response.Messgae = "访问令牌无效"
+		c.Data["json"] = response
+		c.ServeJSON()
+	}
+	timestamp := time.Now().UnixNano() / 1e6
+	reply.Status = constant.UserStatusValid
+	reply.UpdateTime = timestamp
+	err = client.Call("http://127.0.0.1:2379", "User", "UpdateUserById", reply, nil)
+
+	if err != nil {
+		// 返回错误信息
+		response.Code = constant.ResponseSystemErr
+		response.Messgae = err.Error()
+		c.Data["json"] = response
+		c.ServeJSON()
+	}
+
+	response.Code = constant.ResponseNormal
+	response.Messgae = "用户注销成功"
+	c.Data["json"] = response
 	c.ServeJSON()
 }
 
@@ -94,20 +255,20 @@ func (c *UserController) Logout() {
 func (c *UserController) Detail() {
 	id, _ := c.GetInt64("Id")
 	var reply models.User
-	response := Response{}
+	response := response.Response{}
 	args := &models.User{
 		Id: id,
 	}
-	err := client.Call("http://127.0.0.1:2379", "User", "Detail", args, &reply)
+	err := client.Call("http://127.0.0.1:2379", "User", "FindUserById", args, &reply)
 
 	if err != nil {
-		response.Code = "500"
+		response.Code = constant.ResponseSystemErr
 		response.Messgae = err.Error()
 		c.Data["json"] = response
 		c.ServeJSON()
 	}
 
-	response.Code = "200"
+	response.Code = constant.ResponseNormal
 	response.Messgae = "获取用户信息成功"
 	reply.AccessToken = nil
 	reply.Password = nil
@@ -131,14 +292,14 @@ func (c *UserController) Modify() {
 	email := c.GetString("Email")
 
 	var reply models.User
-	response := Response{}
+	response := response.Response{}
 	args := &models.User{
 		Id: id,
 	}
-	err := client.Call("http://127.0.0.1:2379", "User", "Detail", args, &reply)
+	err := client.Call("http://127.0.0.1:2379", "User", "FindUserById", args, &reply)
 
 	if err != nil {
-		response.Code = "500"
+		response.Code = constant.ResponseSystemErr
 		response.Messgae = err.Error()
 		c.Data["json"] = response
 		c.ServeJSON()
@@ -147,16 +308,16 @@ func (c *UserController) Modify() {
 	reply.Phone = phone
 	reply.Email = email
 
-	err = client.Call("http://127.0.0.1:2379", "User", "Modify", reply, nil)
+	err = client.Call("http://127.0.0.1:2379", "User", "UpdateUserById", reply, nil)
 
 	if err != nil {
-		response.Code = "500"
+		response.Code = constant.ResponseSystemErr
 		response.Messgae = err.Error()
 		c.Data["json"] = response
 		c.ServeJSON()
 	}
 
-	response.Code = "200"
+	response.Code = constant.ResponseNormal
 	response.Messgae = "用户信息修改成功！"
 	c.Data["json"] = response
 	c.ServeJSON()
@@ -171,53 +332,54 @@ func (c *UserController) Modify() {
 // @Failure 400 {"code":400,"message":"..."}
 // @router /modifyPassword [post]
 func (c *UserController) ModifyPassword() {
-	username := c.Ctx.Input.Param("Username")
-	password := c.Ctx.Input.Param("Password")
-	newPassword := c.Ctx.Input.Param("NewPassword")
-	response := Response{}
+	id, _ := c.GetInt64("Id")
+	username := c.GetString("Username")
+	password := c.GetString("Password")
+	newPassword := c.GetString("NewPassword")
+	response := response.Response{}
 
 	if password == newPassword {
-		response.Code = "500"
+		response.Code = constant.ResponseSystemErr
 		response.Messgae = "新密码不能与原密码相同"
 		c.Data["json"] = response
 		c.ServeJSON()
 	}
 
 	args := &models.User{
-		Username: username,
+		Id: id,
 	}
 	var loginReply models.User
 
-	err := client.Call("http://127.0.0.1:2379", "User", "GetOneByUsername", args, &loginReply)
+	err := client.Call("http://127.0.0.1:2379", "User", "FindUserById", args, &loginReply)
 
 	if err != nil {
-		response.Code = "500"
+		response.Code = constant.ResponseSystemErr
 		response.Messgae = err.Error()
 		c.Data["json"] = response
 		c.ServeJSON()
 	}
 
-	if loginReply.Password != password {
-		response.Code = "500"
+	if loginReply.Username != username || loginReply.Password != password {
+		response.Code = constant.ResponseSystemErr
 		response.Messgae = "原密码错误"
 		c.Data["json"] = response
 		c.ServeJSON()
 	}
 
 	loginReply.Password = newPassword
-	timestamp := time.Now().Unix()
+	timestamp := time.Now().UnixNano() / 1e6
 	loginReply.UpdateTime = timestamp
 
-	err = client.Call("http://127.0.0.1:2379", "User", "ModifyPassword", args, nil)
+	err = client.Call("http://127.0.0.1:2379", "User", "UpdateUserById", args, nil)
 
 	if err != nil {
-		response.Code = "500"
+		response.Code = constant.ResponseSystemErr
 		response.Messgae = err.Error()
 		c.Data["json"] = response
 		c.ServeJSON()
 	}
 
-	response.Code = "200"
+	response.Code = constant.ResponseNormal
 	response.Messgae = "密码修改成功"
 	c.Data["json"] = response
 	c.ServeJSON()
