@@ -2,6 +2,11 @@ package controllers
 
 import (
 	"github.com/astaxie/beego"
+	"dev.cloud.360baige.com/rpc/client"
+	"dev.cloud.360baige.com/models/response"
+	"dev.model.360baige.com/models"
+	"dev.cloud.360baige.com/models/constant"
+	"time"
 )
 
 type CompanyController struct {
@@ -16,7 +21,25 @@ type CompanyController struct {
 // @Failure 400 {"code":400,"message":"..."}
 // @router /detail [get]
 func (c *CompanyController) Detail() {
-	c.Data["json"] = ""
+	id, _ := c.GetInt64("Id")
+	var reply models.Company
+	response := response.Response{}
+	args := &models.Company{
+		Id: id,
+	}
+	err := client.Call("http://127.0.0.1:2379", "Company", "FindCompanyById", args, &reply)
+
+	if err != nil {
+		response.Code = constant.ResponseSystemErr
+		response.Messgae = err.Error()
+		c.Data["json"] = response
+		c.ServeJSON()
+	}
+
+	response.Code = constant.ResponseNormal
+	response.Messgae = "获取企业信息成功"
+	response.Data = reply
+	c.Data["json"] = response
 	c.ServeJSON()
 }
 
@@ -28,5 +51,44 @@ func (c *CompanyController) Detail() {
 // @Failure 400 {"code":400,"message":"..."}
 // @router /modify [post]
 func (c *CompanyController) Modify() {
+	id, _ := c.GetInt64("Id")
+	name := c.GetString("Name")
+	shortName := c.GetString("ShortName")
+	address := c.GetString("Address")
 
+	var reply models.Company
+	response := response.Response{}
+	args := &models.Company{
+		Id: id,
+	}
+	err := client.Call("http://127.0.0.1:2379", "Company", "FindCompanyById", args, &reply)
+
+	if err != nil {
+		response.Code = constant.ResponseSystemErr
+		response.Messgae = err.Error()
+		c.Data["json"] = response
+		c.ServeJSON()
+	}
+	timestamp := time.Now().UnixNano() / 1e6
+	reply.Id = id
+	if name == "" {
+		reply.Name = name
+	}
+	reply.ShortName = shortName
+	reply.UpdateTime = timestamp
+	reply.Address = address
+
+	err = client.Call("http://127.0.0.1:2379", "Company", "UpdateCompanyById", reply, nil)
+
+	if err != nil {
+		response.Code = constant.ResponseSystemErr
+		response.Messgae = err.Error()
+		c.Data["json"] = response
+		c.ServeJSON()
+	}
+
+	response.Code = constant.ResponseNormal
+	response.Messgae = "用户信息修改成功！"
+	c.Data["json"] = response
+	c.ServeJSON()
 }
