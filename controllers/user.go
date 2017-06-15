@@ -21,6 +21,8 @@ type UserController struct {
 func (c *UserController) Register() {
 	var reply models.User
 	args := &models.User{
+		CreateTime:time.Now().UnixNano() / 1e6,
+		UpdateTime:time.Now().UnixNano() / 1e6,
 		Username: c.GetString("Username"),
 		Password: c.GetString("Password"),
 	}
@@ -55,6 +57,7 @@ func (c *UserController) Login() {
 	} else {
 		c.Data["json"] = err
 	}
+
 	c.ServeJSON()
 }
 
@@ -68,6 +71,7 @@ func (c *UserController) Login() {
 func (c *UserController) Logout() {
 	var reply models.User
 	args := &models.User{
+		UpdateTime:time.Now().UnixNano() / 1e6,
 		Username: c.GetString("Username"),
 		AccessToken: c.GetString("AccessToken"),
 	}
@@ -92,6 +96,7 @@ func (c *UserController) Logout() {
 func (c *UserController) Cancel() {
 	var reply models.User
 	args := &models.User{
+		UpdateTime:time.Now().UnixNano() / 1e6,
 		Username: c.GetString("Username"),
 		AccessToken: c.GetString("AccessToken"),
 	}
@@ -102,6 +107,7 @@ func (c *UserController) Cancel() {
 	} else {
 		c.Data["json"] = err
 	}
+
 	c.ServeJSON()
 }
 
@@ -123,6 +129,7 @@ func (c *UserController) Delete() {
 	} else {
 		c.Data["json"] = err
 	}
+
 	c.ServeJSON()
 }
 
@@ -135,6 +142,7 @@ func (c *UserController) Delete() {
 func (c *UserController) Activation() {
 	var reply models.User
 	args := &models.User{
+		UpdateTime:time.Now().UnixNano() / 1e6,
 		Username:c.GetString("Username"),
 	}
 	err := plugin.Call("http://127.0.0.1:2379", "Admin", "Activation", args, &reply)
