@@ -2,10 +2,10 @@ package controllers
 
 import (
 	"github.com/astaxie/beego"
-	"dev.model.360baige.com/models"
 	"dev.cloud.360baige.com/rpc/client"
-	"dev.cloud.360baige.com/models/response"
+	"dev.model.360baige.com/models/http"
 	"dev.cloud.360baige.com/models/constant"
+	. "dev.model.360baige.com/models/personnel"
 )
 
 type PersonRelationController struct {
@@ -19,25 +19,25 @@ func (c *PersonRelationController) Add() {
 	associatedId, _ := c.GetInt64("associatedId")
 	status, _ := c.GetInt8("status")
 	Type, _ := c.GetInt8("type")
-	var reply models.PersonRelation
-	args := &models.PersonRelation{
-		CompanyId:companyId,
-		AssociationId:associationId,
-		AssociatedId:associatedId,
-		Type:Type,
-		Status:status,
+	var reply PersonRelation
+	args := &PersonRelation{
+		CompanyId:     companyId,
+		AssociationId: associationId,
+		AssociatedId:  associatedId,
+		Type:          Type,
+		Status:        status,
 	}
 	err := client.Call("http://127.0.0.1:2379", "PersonRelation", "GetAssociated", args, &reply)
 	if err == nil {
-		args := &models.PersonRelation{
-			Id:reply.Id,
-			Status:1,
+		args := &PersonRelation{
+			Id:     reply.Id,
+			Status: 1,
 		}
 		err = client.Call("http://127.0.0.1:2379", "PersonRelation", "ModifyPersonRelation", args, &reply)
 	} else {
 		err = client.Call("http://127.0.0.1:2379", "PersonRelation", "AddPersonRelation", args, &reply)
 	}
-	var response response.Response // http 返回体
+	var response http.Response // http 返回体
 	if err != nil {
 		response.Code = constant.ResponseSystemErr
 		response.Messgae = "新增失败"
@@ -51,20 +51,19 @@ func (c *PersonRelationController) Add() {
 	c.ServeJSON()
 }
 
-
 // @router /modify [post]
 func (c *PersonRelationController) Modify() {
 	id, _ := c.GetInt64("id")
 	Type, _ := c.GetInt8("type")
 	status, _ := c.GetInt8("status")
-	var reply models.PersonRelation
-	args := &models.PersonRelation{
-		Id:id,
-		Type:Type,
-		Status:status,
+	var reply PersonRelation
+	args := &PersonRelation{
+		Id:     id,
+		Type:   Type,
+		Status: status,
 	}
 	err := client.Call("http://127.0.0.1:2379", "PersonRelation", "Modify", args, &reply)
-	var response response.Response // http 返回体
+	var response http.Response // http 返回体
 	if err != nil {
 		response.Code = constant.ResponseSystemErr
 		response.Messgae = "修改失败！"
@@ -78,16 +77,15 @@ func (c *PersonRelationController) Modify() {
 	c.ServeJSON()
 }
 
-
 // @router /associatedList [post]
 func (c *PersonRelationController) AssociatedList() {
 	associationId, _ := c.GetInt64("id")
-	var reply models.PersonRelation
-	args := &models.PersonRelation{
-		AssociationId:associationId,
+	var reply PersonRelation
+	args := &PersonRelation{
+		AssociationId: associationId,
 	}
 	err := client.Call("http://127.0.0.1:2379", "PersonRelation", "GetAssociatedAll", args, &reply)
-	var response response.Response // http 返回体
+	var response http.Response // http 返回体
 	if err != nil {
 		response.Code = constant.ResponseSystemErr
 		response.Messgae = "关注列表为空！"
@@ -100,5 +98,3 @@ func (c *PersonRelationController) AssociatedList() {
 	c.Data["json"] = response
 	c.ServeJSON()
 }
-
-

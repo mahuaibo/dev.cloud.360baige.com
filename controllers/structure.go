@@ -2,10 +2,10 @@ package controllers
 
 import (
 	"github.com/astaxie/beego"
-	"dev.model.360baige.com/models"
 	"dev.cloud.360baige.com/rpc/client"
-	"dev.cloud.360baige.com/models/response"
+	"dev.model.360baige.com/models/http"
 	"dev.cloud.360baige.com/models/constant"
+	. "dev.model.360baige.com/models/personnel"
 )
 
 type StructureController struct {
@@ -17,15 +17,15 @@ func (c *StructureController) Add() {
 	Type, _ := c.GetInt8("type")
 	parentId, _ := c.GetInt64("parentId")
 	status, _ := c.GetInt8("status")
-	var reply models.Structure
-	args := &models.Structure{
-		ParentId:parentId,
-		Type:Type,
-		Name: c.GetString("name"),
-		Status:status,
+	var reply Structure
+	args := &Structure{
+		ParentId: parentId,
+		Type:     Type,
+		Name:     c.GetString("name"),
+		Status:   status,
 	}
 	err := client.Call("http://127.0.0.1:2379", "Structure", "AddStructure", args, &reply)
-	var response response.Response // http 返回体
+	var response http.Response // http 返回体
 	if err != nil {
 		response.Code = constant.ResponseSystemErr
 		response.Messgae = "新增失败！"
@@ -44,15 +44,15 @@ func (c *StructureController) Modify() {
 	id, _ := c.GetInt64("id")
 	parentId, _ := c.GetInt64("parentId")
 	status, _ := c.GetInt8("status")
-	var reply models.Structure
-	args := &models.Structure{
-		Id:id,
-		ParentId:parentId,
-		Name:c.GetString("name"),
-		Status:status,
+	var reply Structure
+	args := &Structure{
+		Id:       id,
+		ParentId: parentId,
+		Name:     c.GetString("name"),
+		Status:   status,
 	}
 	err := client.Call("http://127.0.0.1:2379", "Structure", "ModifyStructure", args, &reply)
-	var response response.Response // http 返回体
+	var response http.Response // http 返回体
 	if err != nil {
 		response.Code = constant.ResponseSystemErr
 		response.Messgae = "修改失败！"
@@ -65,23 +65,24 @@ func (c *StructureController) Modify() {
 	c.Data["json"] = response
 	c.ServeJSON()
 }
+
 //
 //// @router /delete [post]
 //func (c *StructureController) Delete() {
 //	ids := c.GetString("ids")
-//	var reply models.Structure
+//	var reply Structure
 //	var err error
 //	if strings.Contains(ids, ",") {
 //		for _, val := range strings.Split(ids, ",") {
 //			id, _ := strconv.ParseInt(val, 10, 64)
-//			args := &models.Structure{
+//			args := &Structure{
 //				Id:id,
 //			}
 //			err = client.Call("http://127.0.0.1:2379", "Structure", "Delete", args, &reply)
 //		}
 //	} else {
 //		id, _ := strconv.ParseInt(ids, 10, 64)
-//		args := &models.Structure{
+//		args := &Structure{
 //			Id:id,
 //		}
 //		err = client.Call("http://127.0.0.1:2379", "Structure", "Delete", args, &reply)
@@ -95,16 +96,15 @@ func (c *StructureController) Modify() {
 //	c.ServeJSON()
 //}
 
-
 // @router /detail [post]
 func (c *StructureController) Detail() {
 	id, _ := c.GetInt64("id")
-	var reply models.Structure
-	args := &models.Structure{
-		Id:id,
+	var reply Structure
+	args := &Structure{
+		Id: id,
 	}
 	err := client.Call("http://127.0.0.1:2379", "Structure", "StructureDetails", args, &reply)
-	var response response.Response // http 返回体
+	var response http.Response // http 返回体
 	if err != nil {
 		response.Code = constant.ResponseSystemErr
 		response.Messgae = "获取失败！"
@@ -118,17 +118,16 @@ func (c *StructureController) Detail() {
 	c.ServeJSON()
 }
 
-
 // @router /structureList [post]
 func (c *StructureController) StructureList() {
 	Type, _ := c.GetInt8("type")
-	var reply models.StructureList
-	args := &models.Structure{
-		ParentId:0,
-		Type:Type,
+	var reply StructureList
+	args := &Structure{
+		ParentId: 0,
+		Type:     Type,
 	}
 	err := client.Call("http://127.0.0.1:2379", "Structure", "GetStructureList", args, &reply)
-	var response response.Response // http 返回体
+	var response http.Response // http 返回体
 	if err != nil {
 		response.Code = constant.ResponseSystemErr
 		response.Messgae = "查询失败！"

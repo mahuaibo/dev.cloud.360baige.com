@@ -2,10 +2,10 @@ package controllers
 
 import (
 	"github.com/astaxie/beego"
-	"dev.model.360baige.com/models"
 	"dev.cloud.360baige.com/rpc/client"
-	"dev.cloud.360baige.com/models/response"
+	"dev.model.360baige.com/models/http"
 	"dev.cloud.360baige.com/models/constant"
+	. "dev.model.360baige.com/models/personnel"
 )
 
 type PersonController struct {
@@ -17,15 +17,15 @@ func (c *PersonController) Add() {
 	companyId, _ := c.GetInt64("companyId")
 	Type, _ := c.GetInt8("type")
 	status, _ := c.GetInt8("status")
-	var reply models.Person
-	args := &models.Person{
+	var reply Person
+	args := &Person{
 		Name:c.GetString("name"),
 		CompanyId:companyId,
 		Type:Type,
 		Status:status,
 	}
 	err := client.Call("http://127.0.0.1:2379", "Person", "AddPerson", args, &reply)
-	var response response.Response // http 返回体
+	var response http.Response // http 返回体
 	if err != nil {
 		response.Code = constant.ResponseSystemErr
 		response.Messgae = "新增失败"
@@ -43,8 +43,8 @@ func (c *PersonController) Add() {
 func (c *PersonController) Detail() {
 	var data map[string]interface{} = make(map[string]interface{})
 	id, _ := c.GetInt64("id")
-	var personReply models.Person
-	personArgs := &models.Person{
+	var personReply Person
+	personArgs := &Person{
 		Id: id,
 	}
 	err := client.Call("http://127.0.0.1:2379", "Person", "Details", personArgs, &personReply)
@@ -55,8 +55,8 @@ func (c *PersonController) Detail() {
 	data["Type"] = personReply.Type
 	data["Status"] = personReply.Status
 
-	var reply []models.AssociatedAll
-	args := models.AssociatedArgs{
+	var reply []AssociatedAll
+	args := AssociatedArgs{
 		AssociatedId:personReply.Id,
 		AssociationId:personReply.Id,
 	}
@@ -69,7 +69,7 @@ func (c *PersonController) Detail() {
 	//拼接结构
 	client.Call("http://127.0.0.1:2379", "Structure", "GetStructure", args, &reply)
 	jointDetailData(data, reply, "structure")
-	var response response.Response // http 返回体
+	var response http.Response // http 返回体
 	if err != nil {
 		response.Code = constant.ResponseSystemErr
 		response.Messgae = "获取失败"
@@ -83,7 +83,7 @@ func (c *PersonController) Detail() {
 	c.ServeJSON()
 }
 
-func jointDetailData(result map[string]interface{}, data []models.AssociatedAll, name string) {
+func jointDetailData(result map[string]interface{}, data []AssociatedAll, name string) {
 	if len(data) > 0 {
 		for key, val := range data {
 			data[key] = val
@@ -97,15 +97,15 @@ func (c *PersonController) Modify() {
 	id, _ := c.GetInt64("id")
 	Type, _ := c.GetInt8("type")
 	status, _ := c.GetInt8("status")
-	var reply models.Person
-	args := &models.Person{
+	var reply Person
+	args := &Person{
 		Id: id,
 		Name:c.GetString("name"),
 		Type:Type,
 		Status:status,
 	}
 	err := client.Call("http://127.0.0.1:2379", "Person", "ModifyPerson", args, &reply)
-	var response response.Response // http 返回体
+	var response http.Response // http 返回体
 	if err != nil {
 		response.Code = constant.ResponseSystemErr
 		response.Messgae = "修改失败"
@@ -122,19 +122,19 @@ func (c *PersonController) Modify() {
 //// @router /delete [post]
 //func (c *PersonController) Delete() {
 //	ids := c.GetString("ids")
-//	var reply models.Person
+//	var reply Person
 //	var err error
 //	if strings.Contains(ids, ",") {
 //		for _, val := range strings.Split(ids, ",") {
 //			id, _ := strconv.ParseInt(val, 10, 64)
-//			args := &models.Person{
+//			args := &Person{
 //				Id: id,
 //			}
 //			err = client.Call("http://127.0.0.1:2379", "Person", "ModifyPersonStatus", args, &reply)
 //		}
 //	} else {
 //		id, _ := strconv.ParseInt(ids, 10, 64)
-//		args := &models.Person{
+//		args := &Person{
 //			Id: id,
 //		}
 //		err = client.Call("http://127.0.0.1:2379", "Person", "ModifyPersonStatus", args, &reply)
@@ -154,14 +154,14 @@ func (c *PersonController) PersonList() {
 	page, _ := c.GetInt("page")
 	rows, _ := c.GetInt("rows")
 	Type, _ := c.GetInt8("type")
-	var reply models.PersonList
-	args := &models.PersonPaging{
+	var reply PersonList
+	args := &PersonPaging{
 		Type:Type,
 		Page:page,
 		Rows:rows,
 	}
 	err := client.Call("http://127.0.0.1:2379", "Person", "GetPersonList", args, &reply)
-	var response response.Response // http 返回体
+	var response http.Response // http 返回体
 	if err != nil {
 		response.Code = constant.ResponseSystemErr
 		response.Messgae = "获取失败"

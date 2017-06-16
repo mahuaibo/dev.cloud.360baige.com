@@ -3,9 +3,9 @@ package controllers
 import (
 	"github.com/astaxie/beego"
 	"dev.cloud.360baige.com/rpc/client"
-	"dev.cloud.360baige.com/models/response"
+	"dev.model.360baige.com/models/http"
 	"dev.cloud.360baige.com/models/constant"
-	"dev.model.360baige.com/models"
+	. "dev.model.360baige.com/models/user"
 	"time"
 	"fmt"
 )
@@ -25,10 +25,10 @@ func (c *UserController) Register() {
 	// 获取参数 和 准备参数
 	username := c.GetString("Username")      // 用户名
 	password := c.GetString("Password")      //密码
-	var reply models.User                    // rpc 返回参数
-	response := response.Response{}          //http 返回体
+	var reply User                           // rpc 返回参数
+	response := http.Response{}              //http 返回体
 	timestamp := time.Now().UnixNano() / 1e6 //操作时间戳
-	args := &models.User{//新增用户参数
+	args := &User{ //新增用户参数
 		CreateTime:  timestamp,
 		UpdateTime:  timestamp,
 		Username:    username,
@@ -55,7 +55,7 @@ func (c *UserController) Register() {
 		c.ServeJSON()
 	}
 
-	resUser := models.User{
+	resUser := User{
 		Id:          reply.Id,
 		Username:    reply.Username,
 		AccessToken: reply.AccessToken,
@@ -78,11 +78,11 @@ func (c *UserController) Register() {
 func (c *UserController) Login() {
 	username := c.GetString("Username")
 	password := c.GetString("Password")
-	response := response.Response{}
-	var reply models.User
-	args := &models.User{
+	response := http.Response{}
+	var reply User
+	args := &User{
 		Username: username,
-		Password:password,
+		Password: password,
 	}
 	err := client.Call("http://127.0.0.1:2379", "User", "FindByUsername", args, &reply)
 	fmt.Println("reply", reply)
@@ -101,7 +101,7 @@ func (c *UserController) Login() {
 		c.ServeJSON()
 	}
 
-	resUser := models.User{
+	resUser := User{
 		Id:          reply.Id,
 		Username:    reply.Username,
 		AccessToken: reply.AccessToken,
@@ -125,9 +125,9 @@ func (c *UserController) Login() {
 func (c *UserController) Logout() {
 	id, _ := c.GetInt64("Id")
 	accessToken := c.GetString("AccessToken")
-	var reply models.User
-	response := response.Response{}
-	args := &models.User{
+	var reply User
+	response := http.Response{}
+	args := &User{
 		Id: id,
 	}
 	err := client.Call("http://127.0.0.1:2379", "User", "FindUserById", args, &reply)
@@ -162,11 +162,11 @@ func (c *UserController) Logout() {
 func (c *UserController) Cancel() {
 	id, _ := c.GetInt64("Id")
 	accessToken := c.GetString("AccessToken")
-	var reply models.User
-	response := response.Response{}
-	args := &models.User{
-		Id: id,
-		AccessToken:accessToken,
+	var reply User
+	response := http.Response{}
+	args := &User{
+		Id:          id,
+		AccessToken: accessToken,
 	}
 	err := client.Call("http://127.0.0.1:2379", "User", "FindUserById", args, &reply)
 	if err != nil {
@@ -190,9 +190,9 @@ func (c *UserController) Cancel() {
 func (c *UserController) Activation() {
 	id, _ := c.GetInt64("Id")
 	accessToken := c.GetString("AccessToken")
-	var reply models.User
-	response := response.Response{}
-	args := &models.User{
+	var reply User
+	response := http.Response{}
+	args := &User{
 		Id: id,
 	}
 	err := client.Call("http://127.0.0.1:2379", "User", "FindUserById", args, &reply)
@@ -237,9 +237,9 @@ func (c *UserController) Activation() {
 // @router /detail [post]
 func (c *UserController) Detail() {
 	id, _ := c.GetInt64("Id")
-	var reply models.User
-	response := response.Response{}
-	args := &models.User{
+	var reply User
+	response := http.Response{}
+	args := &User{
 		Id: id,
 	}
 	err := client.Call("http://127.0.0.1:2379", "User", "FindUserById", args, &reply)
@@ -272,9 +272,9 @@ func (c *UserController) Modify() {
 	phone := c.GetString("Phone")
 	email := c.GetString("Email")
 
-	var reply models.User
-	response := response.Response{}
-	args := &models.User{
+	var reply User
+	response := http.Response{}
+	args := &User{
 		Id: id,
 	}
 	err := client.Call("http://127.0.0.1:2379", "User", "FindUserById", args, &reply)
@@ -317,7 +317,7 @@ func (c *UserController) ModifyPassword() {
 	username := c.GetString("Username")
 	password := c.GetString("Password")
 	newPassword := c.GetString("NewPassword")
-	response := response.Response{}
+	response := http.Response{}
 
 	if password == newPassword {
 		response.Code = constant.ResponseSystemErr
@@ -326,10 +326,10 @@ func (c *UserController) ModifyPassword() {
 		c.ServeJSON()
 	}
 
-	args := &models.User{
+	args := &User{
 		Id: id,
 	}
-	var loginReply models.User
+	var loginReply User
 
 	err := client.Call("http://127.0.0.1:2379", "User", "FindUserById", args, &loginReply)
 

@@ -3,10 +3,10 @@ package controllers
 import (
 	"github.com/astaxie/beego"
 	"dev.cloud.360baige.com/rpc/client"
-	"dev.cloud.360baige.com/models/response"
-	"dev.model.360baige.com/models"
+	"dev.model.360baige.com/models/http"
 	"dev.cloud.360baige.com/models/constant"
 	"time"
+	. "dev.model.360baige.com/models/company"
 )
 
 type CompanyController struct {
@@ -21,14 +21,14 @@ type CompanyController struct {
 // @Failure 400 {"code":400,"message":"..."}
 // @router /detail [get]
 func (c *CompanyController) Add() {
-	var response response.Response // http 返回体
-	var reply models.Company
-	args := &models.Company{
-		CreateTime:time.Now().UnixNano() / 1e6,
-		UpdateTime:time.Now().UnixNano() / 1e6,
-		Name: c.GetString("name"),
+	var response http.Response // http 返回体
+	var reply Company
+	args := &Company{
+		CreateTime: time.Now().UnixNano() / 1e6,
+		UpdateTime: time.Now().UnixNano() / 1e6,
+		Name:       c.GetString("name"),
 	}
-	err := client.Call("http://127.0.0.1:2379", "Company", "AddCompany", args, &reply)
+	err := client.Call("http://127.0.0.1:2379", "Company", "Add", args, &reply)
 	if err != nil {
 		response.Code = constant.ResponseSystemErr
 		response.Messgae = "企业新增失败"
@@ -51,12 +51,12 @@ func (c *CompanyController) Add() {
 // @router /detail [get]
 func (c *CompanyController) Detail() {
 	id, _ := c.GetInt64("Id")
-	var reply models.Company
-	response := response.Response{}
-	args := &models.Company{
+	var reply Company
+	response := http.Response{}
+	args := &Company{
 		Id: id,
 	}
-	err := client.Call("http://127.0.0.1:2379", "Company", "FindCompanyById", args, &reply)
+	err := client.Call("http://127.0.0.1:2379", "Company", "FindById", args, &reply)
 
 	if err != nil {
 		response.Code = constant.ResponseSystemErr
@@ -84,12 +84,12 @@ func (c *CompanyController) Modify() {
 	shortName := c.GetString("ShortName")
 	address := c.GetString("Address")
 
-	var reply models.Company
-	response := response.Response{}
-	args := &models.Company{
+	var reply Company
+	response := http.Response{}
+	args := &Company{
 		Id: id,
 	}
-	err := client.Call("http://127.0.0.1:2379", "Company", "FindCompanyById", args, &reply)
+	err := client.Call("http://127.0.0.1:2379", "Company", "FindById", args, &reply)
 
 	if err != nil {
 		response.Code = constant.ResponseSystemErr
@@ -106,7 +106,7 @@ func (c *CompanyController) Modify() {
 	reply.UpdateTime = timestamp
 	reply.Address = address
 
-	err = client.Call("http://127.0.0.1:2379", "Company", "UpdateCompanyById", reply, nil)
+	err = client.Call("http://127.0.0.1:2379", "Company", "UpdateById", reply, nil)
 
 	if err != nil {
 		response.Code = constant.ResponseSystemErr
