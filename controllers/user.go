@@ -82,7 +82,6 @@ func (c *UserController) Login() {
 	var reply models.User
 	args := &models.User{
 		Username: username,
-		Password:password,
 	}
 	err := client.Call("http://127.0.0.1:2379", "User", "FindByUsername", args, &reply)
 	fmt.Println("reply", reply)

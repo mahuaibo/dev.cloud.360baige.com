@@ -11,7 +11,7 @@ import (
  */
 func Call(etcdURL, serviceName, methodName string, args, reply interface{}) error {
 	// RandomSelect RoundRobin WeightedRoundRobin ConsistentHash
-	s := clientselector.NewEtcdClientSelector([]string{etcdURL}, "/rpcx/" + serviceName, time.Minute, rpcx.RandomSelect, time.Minute)
+	s := clientselector.NewEtcdClientSelector([]string{etcdURL}, "/rpcx/" + serviceName, time.Minute, rpcx.RandomSelect, 10 * time.Second)
 	client := rpcx.NewClient(s)
 	// Failfast Failover Failtry Broadcast Forking
 	client.FailMode = rpcx.Failover
