@@ -21,6 +21,7 @@ type CompanyController struct {
 // @Failure 400 {"code":400,"message":"..."}
 // @router /detail [get]
 func (c *CompanyController) Add() {
+	var response response.Response // http 返回体
 	var reply models.Company
 	args := &models.Company{
 		CreateTime:time.Now().UnixNano() / 1e6,
@@ -28,12 +29,16 @@ func (c *CompanyController) Add() {
 		Name: c.GetString("name"),
 	}
 	err := client.Call("http://127.0.0.1:2379", "Company", "AddCompany", args, &reply)
-	if err == nil {
-		// TODO 注册成功添加角色
-		c.Data["json"] = reply
-	} else {
-		c.Data["json"] = err
+	if err != nil {
+		response.Code = constant.ResponseSystemErr
+		response.Messgae = "企业新增失败"
+		c.Data["json"] = response
+		c.ServeJSON()
 	}
+	response.Code = constant.ResponseNormal
+	response.Messgae = "企业新增成功"
+	response.Data = reply
+	c.Data["json"] = response
 	c.ServeJSON()
 }
 
@@ -55,12 +60,12 @@ func (c *CompanyController) Detail() {
 
 	if err != nil {
 		response.Code = constant.ResponseSystemErr
-		response.Messgae = err.Error()
+		response.Messgae = "企业信息查询失败"
 		c.Data["json"] = response
 		c.ServeJSON()
 	}
 	response.Code = constant.ResponseNormal
-	response.Messgae = "获取企业信息成功"
+	response.Messgae = "企业信息查询成功"
 	response.Data = reply
 	c.Data["json"] = response
 	c.ServeJSON()
@@ -105,13 +110,13 @@ func (c *CompanyController) Modify() {
 
 	if err != nil {
 		response.Code = constant.ResponseSystemErr
-		response.Messgae = err.Error()
+		response.Messgae = "企业信息修改失败！"
 		c.Data["json"] = response
 		c.ServeJSON()
 	}
 
 	response.Code = constant.ResponseNormal
-	response.Messgae = "用户信息修改成功！"
+	response.Messgae = "企业信息修改成功！"
 	c.Data["json"] = response
 	c.ServeJSON()
 }

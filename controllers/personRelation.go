@@ -2,9 +2,10 @@ package controllers
 
 import (
 	"github.com/astaxie/beego"
-	"fmt"
 	"dev.model.360baige.com/models"
 	"dev.cloud.360baige.com/rpc/client"
+	"dev.cloud.360baige.com/models/response"
+	"dev.cloud.360baige.com/models/constant"
 )
 
 type PersonRelationController struct {
@@ -13,20 +14,18 @@ type PersonRelationController struct {
 
 // @router /add [post]
 func (c *PersonRelationController) Add() {
+	companyId, _ := c.GetInt64("companyId")
 	associationId, _ := c.GetInt64("associationId")
 	associatedId, _ := c.GetInt64("associatedId")
-	ownerId, _ := c.GetInt64("ownerId")
-	ownerType, _ := c.GetInt("ownerType")
-	Type, _ := c.GetInt("type")
+	status, _ := c.GetInt8("status")
+	Type, _ := c.GetInt8("type")
 	var reply models.PersonRelation
 	args := &models.PersonRelation{
+		CompanyId:companyId,
 		AssociationId:associationId,
 		AssociatedId:associatedId,
-		OwnerId:ownerId,
-		OwnerType:ownerType,
 		Type:Type,
-		Name:c.GetString("name"),
-		Detail:c.GetString("detail"),
+		Status:status,
 	}
 	err := client.Call("http://127.0.0.1:2379", "PersonRelation", "GetAssociated", args, &reply)
 	if err == nil {
@@ -38,11 +37,17 @@ func (c *PersonRelationController) Add() {
 	} else {
 		err = client.Call("http://127.0.0.1:2379", "PersonRelation", "AddPersonRelation", args, &reply)
 	}
-	if err == nil {
-		c.Data["json"] = reply
-	} else {
-		c.Data["json"] = err
+	var response response.Response // http 返回体
+	if err != nil {
+		response.Code = constant.ResponseSystemErr
+		response.Messgae = "新增失败"
+		c.Data["json"] = response
+		c.ServeJSON()
 	}
+	response.Code = constant.ResponseNormal
+	response.Messgae = "新增成功"
+	response.Data = reply
+	c.Data["json"] = response
 	c.ServeJSON()
 }
 
@@ -50,19 +55,26 @@ func (c *PersonRelationController) Add() {
 // @router /modify [post]
 func (c *PersonRelationController) Modify() {
 	id, _ := c.GetInt64("id")
-	status, _ := c.GetInt("status")
+	Type, _ := c.GetInt8("type")
+	status, _ := c.GetInt8("status")
 	var reply models.PersonRelation
 	args := &models.PersonRelation{
 		Id:id,
+		Type:Type,
 		Status:status,
 	}
-	err := client.Call("http://127.0.0.1:2379", "PersonRelation", "ModifyPersonRelation", args, &reply)
-	fmt.Println(reply, err)
-	if err == nil {
-		c.Data["json"] = reply
-	} else {
-		c.Data["json"] = err
+	err := client.Call("http://127.0.0.1:2379", "PersonRelation", "Modify", args, &reply)
+	var response response.Response // http 返回体
+	if err != nil {
+		response.Code = constant.ResponseSystemErr
+		response.Messgae = "修改失败！"
+		c.Data["json"] = response
+		c.ServeJSON()
 	}
+	response.Code = constant.ResponseNormal
+	response.Messgae = "修改成功"
+	response.Data = reply
+	c.Data["json"] = response
 	c.ServeJSON()
 }
 
@@ -75,11 +87,17 @@ func (c *PersonRelationController) AssociatedList() {
 		AssociationId:associationId,
 	}
 	err := client.Call("http://127.0.0.1:2379", "PersonRelation", "GetAssociatedAll", args, &reply)
-	if err == nil {
-		c.Data["json"] = reply
-	} else {
-		c.Data["json"] = "关注列表为空"
+	var response response.Response // http 返回体
+	if err != nil {
+		response.Code = constant.ResponseSystemErr
+		response.Messgae = "关注列表为空！"
+		c.Data["json"] = response
+		c.ServeJSON()
 	}
+	response.Code = constant.ResponseNormal
+	response.Messgae = "关注列表获取成功"
+	response.Data = reply
+	c.Data["json"] = response
 	c.ServeJSON()
 }
 

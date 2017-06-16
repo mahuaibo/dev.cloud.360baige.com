@@ -4,9 +4,8 @@ import (
 	"github.com/astaxie/beego"
 	"dev.model.360baige.com/models"
 	"dev.cloud.360baige.com/rpc/client"
-	"fmt"
-	"strings"
-	"strconv"
+	"dev.cloud.360baige.com/models/response"
+	"dev.cloud.360baige.com/models/constant"
 )
 
 type StructureController struct {
@@ -15,27 +14,28 @@ type StructureController struct {
 
 // @router /add [post]
 func (c *StructureController) Add() {
-	ownerId, _ := c.GetInt64("ownerId")
-	ownerType, _ := c.GetInt("ownerType")
-	Type, _ := c.GetInt("type")
+	Type, _ := c.GetInt8("type")
 	parentId, _ := c.GetInt64("parentId")
-	status, _ := c.GetInt("status")
+	status, _ := c.GetInt8("status")
 	var reply models.Structure
 	args := &models.Structure{
-		OwnerId:ownerId,
-		OwnerType:ownerType,
 		ParentId:parentId,
 		Type:Type,
 		Name: c.GetString("name"),
-		Detail:c.GetString("detail"),
 		Status:status,
 	}
 	err := client.Call("http://127.0.0.1:2379", "Structure", "AddStructure", args, &reply)
-	if err == nil {
-		c.Data["json"] = reply
-	} else {
-		c.Data["json"] = err
+	var response response.Response // http 返回体
+	if err != nil {
+		response.Code = constant.ResponseSystemErr
+		response.Messgae = "新增失败！"
+		c.Data["json"] = response
+		c.ServeJSON()
 	}
+	response.Code = constant.ResponseNormal
+	response.Messgae = "新增成功"
+	response.Data = reply
+	c.Data["json"] = response
 	c.ServeJSON()
 }
 
@@ -43,22 +43,26 @@ func (c *StructureController) Add() {
 func (c *StructureController) Modify() {
 	id, _ := c.GetInt64("id")
 	parentId, _ := c.GetInt64("parentId")
-	status, _ := c.GetInt("status")
+	status, _ := c.GetInt8("status")
 	var reply models.Structure
 	args := &models.Structure{
 		Id:id,
 		ParentId:parentId,
 		Name:c.GetString("name"),
-		Detail:c.GetString("detail"),
 		Status:status,
 	}
 	err := client.Call("http://127.0.0.1:2379", "Structure", "ModifyStructure", args, &reply)
-	fmt.Println(reply, err)
-	if err == nil {
-		c.Data["json"] = reply
-	} else {
-		c.Data["json"] = err
+	var response response.Response // http 返回体
+	if err != nil {
+		response.Code = constant.ResponseSystemErr
+		response.Messgae = "修改失败！"
+		c.Data["json"] = response
+		c.ServeJSON()
 	}
+	response.Code = constant.ResponseNormal
+	response.Messgae = "修改成功"
+	response.Data = reply
+	c.Data["json"] = response
 	c.ServeJSON()
 }
 //
@@ -100,31 +104,40 @@ func (c *StructureController) Detail() {
 		Id:id,
 	}
 	err := client.Call("http://127.0.0.1:2379", "Structure", "StructureDetails", args, &reply)
-	fmt.Println(reply, err)
-	if err == nil {
-		c.Data["json"] = reply
-	} else {
-		c.Data["json"] = err
+	var response response.Response // http 返回体
+	if err != nil {
+		response.Code = constant.ResponseSystemErr
+		response.Messgae = "获取失败！"
+		c.Data["json"] = response
+		c.ServeJSON()
 	}
+	response.Code = constant.ResponseNormal
+	response.Messgae = "获取成功"
+	response.Data = reply
+	c.Data["json"] = response
 	c.ServeJSON()
 }
 
 
 // @router /structureList [post]
 func (c *StructureController) StructureList() {
-	ownerId, _ := c.GetInt64("ownerId")
-	Type, _ := c.GetInt("type")
+	Type, _ := c.GetInt8("type")
 	var reply models.StructureList
 	args := &models.Structure{
-		OwnerId:ownerId,
 		ParentId:0,
 		Type:Type,
 	}
 	err := client.Call("http://127.0.0.1:2379", "Structure", "GetStructureList", args, &reply)
-	if err == nil {
-		c.Data["json"] = reply
-	} else {
-		c.Data["json"] = err
+	var response response.Response // http 返回体
+	if err != nil {
+		response.Code = constant.ResponseSystemErr
+		response.Messgae = "查询失败！"
+		c.Data["json"] = response
+		c.ServeJSON()
 	}
+	response.Code = constant.ResponseNormal
+	response.Messgae = "查询成功"
+	response.Data = reply
+	c.Data["json"] = response
 	c.ServeJSON()
 }

@@ -4,9 +4,8 @@ import (
 	"github.com/astaxie/beego"
 	"dev.model.360baige.com/models"
 	"dev.cloud.360baige.com/rpc/client"
-	"fmt"
-	"strings"
-	"strconv"
+	"dev.cloud.360baige.com/models/response"
+	"dev.cloud.360baige.com/models/constant"
 )
 
 type PersonStructureController struct {
@@ -16,29 +15,29 @@ type PersonStructureController struct {
 
 // @router /add [post]
 func (c *PersonStructureController) Add() {
-	OwnerId, _ := c.GetInt64("OwnerId")
 	PersonId, _ := c.GetInt64("PersonId")
 	StructureId, _ := c.GetInt64("StructureId")
-	OwnerType, _ := c.GetInt("OwnerType")
-	Type, _ := c.GetInt("Type")
-	Status, _ := c.GetInt("Status")
+	Type, _ := c.GetInt8("Type")
+	Status, _ := c.GetInt8("Status")
 	var reply models.PersonStructure
 	args := &models.PersonStructure{
-		OwnerId:OwnerId,
 		PersonId:PersonId,
 		StructureId:StructureId,
-		OwnerType:OwnerType,
 		Type:Type,
 		Status:Status,
-		Name:c.GetString("Name"),
-		Detail:c.GetString("Detail"),
 	}
 	err := client.Call("http://127.0.0.1:2379", "PersonStructure", "AddPersonStructure", args, &reply)
-	if err == nil {
-		c.Data["json"] = reply
-	} else {
-		c.Data["json"] = err
+	var response response.Response // http 返回体
+	if err != nil {
+		response.Code = constant.ResponseSystemErr
+		response.Messgae = "新增失败！"
+		c.Data["json"] = response
+		c.ServeJSON()
 	}
+	response.Code = constant.ResponseNormal
+	response.Messgae = "新增成功"
+	response.Data = reply
+	c.Data["json"] = response
 	c.ServeJSON()
 }
 

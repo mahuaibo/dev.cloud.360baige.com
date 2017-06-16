@@ -7,6 +7,7 @@ import (
 	"dev.cloud.360baige.com/models/constant"
 	"dev.model.360baige.com/models"
 	"time"
+	"fmt"
 )
 
 type UserController struct {
@@ -81,8 +82,10 @@ func (c *UserController) Login() {
 	var reply models.User
 	args := &models.User{
 		Username: username,
+		Password:password,
 	}
-	err := client.Call("http://127.0.0.1:2379", "User", "FindUserByUsername", args, &reply)
+	err := client.Call("http://127.0.0.1:2379", "User", "FindByUsername", args, &reply)
+	fmt.Println("reply", reply)
 	if err != nil {
 		// 返回错误信息
 		response.Code = constant.ResponseSystemErr
@@ -107,6 +110,7 @@ func (c *UserController) Login() {
 	response.Code = constant.ResponseNormal
 	response.Messgae = "登录成功"
 	response.Data = resUser
+	fmt.Println("response", response)
 	c.Data["json"] = response
 	c.ServeJSON()
 }
@@ -162,6 +166,7 @@ func (c *UserController) Cancel() {
 	response := response.Response{}
 	args := &models.User{
 		Id: id,
+		AccessToken:accessToken,
 	}
 	err := client.Call("http://127.0.0.1:2379", "User", "FindUserById", args, &reply)
 	if err != nil {
@@ -248,8 +253,6 @@ func (c *UserController) Detail() {
 
 	response.Code = constant.ResponseNormal
 	response.Messgae = "获取用户信息成功"
-	reply.AccessToken = nil
-	reply.Password = nil
 	response.Data = reply
 	c.Data["json"] = response
 	c.ServeJSON()
