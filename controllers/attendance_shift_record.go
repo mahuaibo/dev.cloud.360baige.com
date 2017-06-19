@@ -4,11 +4,11 @@ import (
 	"github.com/astaxie/beego"
 	"dev.cloud.360baige.com/rpc/client"
 	"time"
-	. "dev.model.360baige.com/models/user"
+	. "dev.model.360baige.com/models/attendance"
 	. "dev.model.360baige.com/models/response"
 )
 
-type UserController struct {
+type AttendanceShiftRecordController struct {
 	beego.Controller
 }
 
@@ -18,28 +18,28 @@ type UserController struct {
 // @Param   accessToken     query   string true       "访问令牌"
 // @Failure 400 {"code":400,"message":"..."}
 // @router /add [get]
-func (c *UserController) Add() {
+func (c *AttendanceShiftRecordController) Add() {
 	timestamp := time.Now().UnixNano() / 1e6
 	var (
 		res   Response // http 返回体
-		reply User
+		reply AttendanceShiftRecord
 	)
-	args := &User{
+	args := &AttendanceShiftRecord{
 		CreateTime: timestamp,
 		UpdateTime: timestamp,
 	}
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "User", "Add", args, &reply)
+	err := client.Call(beego.AppConfig.String("EtcdURL"), "AttendanceShiftRecord", "Add", args, &reply)
 	if err != nil {
 		res.Code = ResponseSystemErr
 		res.Messgae = "新增失败"
 		c.Data["json"] = res
 		c.ServeJSON()
 	} else {
-		res.Code = ResponseNormal
-		res.Messgae = "新增成功"
-		res.Data = reply
-		c.Data["json"] = res
-		c.ServeJSON()
+        res.Code = ResponseNormal
+        res.Messgae = "新增成功"
+        res.Data = reply
+        c.Data["json"] = res
+        c.ServeJSON()
 	}
 }
 
@@ -50,14 +50,14 @@ func (c *UserController) Add() {
 // @Param   accessToken     query   string true       "访问令牌"
 // @Failure 400 {"code":400,"message":"..."}
 // @router /detail [get]
-func (c *UserController) Detail() {
+func (c *AttendanceShiftRecordController) Detail() {
 	id, _ := c.GetInt64("id")
 	res := Response{}
-	var reply User
-	args := &User{
+	var reply AttendanceShiftRecord
+	args := &AttendanceShiftRecord{
 		Id: id,
 	}
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "User", "FindById", args, &reply)
+	err := client.Call(beego.AppConfig.String("EtcdURL"), "AttendanceShiftRecord", "FindById", args, &reply)
 
 	if err != nil {
 		res.Code = ResponseSystemErr
@@ -80,15 +80,15 @@ func (c *UserController) Detail() {
 // @Param   accessToken     query   string true       "访问令牌"
 // @Failure 400 {"code":400,"message":"..."}
 // @router /modify [post]
-func (c *UserController) Modify() {
+func (c *AttendanceShiftRecordController) Modify() {
 	id, _ := c.GetInt64("id")
 
-	var reply User
+	var reply AttendanceShiftRecord
 	res := Response{}
-	args := &User{
+	args := &AttendanceShiftRecord{
 		Id: id,
 	}
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "User", "FindById", args, &reply)
+	err := client.Call(beego.AppConfig.String("EtcdURL"), "AttendanceShiftRecord", "FindById", args, &reply)
 
 	if err != nil {
 		res.Code = ResponseSystemErr
@@ -101,7 +101,7 @@ func (c *UserController) Modify() {
 
 	reply.UpdateTime = timestamp
 
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "User", "UpdateById", reply, nil)
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "AttendanceShiftRecord", "UpdateById", reply, nil)
 
 	if err != nil {
 		res.Code = ResponseSystemErr
@@ -109,9 +109,9 @@ func (c *UserController) Modify() {
 		c.Data["json"] = res
 		c.ServeJSON()
 	} else {
-		res.Code = ResponseNormal
-		res.Messgae = "信息修改成功！"
-		c.Data["json"] = res
-		c.ServeJSON()
+        res.Code = ResponseNormal
+        res.Messgae = "信息修改成功！"
+        c.Data["json"] = res
+        c.ServeJSON()
 	}
 }

@@ -3,8 +3,7 @@ package controllers
 import (
 	"github.com/astaxie/beego"
 	"dev.cloud.360baige.com/rpc/client"
-	"dev.model.360baige.com/models/http"
-	"dev.cloud.360baige.com/models/constant"
+	. "dev.model.360baige.com/models/response"
 	. "dev.model.360baige.com/models/personnel"
 )
 
@@ -25,15 +24,15 @@ func (c *PersonStructureController) Add() {
 		Type:        Type,
 		Status:      Status,
 	}
-	err := client.Call("http://127.0.0.1:2379", "PersonStructure", "AddPersonStructure", args, &reply)
-	var response http.Response // http 返回体
+	err := client.Call(beego.AppConfig.String("EtcdURL"), "PersonStructure", "AddPersonStructure", args, &reply)
+	var response Response // http 返回体
 	if err != nil {
-		response.Code = constant.ResponseSystemErr
+		response.Code = ResponseSystemErr
 		response.Messgae = "新增失败！"
 		c.Data["json"] = response
 		c.ServeJSON()
 	}
-	response.Code = constant.ResponseNormal
+	response.Code = ResponseNormal
 	response.Messgae = "新增成功"
 	response.Data = reply
 	c.Data["json"] = response
@@ -51,14 +50,14 @@ func (c *PersonStructureController) Add() {
 //			args := &PersonStructure{
 //				Id:id,
 //			}
-//			err = client.Call("http://127.0.0.1:2379", "PersonStructure", "Delete", args, &reply)
+//			err = client.Call(beego.AppConfig.String("EtcdURL"), "PersonStructure", "Delete", args, &reply)
 //		}
 //	} else {
 //		id, _ := strconv.ParseInt(ids, 10, 64)
 //		args := &PersonStructure{
 //			Id:id,
 //		}
-//		err = client.Call("http://127.0.0.1:2379", "PersonStructure", "Delete", args, &reply)
+//		err = client.Call(beego.AppConfig.String("EtcdURL"), "PersonStructure", "Delete", args, &reply)
 //	}
 //	fmt.Println(reply, err)
 //	if err == nil {

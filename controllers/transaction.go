@@ -4,11 +4,11 @@ import (
 	"github.com/astaxie/beego"
 	"dev.cloud.360baige.com/rpc/client"
 	"time"
-	. "dev.model.360baige.com/models/user"
+	. "dev.model.360baige.com/models/account"
 	. "dev.model.360baige.com/models/response"
 )
 
-type UserController struct {
+type TransactionController struct {
 	beego.Controller
 }
 
@@ -18,28 +18,28 @@ type UserController struct {
 // @Param   accessToken     query   string true       "访问令牌"
 // @Failure 400 {"code":400,"message":"..."}
 // @router /add [get]
-func (c *UserController) Add() {
+func (c *TransactionController) Add() {
 	timestamp := time.Now().UnixNano() / 1e6
 	var (
 		res   Response // http 返回体
-		reply User
+		reply Transaction
 	)
-	args := &User{
+	args := &Transaction{
 		CreateTime: timestamp,
 		UpdateTime: timestamp,
 	}
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "User", "Add", args, &reply)
+	err := client.Call(beego.AppConfig.String("EtcdURL"), "Transaction", "Add", args, &reply)
 	if err != nil {
 		res.Code = ResponseSystemErr
 		res.Messgae = "新增失败"
 		c.Data["json"] = res
 		c.ServeJSON()
 	} else {
-		res.Code = ResponseNormal
-		res.Messgae = "新增成功"
-		res.Data = reply
-		c.Data["json"] = res
-		c.ServeJSON()
+        res.Code = ResponseNormal
+        res.Messgae = "新增成功"
+        res.Data = reply
+        c.Data["json"] = res
+        c.ServeJSON()
 	}
 }
 
@@ -50,14 +50,14 @@ func (c *UserController) Add() {
 // @Param   accessToken     query   string true       "访问令牌"
 // @Failure 400 {"code":400,"message":"..."}
 // @router /detail [get]
-func (c *UserController) Detail() {
+func (c *TransactionController) Detail() {
 	id, _ := c.GetInt64("id")
 	res := Response{}
-	var reply User
-	args := &User{
+	var reply Transaction
+	args := &Transaction{
 		Id: id,
 	}
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "User", "FindById", args, &reply)
+	err := client.Call(beego.AppConfig.String("EtcdURL"), "Transaction", "FindById", args, &reply)
 
 	if err != nil {
 		res.Code = ResponseSystemErr
@@ -80,15 +80,15 @@ func (c *UserController) Detail() {
 // @Param   accessToken     query   string true       "访问令牌"
 // @Failure 400 {"code":400,"message":"..."}
 // @router /modify [post]
-func (c *UserController) Modify() {
+func (c *TransactionController) Modify() {
 	id, _ := c.GetInt64("id")
 
-	var reply User
+	var reply Transaction
 	res := Response{}
-	args := &User{
+	args := &Transaction{
 		Id: id,
 	}
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "User", "FindById", args, &reply)
+	err := client.Call(beego.AppConfig.String("EtcdURL"), "Transaction", "FindById", args, &reply)
 
 	if err != nil {
 		res.Code = ResponseSystemErr
@@ -101,7 +101,7 @@ func (c *UserController) Modify() {
 
 	reply.UpdateTime = timestamp
 
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "User", "UpdateById", reply, nil)
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "Transaction", "UpdateById", reply, nil)
 
 	if err != nil {
 		res.Code = ResponseSystemErr
@@ -109,9 +109,9 @@ func (c *UserController) Modify() {
 		c.Data["json"] = res
 		c.ServeJSON()
 	} else {
-		res.Code = ResponseNormal
-		res.Messgae = "信息修改成功！"
-		c.Data["json"] = res
-		c.ServeJSON()
+        res.Code = ResponseNormal
+        res.Messgae = "信息修改成功！"
+        c.Data["json"] = res
+        c.ServeJSON()
 	}
 }

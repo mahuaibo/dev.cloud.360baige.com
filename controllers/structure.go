@@ -3,140 +3,115 @@ package controllers
 import (
 	"github.com/astaxie/beego"
 	"dev.cloud.360baige.com/rpc/client"
-	"dev.model.360baige.com/models/http"
-	"dev.cloud.360baige.com/models/constant"
+	"time"
 	. "dev.model.360baige.com/models/personnel"
+	. "dev.model.360baige.com/models/response"
 )
 
 type StructureController struct {
 	beego.Controller
 }
 
-// @router /add [post]
+// @Title 新增
+// @Description 新增
+// @Success 200 {"code":200,"messgae":"ok", "data":{ ... ... }}
+// @Param   accessToken     query   string true       "访问令牌"
+// @Failure 400 {"code":400,"message":"..."}
+// @router /add [get]
 func (c *StructureController) Add() {
-	Type, _ := c.GetInt8("type")
-	parentId, _ := c.GetInt64("parentId")
-	status, _ := c.GetInt8("status")
-	var reply Structure
+	timestamp := time.Now().UnixNano() / 1e6
+	var (
+		res   Response // http 返回体
+		reply Structure
+	)
 	args := &Structure{
-		ParentId: parentId,
-		Type:     Type,
-		Name:     c.GetString("name"),
-		Status:   status,
+		CreateTime: timestamp,
+		UpdateTime: timestamp,
 	}
-	err := client.Call("http://127.0.0.1:2379", "Structure", "AddStructure", args, &reply)
-	var response http.Response // http 返回体
+	err := client.Call(beego.AppConfig.String("EtcdURL"), "Structure", "Add", args, &reply)
 	if err != nil {
-		response.Code = constant.ResponseSystemErr
-		response.Messgae = "新增失败！"
-		c.Data["json"] = response
+		res.Code = ResponseSystemErr
+		res.Messgae = "新增失败"
+		c.Data["json"] = res
 		c.ServeJSON()
+	} else {
+        res.Code = ResponseNormal
+        res.Messgae = "新增成功"
+        res.Data = reply
+        c.Data["json"] = res
+        c.ServeJSON()
 	}
-	response.Code = constant.ResponseNormal
-	response.Messgae = "新增成功"
-	response.Data = reply
-	c.Data["json"] = response
-	c.ServeJSON()
 }
 
-// @router /modify [post]
-func (c *StructureController) Modify() {
-	id, _ := c.GetInt64("id")
-	parentId, _ := c.GetInt64("parentId")
-	status, _ := c.GetInt8("status")
-	var reply Structure
-	args := &Structure{
-		Id:       id,
-		ParentId: parentId,
-		Name:     c.GetString("name"),
-		Status:   status,
-	}
-	err := client.Call("http://127.0.0.1:2379", "Structure", "ModifyStructure", args, &reply)
-	var response http.Response // http 返回体
-	if err != nil {
-		response.Code = constant.ResponseSystemErr
-		response.Messgae = "修改失败！"
-		c.Data["json"] = response
-		c.ServeJSON()
-	}
-	response.Code = constant.ResponseNormal
-	response.Messgae = "修改成功"
-	response.Data = reply
-	c.Data["json"] = response
-	c.ServeJSON()
-}
-
-//
-//// @router /delete [post]
-//func (c *StructureController) Delete() {
-//	ids := c.GetString("ids")
-//	var reply Structure
-//	var err error
-//	if strings.Contains(ids, ",") {
-//		for _, val := range strings.Split(ids, ",") {
-//			id, _ := strconv.ParseInt(val, 10, 64)
-//			args := &Structure{
-//				Id:id,
-//			}
-//			err = client.Call("http://127.0.0.1:2379", "Structure", "Delete", args, &reply)
-//		}
-//	} else {
-//		id, _ := strconv.ParseInt(ids, 10, 64)
-//		args := &Structure{
-//			Id:id,
-//		}
-//		err = client.Call("http://127.0.0.1:2379", "Structure", "Delete", args, &reply)
-//	}
-//	fmt.Println(reply, err)
-//	if err == nil {
-//		c.Data["json"] = reply
-//	} else {
-//		c.Data["json"] = err
-//	}
-//	c.ServeJSON()
-//}
-
-// @router /detail [post]
+// @Title 信息
+// @Description 信息
+// @Success 200 {"code":200,"messgae":"信息查询成功", "data":{ ... ... }}
+// @Param   id     query   string true       "ID"
+// @Param   accessToken     query   string true       "访问令牌"
+// @Failure 400 {"code":400,"message":"..."}
+// @router /detail [get]
 func (c *StructureController) Detail() {
 	id, _ := c.GetInt64("id")
+	res := Response{}
 	var reply Structure
 	args := &Structure{
 		Id: id,
 	}
-	err := client.Call("http://127.0.0.1:2379", "Structure", "StructureDetails", args, &reply)
-	var response http.Response // http 返回体
+	err := client.Call(beego.AppConfig.String("EtcdURL"), "Structure", "FindById", args, &reply)
+
 	if err != nil {
-		response.Code = constant.ResponseSystemErr
-		response.Messgae = "获取失败！"
-		c.Data["json"] = response
+		res.Code = ResponseSystemErr
+		res.Messgae = "信息查询失败"
+		c.Data["json"] = res
+		c.ServeJSON()
+	} else {
+		res.Code = ResponseNormal
+		res.Messgae = "信息查询成功"
+		res.Data = reply
+		c.Data["json"] = res
 		c.ServeJSON()
 	}
-	response.Code = constant.ResponseNormal
-	response.Messgae = "获取成功"
-	response.Data = reply
-	c.Data["json"] = response
-	c.ServeJSON()
 }
 
-// @router /structureList [post]
-func (c *StructureController) StructureList() {
-	Type, _ := c.GetInt8("type")
-	var reply StructureList
+// @Title 信息修改
+// @Description 信息修改
+// @Success 200 {"code":200,"messgae":"ok", "data":{ ... ... }}
+// @Param   id     query   string true       "ID"
+// @Param   accessToken     query   string true       "访问令牌"
+// @Failure 400 {"code":400,"message":"..."}
+// @router /modify [post]
+func (c *StructureController) Modify() {
+	id, _ := c.GetInt64("id")
+
+	var reply Structure
+	res := Response{}
 	args := &Structure{
-		ParentId: 0,
-		Type:     Type,
+		Id: id,
 	}
-	err := client.Call("http://127.0.0.1:2379", "Structure", "GetStructureList", args, &reply)
-	var response http.Response // http 返回体
+	err := client.Call(beego.AppConfig.String("EtcdURL"), "Structure", "FindById", args, &reply)
+
 	if err != nil {
-		response.Code = constant.ResponseSystemErr
-		response.Messgae = "查询失败！"
-		c.Data["json"] = response
+		res.Code = ResponseSystemErr
+		res.Messgae = err.Error()
+		c.Data["json"] = res
 		c.ServeJSON()
 	}
-	response.Code = constant.ResponseNormal
-	response.Messgae = "查询成功"
-	response.Data = reply
-	c.Data["json"] = response
-	c.ServeJSON()
+	timestamp := time.Now().UnixNano() / 1e6
+	reply.Id = id
+
+	reply.UpdateTime = timestamp
+
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "Structure", "UpdateById", reply, nil)
+
+	if err != nil {
+		res.Code = ResponseSystemErr
+		res.Messgae = "信息修改失败！"
+		c.Data["json"] = res
+		c.ServeJSON()
+	} else {
+        res.Code = ResponseNormal
+        res.Messgae = "信息修改成功！"
+        c.Data["json"] = res
+        c.ServeJSON()
+	}
 }
