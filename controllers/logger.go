@@ -26,7 +26,6 @@ func (c *LoggerController) Add() {
 	)
 	args := &Logger{
 		CreateTime: timestamp,
-		UpdateTime: timestamp,
 	}
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "Logger", "Add", args, &reply)
 	if err != nil {
@@ -96,10 +95,7 @@ func (c *LoggerController) Modify() {
 		c.Data["json"] = res
 		c.ServeJSON()
 	}
-	timestamp := time.Now().UnixNano() / 1e6
 	reply.Id = id
-
-	reply.UpdateTime = timestamp
 
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Logger", "UpdateById", reply, nil)
 

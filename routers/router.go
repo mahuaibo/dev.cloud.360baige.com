@@ -45,6 +45,11 @@ func init() {
 				&controllers.StructureController{},
 			),
 		),
+		beego.NSNamespace("/account",
+			beego.NSInclude(
+				&controllers.AccountController{},
+			),
+		),
 	)
 	beego.AddNamespace(ns)
 }
