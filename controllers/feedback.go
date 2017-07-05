@@ -23,22 +23,12 @@ type FeedbackController struct {
 // @Failure 400 {"code":400,"message":"..."}
 // @router /add [post]
 func (c *FeedbackController) Add() {
-	name := c.GetString("name")
-	shortName := c.GetString("shortName")
-	logo := c.GetString("logo")
-	brief := c.GetString("brief")
-	companyType, _ := c.GetInt8("type")
 	//accessToken := c.GetString("accessToken")
-	timestamp := time.Now().UnixNano() / 1e6
 	var (
 		res   Response // http 返回体
-		reply Feedback
+		reply Response
+		args  Response // 需要更改
 	)
-	args := &Feedback{
-		CreateTime: timestamp,
-		UpdateTime: timestamp,
-
-	}
 
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "Feedback", "Add", args, &reply)
 	if err != nil {
