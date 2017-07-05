@@ -35,11 +35,11 @@ func (c *PersonStructureController) Add() {
 		c.Data["json"] = res
 		c.ServeJSON()
 	} else {
-        res.Code = ResponseNormal
-        res.Messgae = "新增成功"
-        res.Data = reply
-        c.Data["json"] = res
-        c.ServeJSON()
+		res.Code = ResponseNormal
+		res.Messgae = "新增成功"
+		res.Data = reply
+		c.Data["json"] = res
+		c.ServeJSON()
 	}
 }
 
@@ -109,9 +109,9 @@ func (c *PersonStructureController) Modify() {
 		c.Data["json"] = res
 		c.ServeJSON()
 	} else {
-        res.Code = ResponseNormal
-        res.Messgae = "信息修改成功！"
-        c.Data["json"] = res
-        c.ServeJSON()
+		res.Code = ResponseNormal
+		res.Messgae = "信息修改成功！"
+		c.Data["json"] = res
+		c.ServeJSON()
 	}
 }

@@ -12,6 +12,42 @@ type PersonRelationController struct {
 	beego.Controller
 }
 
+// @Title 添加孩子接口
+// @Description 添加孩子接口
+// @Success 200 {"code":200,"messgae":"ok","data":{"accessToken":"ok"}}
+// @Param accessToken     query   string true       "访问令牌"
+// @Param companyId     query   string true       "学校id"
+// @Param personId query   string true       "身份id"
+// @Param userId query   string true       "userid"
+// @Param position  query   string true       "身份类型"
+// @Param 各种孩子的参数
+// @Failure 400 {"code":400,"message":"..."}
+// @router /addchildparent [post]
+func (c *PersonRelationController) AddPersonRelation() {
+	timestamp := time.Now().UnixNano() / 1e6
+	var (
+		res   Response // http 返回体
+		reply PersonRelation
+	)
+	args := &PersonRelation{
+		CreateTime: timestamp,
+		UpdateTime: timestamp,
+	}
+	err := client.Call(beego.AppConfig.String("EtcdURL"), "PersonRelation", "Add", args, &reply)
+	if err != nil {
+		res.Code = ResponseSystemErr
+		res.Messgae = "新增失败"
+		c.Data["json"] = res
+		c.ServeJSON()
+	} else {
+		res.Code = ResponseNormal
+		res.Messgae = "新增成功"
+		res.Data = reply
+		c.Data["json"] = res
+		c.ServeJSON()
+	}
+}
+
 // @Title 新增
 // @Description 新增
 // @Success 200 {"code":200,"messgae":"ok", "data":{ ... ... }}

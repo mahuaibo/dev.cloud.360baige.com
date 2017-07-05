@@ -11,7 +11,35 @@ import (
 type CompanyController struct {
 	beego.Controller
 }
-
+// @Title 学校地区接口
+// @Description 学校地区接口
+// @Success 200 {"code":200,"messgae":"ok","data":{"list":{... ...},"accessToken":"ok"}}
+// @Param accessToken     query   string true       "访问令牌"
+// @Param companyId     query   string true       "学校id"
+// @Param personId query   string true       "身份id"
+// @Param userId query   string true       "userid"
+// @Failure 400 {"code":400,"message":"..."}
+// @router /getschoolarea [post]
+func (c *PersonController) GetSchoolArea() {
+	var (
+		res   Response // http 返回体
+		reply Company
+		args Company
+	)
+	err := client.Call(beego.AppConfig.String("EtcdURL"), "Company", "List", args, &reply)
+	if err != nil {
+		res.Code = ResponseSystemErr
+		res.Messgae = "信息查询失败"
+		c.Data["json"] = res
+		c.ServeJSON()
+	} else {
+		res.Code = ResponseNormal
+		res.Messgae = "信息查询成功"
+		res.Data = reply
+		c.Data["json"] = res
+		c.ServeJSON()
+	}
+}
 // @Title 企业新增
 // @Description 企业信息
 // @Success 200 {"code":200,"messgae":"ok", "data":{ ... ... }}

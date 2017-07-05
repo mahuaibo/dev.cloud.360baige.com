@@ -14,7 +14,39 @@ import (
 type AccountController struct {
 	beego.Controller
 }
+// @Title 我的账户信息接口
+// @Description 我的账户信息接口
+// @Success 200 {"code":200,"messgae":"ok","data":{"list":{... ...},"accessToken":"ok"}}
+// @Param accessToken     query   string true       "访问令牌"
+// @Param companyId     query   string true       "学校id"
+// @Param personId query   string true       "身份id"
+// @Param userId query   string true       "userid"
+// @Param position  query   string true       "身份类型"
+// @Param childId query   string true       "孩子id"
+// @Failure 400 {"code":400,"message":"..."}
+// @router /account [post]
+func (c *AccountController) Account() {
+	id, _ := c.GetInt64("id")
+	res := Response{}
+	var reply Account
+	args := &Account{
+		Id: id,
+	}
+	err := client.Call(beego.AppConfig.String("EtcdURL"), "Account", "FindById", args, &reply)
 
+	if err != nil {
+		res.Code = ResponseSystemErr
+		res.Messgae = "信息查询失败"
+		c.Data["json"] = res
+		c.ServeJSON()
+	} else {
+		res.Code = ResponseNormal
+		res.Messgae = "信息查询成功"
+		res.Data = reply
+		c.Data["json"] = res
+		c.ServeJSON()
+	}
+}
 // @Title 新增
 // @Description 新增
 // @Success 200 {"code":200,"messgae":"ok", "data":{ ... ... }}
