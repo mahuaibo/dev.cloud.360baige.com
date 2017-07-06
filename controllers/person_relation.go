@@ -20,7 +20,7 @@ type PersonRelationController struct {
 // @Param personId query   string true       "身份id"
 // @Param userId query   string true       "userid"
 // @Param position  query   string true       "身份类型"
-// @Param 各种孩子的参数
+// @Param pas  query   string true      "各种孩子的参数"
 // @Failure 400 {"code":400,"message":"..."}
 // @router /addchildparent [post]
 func (c *PersonRelationController) AddPersonRelation() {

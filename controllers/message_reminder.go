@@ -20,7 +20,7 @@ type MessageReminderController struct {
 // @Param companyId     query   string true       "学校id"
 // @Param personId query   string true       "身份id"
 // @Param userId query   string true       "userid"
-// @Param 各个提醒选项
+// @Param  params     query   string true       "各个提醒选项"
 // @Failure 400 {"code":400,"message":"..."}
 // @router /set [post]
 func (c *MessageReminderController) Set  () {

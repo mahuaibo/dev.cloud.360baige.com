@@ -19,7 +19,7 @@ type PersonController struct {
 // @Param userId query   string true       "userid"
 // @Failure 400 {"code":400,"message":"..."}
 // @router /getchildlist [post]
-func (c *PersonController) getChildList() {
+func (c *PersonController) GetChildList() {
 	var (
 		res   Response // http 返回体
 		reply Person
