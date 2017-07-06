@@ -62,7 +62,7 @@ func (c *OrderController) GetOrderList() {
 // @Param userId query   string true       "userid"
 // @Param childId query   string true       "childid"
 // @Param orderId query   string true       "orderid"
-// @Param 各种参数
+// @Param params  query   string true       "各种参数"
 // @Failure 400 {"code":400,"message":"..."}
 // @router /cancelorder [post]
 func (c *OrderController) CancelOrder() {
@@ -109,7 +109,7 @@ func (c *OrderController) CancelOrder() {
 // @Param userId query   string true       "userid"
 // @Param childId query   string true       "childid"
 // @Param orderId query   string true       "orderid"
-// @Param 各种参数
+// @Param params  query   string true       "各种参数"
 // @Failure 400 {"code":400,"message":"..."}
 // @router /confirmationOfReceipt [post]
 func (c *OrderController) ConfirmationOfReceipt() {

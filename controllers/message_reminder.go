@@ -66,7 +66,7 @@ func (c *MessageReminderController) Set  () {
 // @Param accessToken     query   string true       "访问令牌"
 // @Param companyId     query   string true       "学校id"
 // @Param userId query   string true       "userid"
-// @Param 各个提醒选项
+// @Param userId query   string true       "各个提醒选项"
 // @Failure 400 {"code":400,"message":"..."}
 // @router /detail [post]
 func (c *MessageReminderController) Detail  () {

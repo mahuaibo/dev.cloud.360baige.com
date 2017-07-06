@@ -20,7 +20,7 @@ type OrderRemindshipmentController struct {
 // @Param userId query   string true       "userid"
 // @Param childId query   string true       "childid"
 // @Param orderId query   string true       "orderid"
-// @Param 各种参数
+// @Param params  query   string true       "各种参数"
 // @Failure 400 {"code":400,"message":"..."}
 // @router /add [post]
 func (c *OrderRemindshipmentController) Add() {

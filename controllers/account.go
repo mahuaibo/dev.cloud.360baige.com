@@ -14,6 +14,7 @@ import (
 type AccountController struct {
 	beego.Controller
 }
+
 // @Title 我的账户信息接口
 // @Description 我的账户信息接口
 // @Success 200 {"code":200,"messgae":"ok","data":{"list":{... ...},"accessToken":"ok"}}
@@ -47,6 +48,7 @@ func (c *AccountController) Account() {
 		c.ServeJSON()
 	}
 }
+
 // @Title 新增
 // @Description 新增
 // @Success 200 {"code":200,"messgae":"ok", "data":{ ... ... }}
@@ -158,7 +160,10 @@ func (c *AccountController) Modify() {
 // @Title 信息列表
 // @Description 信息列表
 // @Success 200 {"code":200,"messgae":"ok", "data":{ ... ... }}
-// @Param   pageSize  current  sord filters
+// @Param   pageSize     query   string true       "pageSize"
+// @Param   current     query   string true       "current"
+// @Param   sord     query   string true       "sord"
+// @Param   filters     query   string true       "filters"
 // @Param   accessToken     query   string true       "访问令牌"
 // @Failure 400 {"code":400,"message":"..."}
 // @router /list [post]
@@ -195,7 +200,10 @@ func (c *AccountController) List() {
 // @Title 信息列表
 // @Description 信息列表
 // @Success 200 {"code":200,"messgae":"ok", "data":{ ... ... }}
-// @Param   pageSize  current  sord filters
+// @Param   pageSize     query   string true       "pageSize"
+// @Param   current     query   string true       "current"
+// @Param   sord     query   string true       "sord"
+// @Param   filters     query   string true       "filters"
 // @Param   accessToken     query   string true       "访问令牌"
 // @Failure 400 {"code":400,"message":"..."}
 // @router /updateByIds [post]
@@ -228,7 +236,10 @@ func (c *AccountController) UpdateByIds() {
 // @Title 批量新增
 // @Description 批量新增
 // @Success 200 {"code":200,"messgae":"ok", "data":{ ... ... }}
-// @Param   pageSize  current  sord filters
+// @Param   pageSize     query   string true       "pageSize"
+// @Param   current     query   string true       "current"
+// @Param   sord     query   string true       "sord"
+// @Param   filters     query   string true       "filters"
 // @Param   accessToken     query   string true       "访问令牌"
 // @Failure 400 {"code":400,"message":"..."}
 // @router /addMultiple [post]
