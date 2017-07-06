@@ -585,16 +585,16 @@ func init() {
 
 	beego.GlobalControllerRouter["dev.cloud.360baige.com/controllers:PersonController"] = append(beego.GlobalControllerRouter["dev.cloud.360baige.com/controllers:PersonController"],
 		beego.ControllerComments{
-			Method: "GetCardList",
-			Router: `/getcardlist`,
+			Method: "GetSchoolArea",
+			Router: `/getschoolarea`,
 			AllowHTTPMethods: []string{"post"},
 			MethodParams: param.Make(),
 			Params: nil})
 
 	beego.GlobalControllerRouter["dev.cloud.360baige.com/controllers:PersonController"] = append(beego.GlobalControllerRouter["dev.cloud.360baige.com/controllers:PersonController"],
 		beego.ControllerComments{
-			Method: "GetSchoolArea",
-			Router: `/getschoolarea`,
+			Method: "GetCardList",
+			Router: `/getcardlist`,
 			AllowHTTPMethods: []string{"post"},
 			MethodParams: param.Make(),
 			Params: nil})
