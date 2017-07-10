@@ -5,6 +5,9 @@ import (
 	"dev.cloud.360baige.com/rpc/client"
 	. "dev.model.360baige.com/models/user"
 	. "dev.model.360baige.com/models/response"
+	. "dev.model.360baige.com/models/paginator"
+	"time"
+	"fmt"
 )
 
 // USER API
@@ -34,9 +37,18 @@ func (c *UserPositionController) List() {
 		c.ServeJSON()
 	} else {
 		//判断时效是否超时 TODO
+		timestamp := time.Now().UnixNano() / 1e6
+		if (replyUser.ExpireIn == 0 || timestamp < replyUser.ExpireIn) {
+
+		} else {
+			res.Code = ResponseSystemErr
+			res.Messgae = "访问票据超时"
+			c.Data["json"] = res
+			c.ServeJSON()
+		}
 	}
 
-	var replyUserPosition []UserPosition
+	var replyUserPosition *Paginator
 
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "ListByUserId", &UserPosition{
 		UserId: replyUser.Id,
@@ -62,7 +74,8 @@ func (c *UserPositionController) List() {
 		//	ExpireIn:replyUserPosition.ExpireIn,
 		//	Status:replyUserPosition.Status,
 		//}
-		res.Data = replyUserPosition
+		fmt.Println(replyUserPosition)
+		res.Data = replyUserPosition.List
 		c.Data["json"] = res
 		c.ServeJSON()
 	}

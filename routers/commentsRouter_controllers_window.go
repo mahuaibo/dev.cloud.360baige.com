@@ -42,7 +42,7 @@ func init() {
 	beego.GlobalControllerRouter["dev.cloud.360baige.com/controllers/window:UserController"] = append(beego.GlobalControllerRouter["dev.cloud.360baige.com/controllers/window:UserController"],
 		beego.ControllerComments{
 			Method: "Logout",
-			Router: `/login`,
+			Router: `/logout`,
 			AllowHTTPMethods: []string{"post"},
 			MethodParams: param.Make(),
 			Params: nil})
@@ -50,7 +50,7 @@ func init() {
 	beego.GlobalControllerRouter["dev.cloud.360baige.com/controllers/window:UserController"] = append(beego.GlobalControllerRouter["dev.cloud.360baige.com/controllers/window:UserController"],
 		beego.ControllerComments{
 			Method: "ModifyPassword",
-			Router: `/login`,
+			Router: `/modifypassword`,
 			AllowHTTPMethods: []string{"post"},
 			MethodParams: param.Make(),
 			Params: nil})
@@ -58,7 +58,7 @@ func init() {
 	beego.GlobalControllerRouter["dev.cloud.360baige.com/controllers/window:UserController"] = append(beego.GlobalControllerRouter["dev.cloud.360baige.com/controllers/window:UserController"],
 		beego.ControllerComments{
 			Method: "Modify",
-			Router: `/login`,
+			Router: `/modify`,
 			AllowHTTPMethods: []string{"post"},
 			MethodParams: param.Make(),
 			Params: nil})
