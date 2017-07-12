@@ -9,8 +9,6 @@ import (
 	//. "dev.model.360baige.com/http/company"
 	"time"
 	"fmt"
-	"github.com/astaxie/beego/orm"
-	//"strconv"
 )
 
 // USER API
@@ -25,7 +23,7 @@ type UserPositionController struct {
 // @Failure 400 {"code":400,"message":"获取用户身份失败"}
 // @router /positionlist [get]
 func (c *UserPositionController) PositionList() {
-	res  := UserPositionResponse{}
+	res := UserPositionResponse{}
 	access_ticket := c.GetString("access_ticket")
 
 	var replyUser User
@@ -52,11 +50,24 @@ func (c *UserPositionController) PositionList() {
 	}
 
 	var replyUserPosition *UserPositionPaginator
-	cond := orm.NewCondition()
-	cond1 := cond.And("user_id__exact", replyUser.Id).And("status__gt", -1)
+	var cond1 []CondValue
+	cond1 = append(cond1, CondValue{
+		Type:  "And",
+		Exprs: "user_id",
+		Args:  replyUser.Id,
+	})
+	cond1 = append(cond1, CondValue{
+		Type:  "And",
+		Exprs: "status__gt",
+		Args:  -1,
+	})
+	fmt.Println(cond1)
+	//cond := orm.NewCondition()
+	//cond1 := cond.And("user_id__exact", replyUser.Id).And("status__gt", -1)
+
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "ListAll", &UserPositionPaginator{
-		Cond: cond1,
-		Cols: []string{"id", "user_id", "company_id", "type", "person_id"},
+		Cond:     cond1,
+		Cols:     []string{"id", "user_id", "company_id", "type", "person_id"},
 		OrderBy:  []string{"id"},
 		PageSize: 0,
 	}, &replyUserPosition)
@@ -66,32 +77,32 @@ func (c *UserPositionController) PositionList() {
 		c.Data["json"] = res
 		c.ServeJSON()
 	} else {
-		var idarg []int64
-		for _, value := range replyUserPosition.List {
-			idarg = append(idarg, value.CompanyId)
-		}
-		fmt.Println(idarg)
-		var replyUserCompany *CompanyPaginator
-		cond2 := orm.NewCondition()
-		cond3 := cond2.And("id__in",idarg)
-		err = client.Call(beego.AppConfig.String("EtcdURL"), "Company", "ListAll", &CompanyPaginator{
-			Cond: cond3,
-			Cols: []string{"id", "name", "short_name"},
-			OrderBy:  []string{"id"},
-			PageSize: 0,
-		}, &replyUserCompany)
-		fmt.Println("dfddfsc-------------")
-		fmt.Println(replyUserCompany)
-		if err != nil {
-			res.Code = ResponseNormal
-			res.Messgae = "获取用户身份成功"
-			//循环赋值
-
-		}else{
-
-		}
-
-		fmt.Println(replyUserPosition)
+		//var idarg []int64
+		//for _, value := range replyUserPosition.List {
+		//	idarg = append(idarg, value.CompanyId)
+		//}
+		//fmt.Println(idarg)
+		//var replyUserCompany *CompanyPaginator
+		//cond2 := orm.NewCondition()
+		//cond3 := cond2.And("id__in",idarg)
+		//err = client.Call(beego.AppConfig.String("EtcdURL"), "Company", "ListAll", &CompanyPaginator{
+		//	Cond: cond3,
+		//	Cols: []string{"id", "name", "short_name"},
+		//	OrderBy:  []string{"id"},
+		//	PageSize: 0,
+		//}, &replyUserCompany)
+		//fmt.Println("dfddfsc-------------")
+		//fmt.Println(replyUserCompany)
+		//if err != nil {
+		res.Code = ResponseNormal
+		res.Messgae = "获取用户身份成功"
+		//	//循环赋值
+		//
+		//}else{
+		//
+		//}
+		//
+		//fmt.Println(replyUserPosition)
 		//res.Data = &replyUserPosition.List
 		c.Data["json"] = res
 		c.ServeJSON()
