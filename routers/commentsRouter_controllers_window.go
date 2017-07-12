@@ -65,8 +65,8 @@ func init() {
 
 	beego.GlobalControllerRouter["dev.cloud.360baige.com/controllers/window:UserPositionController"] = append(beego.GlobalControllerRouter["dev.cloud.360baige.com/controllers/window:UserPositionController"],
 		beego.ControllerComments{
-			Method: "List",
-			Router: `/list`,
+			Method: "PositionList",
+			Router: `/positionlist`,
 			AllowHTTPMethods: []string{"get"},
 			MethodParams: param.Make(),
 			Params: nil})

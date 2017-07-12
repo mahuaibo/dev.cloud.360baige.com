@@ -6,6 +6,7 @@ import (
 	"dev.cloud.360baige.com/utils"
 	. "dev.model.360baige.com/models/user"
 	. "dev.model.360baige.com/models/response"
+	. "dev.model.360baige.com/http/window"
 	"fmt"
 	"time"
 	"strconv"
@@ -24,7 +25,8 @@ type UserController struct {
 // @Failure 400 {"code":400,"message":"登录失败"}
 // @router /login [post]
 func (c *UserController) Login() {
-	res := Response{}
+	res := UserLoginResponse{}
+	//res := Response{}
 	username := c.GetString("username")
 	password := c.GetString("password")
 
@@ -76,12 +78,9 @@ func (c *UserController) Login() {
 			c.Data["json"] = res
 			c.ServeJSON()
 		} else {
-			replyData := User{
-				Username:     reply.Username,
-				AccessTicket: reply.AccessTicket,
-				ExpireIn:     reply.ExpireIn,
-			}
-			res.Data = replyData
+			res.Data.Username = reply.Username
+			res.Data.AccessTicket = reply.AccessTicket
+			res.Data.ExpireIn = reply.ExpireIn
 			c.Data["json"] = res
 			c.ServeJSON()
 		}
