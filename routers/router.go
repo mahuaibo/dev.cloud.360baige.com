@@ -29,6 +29,21 @@ func init() {
 						&window.UserPositionController{},
 					),
 				),
+				beego.NSNamespace("/company",
+					beego.NSInclude(
+						&window.CompanyController{},
+					),
+				),
+				beego.NSNamespace("/account",
+					beego.NSInclude(
+						&window.AccountController{},
+					),
+				),
+				beego.NSNamespace("/account_item",
+					beego.NSInclude(
+						&window.AccountItemController{},
+					),
+				),
 			),
 		))
 	beego.AddNamespace(windowApi)

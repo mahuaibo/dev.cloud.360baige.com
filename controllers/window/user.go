@@ -70,7 +70,7 @@ func (c *UserController) Login() {
 		timestamp := time.Now().UnixNano() / 1e6
 		newAccessTicket := reply.Username + strconv.FormatInt(timestamp, 10)
 		reply.UpdateTime = timestamp
-		reply.AccessTicket = newAccessTicket//更新船票 应该判断时效，再做更新
+		reply.AccessTicket = newAccessTicket //更新船票 应该判断时效，再做更新
 		err2 := client.Call(beego.AppConfig.String("EtcdURL"), "User", "UpdateById", reply, nil)
 		if err2 != nil {
 			res.Code = ResponseSystemErr
@@ -91,47 +91,60 @@ func (c *UserController) Login() {
 
 // @Title 用户信息接口
 // @Description 用户信息接口
-// @Success 200 {"code":200,"messgae":"获取用户信息成功","data":{"access_ticket":"xxxx","expire_in":0}}
-// @Param   user_id     query   string true       "用户ID"
+// @Success 200 {"code":200,"messgae":"获取用户信息成功","data":{"id":"xxxx","username":0}}
+// @Param   access_token     query   string true       "访问令牌"
 // @Failure 400 {"code":400,"message":"获取用户信息失败"}
 // @router /detail [get]
 func (c *UserController) Detail() {
-	res := Response{}
-	user_id, _ := c.GetInt64("user_id", 0)
-	if user_id == 0 {
+	res := UserDetailResponse{}
+	access_token := c.GetString("access_token")
+	if access_token == "" {
 		res.Code = ResponseSystemErr
-		res.Messgae = "获取用户信息失败"
+		res.Messgae = "访问令牌无效"
 		c.Data["json"] = res
 		c.ServeJSON()
 	}
-	var reply User
+	//检测 accessToken
+	var replyAccessToken UserPosition
 	var err error
-
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "User", "FindById", &User{
-		Id: user_id,
-	}, &reply)
-
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByAccessToken", &UserPosition{
+		AccessToken: access_token,
+	}, &replyAccessToken)
 	if err != nil {
-		res.Code = ResponseSystemErr
-		res.Messgae = "获取用户信息失败"
+		res.Code = ResponseLogicErr
+		res.Messgae = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
 	} else {
-		res.Code = ResponseNormal
-		res.Messgae = "获取用户信息成功"
-		replyData := User{
-			Id:         reply.Id,
-			CreateTime: reply.CreateTime,
-			UpdateTime: reply.UpdateTime,
-			Username:   reply.Username,
-			Email:      reply.Email,
-			Phone:      reply.Phone,
-			Status:     reply.Status,
+		user_id := replyAccessToken.UserId
+		if user_id == 0 {
+			res.Code = ResponseSystemErr
+			res.Messgae = "获取用户信息失败"
+			c.Data["json"] = res
+			c.ServeJSON()
+		} else {
+			var reply User
+			err = client.Call(beego.AppConfig.String("EtcdURL"), "User", "FindById", &User{
+				Id: user_id,
+			}, &reply)
+
+			if err != nil {
+				res.Code = ResponseSystemErr
+				res.Messgae = "获取用户信息失败"
+				c.Data["json"] = res
+				c.ServeJSON()
+			}
+			res.Code = ResponseNormal
+			res.Messgae = "获取用户信息成功"
+			res.Data.Username = reply.Username
+			res.Data.Email = reply.Email
+			res.Data.Phone = reply.Phone
+			c.Data["json"] = res
+			c.ServeJSON()
 		}
-		res.Data = replyData
-		c.Data["json"] = res
-		c.ServeJSON()
+
 	}
+
 }
 
 // @Title 用户退出接口
@@ -151,7 +164,65 @@ func (c *UserController) Logout() {
 // @Failure 400 {"code":400,"message":"用户修改密码失败"}
 // @router /modifypassword [post]
 func (c *UserController) ModifyPassword() {
+	res := ModifyPasswordResponse{}
+	access_token := c.GetString("access_token")
+	if access_token == "" {
+		res.Code = ResponseSystemErr
+		res.Messgae = "访问令牌无效"
+		c.Data["json"] = res
+		c.ServeJSON()
+	} else {
+		//检测 accessToken
+		var replyAccessToken UserPosition
+		var err error
+		err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByAccessToken", &UserPosition{
+			AccessToken: access_token,
+		}, &replyAccessToken)
+		fmt.Println(err)
+		fmt.Println(replyAccessToken)
+		if err != nil {
+			res.Code = ResponseLogicErr
+			res.Messgae = "访问令牌失效"
+			c.Data["json"] = res
+			c.ServeJSON()
+		} else {
+			u_id := replyAccessToken.UserId
+			if u_id == 0 {
+				res.Code = ResponseSystemErr
+				res.Messgae = "获取用户信息失败"
+				c.Data["json"] = res
+				c.ServeJSON()
+			} else {
+				var reply User
+				err = client.Call(beego.AppConfig.String("EtcdURL"), "User", "FindById", &User{
+					Id: u_id,
+				}, &reply)
 
+				if err != nil {
+					res.Code = ResponseSystemErr
+					res.Messgae = "获取用户信息失败"
+					c.Data["json"] = res
+					c.ServeJSON()
+				} else {
+					password := c.GetString("password")
+					timestamp := time.Now().UnixNano() / 1e6
+					reply.UpdateTime = timestamp
+					reply.Password = password
+					err = client.Call(beego.AppConfig.String("EtcdURL"), "User", "UpdateById", reply, nil)
+					if err != nil {
+						res.Code = ResponseSystemErr
+						res.Messgae = "用户信息修改失败！"
+						c.Data["json"] = res
+						c.ServeJSON()
+					}
+					res.Code = ResponseNormal
+					res.Messgae = "用户信息修改成功！"
+					c.Data["json"] = res
+					c.ServeJSON()
+				}
+			}
+		}
+	}
 }
 
 // @Title 用户信息修改接口

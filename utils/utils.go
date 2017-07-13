@@ -3,7 +3,9 @@ package utils
 import (
 	"strings"
 	"regexp"
+	"time"
 )
+
 func DetermineStringType(str string) (int, bool) {
 	var strType int
 	var b bool
@@ -20,7 +22,7 @@ func DetermineStringType(str string) (int, bool) {
 		} else {
 			strType = 1
 			//账号组合
-			b=true
+			b = true
 		}
 
 	}
@@ -50,6 +52,7 @@ func IsInteger(str ...string) bool {
 	}
 	return b
 }
+
 //手机号码
 func IsMobile(str ...string) bool {
 	var b bool
@@ -60,4 +63,19 @@ func IsMobile(str ...string) bool {
 		}
 	}
 	return b
+}
+
+func GetMonthStartUnix(current string) int64 {
+	tm2, _ := time.ParseInLocation("2006-01-02", current, time.Local)
+	stime := tm2.UnixNano() / 1e6
+	return stime
+}
+func GetNextMonthStartUnix(current string) int64 {
+	tm2, _ := time.ParseInLocation("2006-01-02", current, time.Local)
+	t := time.Unix(tm2.UnixNano()/1e9, 0)
+	s := time.Date(t.Year(), t.Month()+1, t.Day(), 0, 0, 0, 0, t.Location())
+	es := s.Format("2006-01-02")
+	estm2, _ := time.ParseInLocation("2006-01-02", es, time.Local)
+	etime := estm2.UnixNano() / 1e6
+	return etime
 }

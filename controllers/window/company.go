@@ -5,7 +5,10 @@ import (
 	"dev.cloud.360baige.com/rpc/client"
 	. "dev.model.360baige.com/models/company"
 	. "dev.model.360baige.com/models/response"
+	. "dev.model.360baige.com/http/window"
+	. "dev.model.360baige.com/models/user"
 	"time"
+	"fmt"
 )
 
 // COMPANY API
@@ -16,115 +19,178 @@ type CompanyController struct {
 // @Title 企业信息接口
 // @Description 企业信息接口
 // @Success 200 {"code":200,"messgae":"获取企业信息成功","data":{"access_ticket":"xxxx","expire_in":0}}
-// @Param   company_id     query   string true       "企业ID"
+// @Param   access_token     query   string true       "访问令牌"
 // @Failure 400 {"code":400,"message":"获取企业信息失败"}
 // @router /detail [get]
 func (c *CompanyController) Detail() {
-	res := Response{}
-	company_id, _ := c.GetInt64("company_id", 0)
-	if company_id == 0 {
+	res := CompanyDetailResponse{}
+	access_token := c.GetString("access_token")
+	if access_token == "" {
 		res.Code = ResponseSystemErr
-		res.Messgae = "获取企业信息失败"
+		res.Messgae = "访问令牌无效"
+		c.Data["json"] = res
+		c.ServeJSON()
+	}
+	//检测 accessToken
+	var replyAccessToken UserPosition
+	var err error
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByAccessToken", &UserPosition{
+		AccessToken: access_token,
+	}, &replyAccessToken)
+	if err != nil {
+		res.Code = ResponseLogicErr
+		res.Messgae = "访问令牌失效"
+		c.Data["json"] = res
+		c.ServeJSON()
+	}
+	com_id := replyAccessToken.CompanyId
+	if com_id == 0 {
+		res.Code = ResponseSystemErr
+		res.Messgae = "获取公司信息失败"
 		c.Data["json"] = res
 		c.ServeJSON()
 	}
 	var reply Company
-	var err error
-
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Company", "FindById", &Company{
-		Id: company_id,
+		Id: com_id,
 	}, &reply)
 
 	if err != nil {
 		res.Code = ResponseSystemErr
-		res.Messgae = "获取企业信息失败"
-		c.Data["json"] = res
-		c.ServeJSON()
-	} else {
-		res.Code = ResponseNormal
-		res.Messgae = "获取企业信息成功"
-		replyData := Company{
-			Id:         reply.Id,
-			CreateTime: reply.CreateTime,
-			UpdateTime: reply.UpdateTime,
-			Type:       reply.Type,
-			Level:      reply.Level,
-			Logo:       reply.Logo,
-			Name:       reply.Name,
-			ShortName:  reply.ShortName,
-			SubDomain:  reply.SubDomain,
-			CityId:     reply.CityId,
-			Address:    reply.Address,
-			PositionX:  reply.PositionX,
-			PositionY:  reply.PositionY,
-			Remark:     reply.Remark,
-			Brief:      reply.Brief,
-			Status:     reply.Status,
-		}
-		res.Data = replyData
+		res.Messgae = "获取公司信息失败"
 		c.Data["json"] = res
 		c.ServeJSON()
 	}
+	res.Code = ResponseNormal
+	res.Messgae = "获取公司信息成功"
+	res.Data.Logo = reply.Logo
+	res.Data.Name = reply.Name
+	res.Data.ShortName = reply.ShortName
+	res.Data.ProvinceId = reply.ProvinceId
+	res.Data.CityId = reply.CityId
+	res.Data.DistrictId = reply.DistrictId
+	res.Data.Address = reply.Address
+	res.Data.PositionX = reply.PositionX
+	res.Data.PositionY = reply.PositionY
+	res.Data.Remark = reply.Remark
+	res.Data.Brief = reply.Brief
+	res.Data.Status = reply.Status
+	c.Data["json"] = res
+	c.ServeJSON()
+
 }
 
 // @Title 企业信息修改接口
 // @Description 企业信息修改接口
-// @Success 200 {"code":200,"messgae":"获取企业信息修改成功","data":{"access_ticket":"xxxx","expire_in":0}}
-// @Param   company_id     query   string true       "企业ID"
-// @Failure 400 {"code":400,"message":"获取企业信息修改失败"}
-// @router /modify [get]
+// @Success 200 {"code":200,"messgae":"企业信息修改成功","data":{"access_ticket":"xxxx","expire_in":0}}
+// @Param   access_token     query   string true       "访问令牌"
+// @Failure 400 {"code":400,"message":"企业信息修改失败"}
+// @router /modify [post]
 func (c *CompanyController) Modify() {
-	res := Response{}
-	company_id, _ := c.GetInt64("company_id", 0)
-	name := c.GetString("name")
-	short_name := c.GetString("short_name")
-	logo := c.GetString("logo")
-	if company_id == 0 {
+	res := CompanyModifyResponse{}
+	access_token := c.GetString("access_token")
+	if access_token == "" {
 		res.Code = ResponseSystemErr
-		res.Messgae = "获取企业信息失败"
-		c.Data["json"] = res
-		c.ServeJSON()
-	}
-	var reply Company
-	var err error
-	timestamp := time.Now().UnixNano()/10e6
-
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "Company", "UpdateById", &Company{
-		Id: company_id,
-		UpdateTime:timestamp,
-		Name:name,
-		ShortName:short_name,
-		Logo:logo,
-	}, &reply)
-
-	if err != nil {
-		res.Code = ResponseSystemErr
-		res.Messgae = "获取企业信息失败"
+		res.Messgae = "访问令牌无效"
 		c.Data["json"] = res
 		c.ServeJSON()
 	} else {
-		res.Code = ResponseNormal
-		res.Messgae = "获取企业信息成功"
-		replyData := Company{
-			Id:         reply.Id,
-			CreateTime: reply.CreateTime,
-			UpdateTime: reply.UpdateTime,
-			Type:       reply.Type,
-			Level:      reply.Level,
-			Logo:       reply.Logo,
-			Name:       reply.Name,
-			ShortName:  reply.ShortName,
-			SubDomain:  reply.SubDomain,
-			CityId:     reply.CityId,
-			Address:    reply.Address,
-			PositionX:  reply.PositionX,
-			PositionY:  reply.PositionY,
-			Remark:     reply.Remark,
-			Brief:      reply.Brief,
-			Status:     reply.Status,
+		//检测 accessToken
+		var replyAccessToken UserPosition
+		var err error
+		err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByAccessToken", &UserPosition{
+			AccessToken: access_token,
+		}, &replyAccessToken)
+		fmt.Println(err)
+		fmt.Println(replyAccessToken)
+		if err != nil {
+			res.Code = ResponseLogicErr
+			res.Messgae = "访问令牌失效"
+			c.Data["json"] = res
+			c.ServeJSON()
+		} else {
+			com_id := replyAccessToken.CompanyId
+			if com_id == 0 {
+				res.Code = ResponseSystemErr
+				res.Messgae = "获取公司信息失败"
+				c.Data["json"] = res
+				c.ServeJSON()
+			} else {
+				var reply Company
+				err = client.Call(beego.AppConfig.String("EtcdURL"), "Company", "FindById", &Company{
+					Id: com_id,
+				}, &reply)
+
+				if err != nil {
+					res.Code = ResponseSystemErr
+					res.Messgae = "获取公司信息失败"
+					c.Data["json"] = res
+					c.ServeJSON()
+				}
+
+				if (reply.Status != 1) {
+					res.Code = ResponseSystemErr
+					res.Messgae = "公司状态不可修改"
+					c.Data["json"] = res
+					c.ServeJSON()
+				} else {
+					logo := c.GetString("logo")
+					name := c.GetString("name")
+					shortName := c.GetString("short_name")
+					provinceId, _ := c.GetInt64("province_id")
+					cityId, _ := c.GetInt64("city_id")
+					districtId, _ := c.GetInt64("district_id")
+					address := c.GetString("address")
+					positionX, _ := c.GetFloat("position_x", 64)
+					positionY, _ := c.GetFloat("position_y", 64)
+					remark := c.GetString("remark")
+					brief := c.GetString("brief")
+
+					timestamp := time.Now().UnixNano() / 1e6
+					reply.UpdateTime = timestamp
+					reply.Logo = logo
+					reply.Name = name
+					reply.ShortName = shortName
+					reply.ProvinceId = provinceId
+					reply.CityId = cityId
+					reply.DistrictId = districtId
+					reply.Address = address
+					reply.PositionX = positionX
+					reply.PositionY = positionY
+					reply.Remark = remark
+					reply.Brief = brief
+
+					err = client.Call(beego.AppConfig.String("EtcdURL"), "Company", "UpdateById", reply, nil)
+
+					if err != nil {
+						res.Code = ResponseSystemErr
+						res.Messgae = "企业信息修改失败！"
+						c.Data["json"] = res
+						c.ServeJSON()
+					}
+
+					res.Code = ResponseNormal
+					res.Messgae = "企业信息修改成功！"
+					res.Data.Logo = reply.Logo
+					res.Data.Name = reply.Name
+					res.Data.ShortName = reply.ShortName
+					res.Data.ProvinceId = reply.ProvinceId
+					res.Data.CityId = reply.CityId
+					res.Data.DistrictId = reply.DistrictId
+					res.Data.Address = reply.Address
+					res.Data.PositionX = reply.PositionX
+					res.Data.PositionY = reply.PositionY
+					res.Data.Remark = reply.Remark
+					res.Data.Brief = reply.Brief
+					res.Data.Status = reply.Status
+					c.Data["json"] = res
+					c.ServeJSON()
+				}
+
+			}
+
 		}
-		res.Data = replyData
-		c.Data["json"] = res
-		c.ServeJSON()
+
 	}
+
 }

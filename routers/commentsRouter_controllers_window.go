@@ -7,6 +7,22 @@ import (
 
 func init() {
 
+	beego.GlobalControllerRouter["dev.cloud.360baige.com/controllers/window:AccountController"] = append(beego.GlobalControllerRouter["dev.cloud.360baige.com/controllers/window:AccountController"],
+		beego.ControllerComments{
+			Method: "AccountStatistics",
+			Router: `/accountstatistics`,
+			AllowHTTPMethods: []string{"get"},
+			MethodParams: param.Make(),
+			Params: nil})
+
+	beego.GlobalControllerRouter["dev.cloud.360baige.com/controllers/window:AccountItemController"] = append(beego.GlobalControllerRouter["dev.cloud.360baige.com/controllers/window:AccountItemController"],
+		beego.ControllerComments{
+			Method: "List",
+			Router: `/list`,
+			AllowHTTPMethods: []string{"get"},
+			MethodParams: param.Make(),
+			Params: nil})
+
 	beego.GlobalControllerRouter["dev.cloud.360baige.com/controllers/window:CompanyController"] = append(beego.GlobalControllerRouter["dev.cloud.360baige.com/controllers/window:CompanyController"],
 		beego.ControllerComments{
 			Method: "Detail",
@@ -19,7 +35,7 @@ func init() {
 		beego.ControllerComments{
 			Method: "Modify",
 			Router: `/modify`,
-			AllowHTTPMethods: []string{"get"},
+			AllowHTTPMethods: []string{"post"},
 			MethodParams: param.Make(),
 			Params: nil})
 
@@ -73,8 +89,8 @@ func init() {
 
 	beego.GlobalControllerRouter["dev.cloud.360baige.com/controllers/window:UserPositionController"] = append(beego.GlobalControllerRouter["dev.cloud.360baige.com/controllers/window:UserPositionController"],
 		beego.ControllerComments{
-			Method: "Detail",
-			Router: `/detail`,
+			Method: "PositionToken",
+			Router: `/positiontoken`,
 			AllowHTTPMethods: []string{"get"},
 			MethodParams: param.Make(),
 			Params: nil})
