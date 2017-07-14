@@ -156,12 +156,12 @@ func GetStatus(status int8)string{
 	}
 	return rStatus
 }
-// @Title 账务详情接口
+// @Title 详情接口
 // @Description 账务详情接口
-// @Success 200 {"code":200,"messgae":"获取账务详情成功","data":{"access_ticket":"xxxx","expire_in":0}}
+// @Success 200 {"code":200,"messgae":"获取订单详情成功","data":{"access_ticket":"xxxx","expire_in":0}}
 // @Param   access_token     query   string true       "访问令牌"
 // @Param   id     query   string true       "id"
-// @Failure 400 {"code":400,"message":"获取账务统计信息失败"}
+// @Failure 400 {"code":400,"message":"获取取订单信息失败"}
 // @router /detail [get]
 func (c *OrderController) Detail() {
 	res := OrderDetailResponse{}
@@ -195,6 +195,74 @@ func (c *OrderController) Detail() {
 			var reply Order
 			err = client.Call(beego.AppConfig.String("EtcdURL"), "Order", "FindById", &Order{
 				Id: ai_id,
+			}, &reply)
+			if err != nil {
+				res.Code = ResponseSystemErr
+				res.Messgae = "获取信息失败"
+				c.Data["json"] = res
+				c.ServeJSON()
+			} else {
+				re := time.Unix(reply.CreateTime/1000, 0).Format("2006-01-02")
+				var rPayType, rStatus string
+				rStatus=GetStatus(reply.Status)
+				if reply.PayType == 1 {
+					rPayType = "在线支付"
+				} else {
+					rPayType = "线下支付"
+				}
+				res.Code = ResponseSystemErr
+				res.Messgae = "获取账户信息成功"
+				res.Data.CreateTime = re
+				res.Data.Code = reply.Code
+				res.Data.Price = reply.Price
+				res.Data.Type = reply.Type
+				res.Data.PayType = rPayType
+				res.Data.Brief = reply.Brief
+				res.Data.Status = rStatus
+				c.Data["json"] = res
+				c.ServeJSON()
+			}
+		}
+	}
+}
+// @Title 账务详情接口
+// @Description 账务详情接口
+// @Success 200 {"code":200,"messgae":"获取账务详情成功","data":{"access_ticket":"xxxx","expire_in":0}}
+// @Param   access_token     query   string true       "访问令牌"
+// @Param   code     query   string true       "code"
+// @Failure 400 {"code":400,"message":"获取账务统计信息失败"}
+// @router /detailbycode [get]
+func (c *OrderController) DetailByCode() {
+	res := OrderDetailResponse{}
+	access_token := c.GetString("access_token")
+	if access_token == "" {
+		res.Code = ResponseSystemErr
+		res.Messgae = "访问令牌无效"
+		c.Data["json"] = res
+		c.ServeJSON()
+	}
+	//检测 accessToken
+	var replyAccessToken UserPosition
+	var err error
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByAccessToken", &UserPosition{
+		AccessToken: access_token,
+	}, &replyAccessToken)
+	if err != nil {
+		res.Code = ResponseLogicErr
+		res.Messgae = "访问令牌失效"
+		c.Data["json"] = res
+		c.ServeJSON()
+	} else {
+		code:= c.GetString("code")
+		if code == "" {
+			res.Code = ResponseSystemErr
+			res.Messgae = "获取信息失败"
+			c.Data["json"] = res
+			c.ServeJSON()
+		} else {
+			var reply Order
+			err = client.Call(beego.AppConfig.String("EtcdURL"), "Order", "FindByCode", &Order{
+				Code: code,
 			}, &reply)
 			if err != nil {
 				res.Code = ResponseSystemErr

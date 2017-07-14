@@ -87,6 +87,14 @@ func init() {
 			MethodParams: param.Make(),
 			Params: nil})
 
+	beego.GlobalControllerRouter["dev.cloud.360baige.com/controllers/window:OrderController"] = append(beego.GlobalControllerRouter["dev.cloud.360baige.com/controllers/window:OrderController"],
+		beego.ControllerComments{
+			Method: "DetailByCode",
+			Router: `/detailbycode`,
+			AllowHTTPMethods: []string{"get"},
+			MethodParams: param.Make(),
+			Params: nil})
+
 	beego.GlobalControllerRouter["dev.cloud.360baige.com/controllers/window:UserController"] = append(beego.GlobalControllerRouter["dev.cloud.360baige.com/controllers/window:UserController"],
 		beego.ControllerComments{
 			Method: "Login",

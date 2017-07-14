@@ -282,7 +282,7 @@ func (c *AccountItemController) TradingList() {
 // @Success 200 {"code":200,"messgae":"获取账务详情成功","data":{"access_ticket":"xxxx","expire_in":0}}
 // @Param   access_token     query   string true       "访问令牌"
 // @Param   id     query   string true       "id"
-// @Failure 400 {"code":400,"message":"获取账务统计信息失败"}
+// @Failure 400 {"code":400,"message":"获取账务详情失败"}
 // @router /detail [get]
 func (c *AccountItemController) Detail() {
 	res := AccountItemDetailResponse{}
