@@ -79,3 +79,13 @@ func GetNextMonthStartUnix(current string) int64 {
 	etime := estm2.UnixNano() / 1e6
 	return etime
 }
+//第二天
+func GetNextDayUnix(current string) int64 {
+	tm2, _ := time.ParseInLocation("2006-01-02", current, time.Local)
+	t := time.Unix(tm2.UnixNano()/1e9, 0)
+	s := time.Date(t.Year(), t.Month(), t.Day()+1, 0, 0, 0, 0, t.Location())
+	es := s.Format("2006-01-02")
+	estm2, _ := time.ParseInLocation("2006-01-02", es, time.Local)
+	etime := estm2.UnixNano() / 1e6
+	return etime
+}

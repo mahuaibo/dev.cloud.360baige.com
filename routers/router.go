@@ -44,6 +44,11 @@ func init() {
 						&window.AccountItemController{},
 					),
 				),
+				beego.NSNamespace("/order",
+					beego.NSInclude(
+						&window.OrderController{},
+					),
+				),
 			),
 		))
 	beego.AddNamespace(windowApi)
