@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"time"
 	"strconv"
+	"dev.model.360baige.com/models/batch"
+	"dev.action.360baige.com/actions/user"
 )
 
 // USER API
@@ -230,7 +232,27 @@ func (c *UserController) ModifyPassword() {
 // @Success 200 {"code":200,"messgae":"用户修改密码成功","data":{"access_ticket":"xxxx","expire_in":0}}
 // @Param   access_token query   string true       "访问令牌"
 // @Failure 400 {"code":400,"message":"用户修改密码失败"}
-// @router /modify [post]
+// @router /modify [get]
 func (c *UserController) Modify() {
-
+	res := ModifyPasswordResponse{}
+	var args user.UpdateByCond
+	//args.Id = 1
+	//user := User{
+	//	CreateTime: 1499760680777,
+	//	UpdateTime: 1499760680777,
+	//	Username: "bbbbbbbbbbb",
+	//	Password: "18910110013",
+	//	Email: "ashdiasjf@aseq.com",
+	//	Phone: "18919000919",
+	//}
+	//args = append(args, user)
+	//var reply User
+	var reply batch.BackNumm
+	err := client.Call(beego.AppConfig.String("EtcdURL"), "User", "UpdateByCond", args, &reply)
+	fmt.Println("err>>>>>", err)
+	fmt.Println("reply>>>>>", reply)
+	res.Code = ResponseNormal
+	res.Messgae = ""
+	c.Data["json"] = res
+	c.ServeJSON()
 }
