@@ -39,6 +39,62 @@ func init() {
 			MethodParams: param.Make(),
 			Params: nil})
 
+	beego.GlobalControllerRouter["dev.cloud.360baige.com/controllers/window:ApplicationController"] = append(beego.GlobalControllerRouter["dev.cloud.360baige.com/controllers/window:ApplicationController"],
+		beego.ControllerComments{
+			Method: "List",
+			Router: `/list`,
+			AllowHTTPMethods: []string{"get"},
+			MethodParams: param.Make(),
+			Params: nil})
+
+	beego.GlobalControllerRouter["dev.cloud.360baige.com/controllers/window:ApplicationController"] = append(beego.GlobalControllerRouter["dev.cloud.360baige.com/controllers/window:ApplicationController"],
+		beego.ControllerComments{
+			Method: "Detail",
+			Router: `/detail`,
+			AllowHTTPMethods: []string{"get"},
+			MethodParams: param.Make(),
+			Params: nil})
+
+	beego.GlobalControllerRouter["dev.cloud.360baige.com/controllers/window:ApplicationController"] = append(beego.GlobalControllerRouter["dev.cloud.360baige.com/controllers/window:ApplicationController"],
+		beego.ControllerComments{
+			Method: "ModifyStatus",
+			Router: `/modifystatus`,
+			AllowHTTPMethods: []string{"get"},
+			MethodParams: param.Make(),
+			Params: nil})
+
+	beego.GlobalControllerRouter["dev.cloud.360baige.com/controllers/window:ApplicationTplController"] = append(beego.GlobalControllerRouter["dev.cloud.360baige.com/controllers/window:ApplicationTplController"],
+		beego.ControllerComments{
+			Method: "List",
+			Router: `/list`,
+			AllowHTTPMethods: []string{"get"},
+			MethodParams: param.Make(),
+			Params: nil})
+
+	beego.GlobalControllerRouter["dev.cloud.360baige.com/controllers/window:ApplicationTplController"] = append(beego.GlobalControllerRouter["dev.cloud.360baige.com/controllers/window:ApplicationTplController"],
+		beego.ControllerComments{
+			Method: "Detail",
+			Router: `/detail`,
+			AllowHTTPMethods: []string{"get"},
+			MethodParams: param.Make(),
+			Params: nil})
+
+	beego.GlobalControllerRouter["dev.cloud.360baige.com/controllers/window:ApplicationTplController"] = append(beego.GlobalControllerRouter["dev.cloud.360baige.com/controllers/window:ApplicationTplController"],
+		beego.ControllerComments{
+			Method: "Subscription",
+			Router: `/subscription`,
+			AllowHTTPMethods: []string{"get"},
+			MethodParams: param.Make(),
+			Params: nil})
+
+	beego.GlobalControllerRouter["dev.cloud.360baige.com/controllers/window:ApplicationTplController"] = append(beego.GlobalControllerRouter["dev.cloud.360baige.com/controllers/window:ApplicationTplController"],
+		beego.ControllerComments{
+			Method: "ModifyStatus",
+			Router: `/modifystatus`,
+			AllowHTTPMethods: []string{"get"},
+			MethodParams: param.Make(),
+			Params: nil})
+
 	beego.GlobalControllerRouter["dev.cloud.360baige.com/controllers/window:CompanyController"] = append(beego.GlobalControllerRouter["dev.cloud.360baige.com/controllers/window:CompanyController"],
 		beego.ControllerComments{
 			Method: "Detail",
@@ -65,9 +121,9 @@ func init() {
 
 	beego.GlobalControllerRouter["dev.cloud.360baige.com/controllers/window:LoggerController"] = append(beego.GlobalControllerRouter["dev.cloud.360baige.com/controllers/window:LoggerController"],
 		beego.ControllerComments{
-			Method: "GetList",
-			Router: `/getList`,
-			AllowHTTPMethods: []string{"post"},
+			Method: "List",
+			Router: `/list`,
+			AllowHTTPMethods: []string{"get"},
 			MethodParams: param.Make(),
 			Params: nil})
 

@@ -49,6 +49,21 @@ func init() {
 						&window.OrderController{},
 					),
 				),
+				beego.NSNamespace("/application",
+					beego.NSInclude(
+						&window.ApplicationController{},
+					),
+				),
+				beego.NSNamespace("/application_tpl",
+					beego.NSInclude(
+						&window.ApplicationTplController{},
+					),
+				),
+				beego.NSNamespace("/logger",
+					beego.NSInclude(
+						&window.LoggerController{},
+					),
+				),
 			),
 		))
 	beego.AddNamespace(windowApi)

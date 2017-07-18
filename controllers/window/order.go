@@ -22,7 +22,7 @@ type OrderController struct {
 // @Param   current     query   string true       "当前页"
 // @Param   page_size     query   string true       "每页数量"
 // @Param   status     query   string true       "订单状态：-2 全部 0:撤回 1：待审核 2：已通过 3：未通过 4：发货中 5：完成"
-// @Failure 400 {"code":400,"message":"获取账务统计信息失败"}
+// @Failure 400 {"code":400,"message":"获取订单列表信息失败"}
 // @router /list [get]
 func (c *OrderController) List() {
 	res := OrderListResponse{}
@@ -85,6 +85,12 @@ func (c *OrderController) List() {
 					Exprs: "status",
 					Args:  status,
 				})
+			} else {
+				cond1 = append(cond1, CondValue{
+					Type:  "And",
+					Exprs: "status__gt",
+					Args:  -1,
+				})
 			}
 			currentPage, _ := c.GetInt64("current")
 			pageSize, _ := c.GetInt64("page_size")
@@ -111,7 +117,7 @@ func (c *OrderController) List() {
 					} else {
 						rPayType = "线下支付"
 					}
-					rStatus=GetStatus(value.Status)
+					rStatus = GetStatus(value.Status)
 					res.Data.List = append(res.Data.List, OrderValue{
 						Id:         value.Id,
 						CreateTime: re,
@@ -138,9 +144,9 @@ func (c *OrderController) List() {
 		}
 	}
 }
-func GetStatus(status int8)string{
+func GetStatus(status int8) string {
 	var rStatus string
-	switch  status{
+	switch  status {
 	case 0:
 		rStatus = "撤回"
 	case 1:
@@ -156,6 +162,7 @@ func GetStatus(status int8)string{
 	}
 	return rStatus
 }
+
 // @Title 详情接口
 // @Description 账务详情接口
 // @Success 200 {"code":200,"messgae":"获取订单详情成功","data":{"access_ticket":"xxxx","expire_in":0}}
@@ -204,7 +211,7 @@ func (c *OrderController) Detail() {
 			} else {
 				re := time.Unix(reply.CreateTime/1000, 0).Format("2006-01-02")
 				var rPayType, rStatus string
-				rStatus=GetStatus(reply.Status)
+				rStatus = GetStatus(reply.Status)
 				if reply.PayType == 1 {
 					rPayType = "在线支付"
 				} else {
@@ -225,6 +232,7 @@ func (c *OrderController) Detail() {
 		}
 	}
 }
+
 // @Title 账务详情接口
 // @Description 账务详情接口
 // @Success 200 {"code":200,"messgae":"获取账务详情成功","data":{"access_ticket":"xxxx","expire_in":0}}
@@ -253,7 +261,7 @@ func (c *OrderController) DetailByCode() {
 		c.Data["json"] = res
 		c.ServeJSON()
 	} else {
-		code:= c.GetString("code")
+		code := c.GetString("code")
 		if code == "" {
 			res.Code = ResponseSystemErr
 			res.Messgae = "获取信息失败"
@@ -272,7 +280,7 @@ func (c *OrderController) DetailByCode() {
 			} else {
 				re := time.Unix(reply.CreateTime/1000, 0).Format("2006-01-02")
 				var rPayType, rStatus string
-				rStatus=GetStatus(reply.Status)
+				rStatus = GetStatus(reply.Status)
 				if reply.PayType == 1 {
 					rPayType = "在线支付"
 				} else {

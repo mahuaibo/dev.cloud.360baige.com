@@ -8,7 +8,7 @@ import (
 	. "dev.model.360baige.com/http/window"
 	"time"
 	"fmt"
-	"dev.model.360baige.com/models/company"
+	. "dev.model.360baige.com/models/company"
 	"strconv"
 )
 
@@ -104,7 +104,7 @@ func (c *UserPositionController) PositionList() {
 				c.Data["json"] = res
 				c.ServeJSON()
 			}
-			companyByIds := make(map[int64]company.Company)
+			companyByIds := make(map[int64]Company)
 			for _, value := range replyUserCompany.List {
 				companyByIds[value.Id] = value
 			}
