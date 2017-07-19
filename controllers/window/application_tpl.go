@@ -5,7 +5,7 @@ import (
 	"dev.cloud.360baige.com/rpc/client"
 	. "dev.model.360baige.com/http/window"
 	. "dev.model.360baige.com/models/user"
-	. "dev.model.360baige.com/models/response"
+	//. "dev.model.360baige.com/models/response"
 	. "dev.model.360baige.com/models/application"
 	. "dev.model.360baige.com/models/company"
 	"time"
@@ -210,7 +210,7 @@ func (c *ApplicationTplController) Detail() {
 				c.Data["json"] = res
 				c.ServeJSON()
 			}
-			re := time.Unix(replyApplicationTpl.CreateTime/1000, 0).Format("2006-01-02")
+			re := time.Unix(replyApplicationTpl.CreateTime / 1000, 0).Format("2006-01-02")
 			//开发者
 			var replyUser User
 			err = client.Call(beego.AppConfig.String("EtcdURL"), "User", "FindByIdNoStatus", &User{
@@ -338,7 +338,7 @@ func (c *ApplicationTplController) Subscription() {
 					c.Data["json"] = res
 					c.ServeJSON()
 				} else {
-					if reply.Status >0 {
+					if reply.Status > 0 {
 						res.Code = ResponseSystemErr
 						res.Messgae = "此应用已经下架"
 						c.Data["json"] = res

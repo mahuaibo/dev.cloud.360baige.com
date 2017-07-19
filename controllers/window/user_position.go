@@ -4,7 +4,7 @@ import (
 	"github.com/astaxie/beego"
 	"dev.cloud.360baige.com/rpc/client"
 	. "dev.model.360baige.com/models/user"
-	. "dev.model.360baige.com/models/response"
+	//. "dev.model.360baige.com/models/response"
 	. "dev.model.360baige.com/http/window"
 	"time"
 	"fmt"

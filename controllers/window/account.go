@@ -5,8 +5,8 @@ import (
 	"dev.cloud.360baige.com/rpc/client"
 	. "dev.model.360baige.com/http/window"
 	. "dev.model.360baige.com/models/user"
-	. "dev.model.360baige.com/models/response"
 	. "dev.model.360baige.com/models/account"
+	"dev.model.360baige.com/action"
 	"dev.cloud.360baige.com/utils"
 	"time"
 )
@@ -33,11 +33,15 @@ func (c *AccountController) AccountStatistics() {
 		c.ServeJSON()
 	}
 	//检测 accessToken
+	var args action.FindByCond
+	args.CondList = append(args.CondList, action.CondValue{
+		Type:  "And",
+		Key: "accessToken",
+		Val:  access_token,
+	})
+	args.Fileds = []string{"id", "user_id", "company_id", "type"}
 	var replyAccessToken UserPosition
-	var err error
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByAccessToken", &UserPosition{
-		AccessToken: access_token,
-	}, &replyAccessToken)
+	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
 	if err != nil {
 		res.Code = ResponseLogicErr
 		res.Messgae = "访问令牌失效"
