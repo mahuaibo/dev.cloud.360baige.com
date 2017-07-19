@@ -8,6 +8,8 @@ import (
 	//. "dev.model.360baige.com/models/response"
 	. "dev.model.360baige.com/models/order"
 	"time"
+	"dev.model.360baige.com/action"
+	"encoding/json"
 )
 
 type OrderController struct {
@@ -34,11 +36,15 @@ func (c *OrderController) List() {
 		c.ServeJSON()
 	}
 	//检测 accessToken
+	var args action.FindByCond
+	args.CondList = append(args.CondList, action.CondValue{
+		Type:  "And",
+		Key: "accessToken",
+		Val:  access_token,
+	})
+	args.Fileds = []string{"id", "user_id", "company_id", "type"}
 	var replyAccessToken UserPosition
-	var err error
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByAccessToken", &UserPosition{
-		AccessToken: access_token,
-	}, &replyAccessToken)
+	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
 	if err != nil {
 		res.Code = ResponseLogicErr
 		res.Messgae = "访问令牌失效"
@@ -56,46 +62,46 @@ func (c *OrderController) List() {
 			c.Data["json"] = res
 			c.ServeJSON()
 		} else {
-			var reply OrderListPaginator
-			var cond1 []CondValue
-			cond1 = append(cond1, CondValue{
-				Type:  "And",
-				Exprs: "company_id",
-				Args:  com_id,
+			var reply action.PageByCond
+			var cond1 []action.CondValue
+			cond1 = append(cond1, action.CondValue{
+				Type: "And",
+				Key:  "company_id",
+				Val:  com_id,
 			})
-			cond1 = append(cond1, CondValue{
-				Type:  "And",
-				Exprs: "user_id",
-				Args:  user_id,
+			cond1 = append(cond1, action.CondValue{
+				Type: "And",
+				Key:  "user_id",
+				Val:  user_id,
 			})
-			cond1 = append(cond1, CondValue{
-				Type:  "And",
-				Exprs: "user_position_id",
-				Args:  user_position_id,
+			cond1 = append(cond1, action.CondValue{
+				Type: "And",
+				Key:  "user_position_id",
+				Val:  user_position_id,
 			})
-			cond1 = append(cond1, CondValue{
-				Type:  "And",
-				Exprs: "user_position_type",
-				Args:  user_position_type,
+			cond1 = append(cond1, action.CondValue{
+				Type: "And",
+				Key:  "user_position_type",
+				Val:  user_position_type,
 			})
 			status, _ := c.GetInt8("status")
 			if status != -2 {
-				cond1 = append(cond1, CondValue{
+				cond1 = append(cond1,  action.CondValue{
 					Type:  "And",
-					Exprs: "status",
-					Args:  status,
+					Key: "status",
+					Val:  status,
 				})
 			} else {
-				cond1 = append(cond1, CondValue{
+				cond1 = append(cond1, action.CondValue{
 					Type:  "And",
-					Exprs: "status__gt",
-					Args:  -1,
+					Key: "status__gt",
+					Val:  -1,
 				})
 			}
 			currentPage, _ := c.GetInt64("current")
 			pageSize, _ := c.GetInt64("page_size")
-			err = client.Call(beego.AppConfig.String("EtcdURL"), "Order", "PageBy", &OrderListPaginator{
-				Cond:     cond1,
+			err = client.Call(beego.AppConfig.String("EtcdURL"), "Order", "PageByCond", &action.PageByCond{
+				CondList:     cond1,
 				Cols:     []string{"id", "create_time", "code", "price", "type", "pay_type", "brief", "status"},
 				OrderBy:  []string{"id"},
 				PageSize: pageSize,
@@ -107,9 +113,10 @@ func (c *OrderController) List() {
 				c.Data["json"] = res
 				c.ServeJSON()
 			} else {
-				//res.Data.List = reply2.List
+				replyList := []Order{}
+				err = json.Unmarshal([]byte(reply.Json), &replyList)
 				//List 循环赋值
-				for _, value := range reply.List {
+				for _, value := range replyList {
 					re := time.Unix(value.CreateTime/1000, 0).Format("2006-01-02")
 					var rPayType, rStatus string
 					if value.PayType == 1 {
@@ -180,11 +187,15 @@ func (c *OrderController) Detail() {
 		c.ServeJSON()
 	}
 	//检测 accessToken
+	var args action.FindByCond
+	args.CondList = append(args.CondList, action.CondValue{
+		Type:  "And",
+		Key: "accessToken",
+		Val:  access_token,
+	})
+	args.Fileds = []string{"id", "user_id", "company_id", "type"}
 	var replyAccessToken UserPosition
-	var err error
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByAccessToken", &UserPosition{
-		AccessToken: access_token,
-	}, &replyAccessToken)
+	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
 	if err != nil {
 		res.Code = ResponseLogicErr
 		res.Messgae = "访问令牌失效"
@@ -250,11 +261,15 @@ func (c *OrderController) DetailByCode() {
 		c.ServeJSON()
 	}
 	//检测 accessToken
+	var args action.FindByCond
+	args.CondList = append(args.CondList, action.CondValue{
+		Type:  "And",
+		Key: "accessToken",
+		Val:  access_token,
+	})
+	args.Fileds = []string{"id", "user_id", "company_id", "type"}
 	var replyAccessToken UserPosition
-	var err error
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByAccessToken", &UserPosition{
-		AccessToken: access_token,
-	}, &replyAccessToken)
+	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
 	if err != nil {
 		res.Code = ResponseLogicErr
 		res.Messgae = "访问令牌失效"
@@ -269,9 +284,14 @@ func (c *OrderController) DetailByCode() {
 			c.ServeJSON()
 		} else {
 			var reply Order
-			err = client.Call(beego.AppConfig.String("EtcdURL"), "Order", "FindByCode", &Order{
-				Code: code,
-			}, &reply)
+			var args2 action.FindByCond
+			args2.CondList = append(args2.CondList, action.CondValue{
+				Type:  "And",
+				Key: "code",
+				Val:  code,
+			})
+			args2.Fileds = []string{"id", "user_id", "company_id", "type"}
+			err = client.Call(beego.AppConfig.String("EtcdURL"), "Order", "FindByCond", args2, &reply)
 			if err != nil {
 				res.Code = ResponseSystemErr
 				res.Messgae = "获取信息失败"

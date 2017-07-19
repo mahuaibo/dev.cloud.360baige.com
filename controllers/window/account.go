@@ -60,12 +60,30 @@ func (c *AccountController) AccountStatistics() {
 			c.ServeJSON()
 		} else {
 			var reply Account
-			err = client.Call(beego.AppConfig.String("EtcdURL"), "Account", "FindByUserPos", &Account{
-				CompanyId:        com_id,
-				UserId:           user_id,
-				UserPositionId:   user_position_id,
-				UserPositionType: user_position_type,
-			}, &reply)
+			//检测 accessToken
+			var args2 action.FindByCond
+			args2.CondList = append(args2.CondList, action.CondValue{
+				Type:  "And",
+				Key: "company_id",
+				Val:  com_id,
+			})
+			args2.CondList = append(args2.CondList, action.CondValue{
+				Type:  "And",
+				Key: "user_id",
+				Val:  user_id,
+			})
+			args2.CondList = append(args2.CondList, action.CondValue{
+				Type:  "And",
+				Key: "user_position_id",
+				Val:  user_position_id,
+			})
+			args2.CondList = append(args2.CondList, action.CondValue{
+				Type:  "And",
+				Key: "user_position_type",
+				Val:  user_position_type,
+			})
+			args2.Fileds = []string{"id", "balance"}
+			err = client.Call(beego.AppConfig.String("EtcdURL"), "Account", "FindByCond", args2, &reply)
 			if err != nil {
 				res.Code = ResponseSystemErr
 				res.Messgae = "获取账务统计信息失败"

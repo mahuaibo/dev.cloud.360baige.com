@@ -9,6 +9,8 @@ import (
 	. "dev.model.360baige.com/models/application"
 	. "dev.model.360baige.com/models/company"
 	"time"
+	"dev.model.360baige.com/action"
+	"encoding/json"
 )
 
 // APPLICATION API
@@ -35,11 +37,15 @@ func (c *ApplicationController) List() {
 		c.ServeJSON()
 	}
 	//检测 accessToken
+	var args action.FindByCond
+	args.CondList = append(args.CondList, action.CondValue{
+		Type:  "And",
+		Key: "accessToken",
+		Val:  access_token,
+	})
+	args.Fileds = []string{"id", "user_id", "company_id", "type"}
 	var replyAccessToken UserPosition
-	var err error
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByAccessToken", &UserPosition{
-		AccessToken: access_token,
-	}, &replyAccessToken)
+	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
 	if err != nil {
 		res.Code = ResponseLogicErr
 		res.Messgae = "访问令牌失效"
@@ -57,46 +63,45 @@ func (c *ApplicationController) List() {
 			c.Data["json"] = res
 			c.ServeJSON()
 		} else {
-			var reply ApplicationListPaginator
-			var cond1 []CondValue
-			cond1 = append(cond1, CondValue{
+			var reply action.PageByCond
+			var cond1 []action.CondValue
+			cond1 = append(cond1, action.CondValue{
 				Type:  "And",
-				Exprs: "company_id",
-				Args:  com_id,
+				Key: "company_id",
+				Val:  com_id,
 			})
-			cond1 = append(cond1, CondValue{
+			cond1 = append(cond1, action.CondValue{
 				Type:  "And",
-				Exprs: "user_id",
-				Args:  user_id,
+				Key: "user_id",
+				Val:  user_id,
 			})
-			cond1 = append(cond1, CondValue{
+			cond1 = append(cond1, action.CondValue{
 				Type:  "And",
-				Exprs: "user_position_id",
-				Args:  user_position_id,
+				Key: "user_position_id",
+				Val:  user_position_id,
 			})
-			cond1 = append(cond1, CondValue{
+			cond1 = append(cond1, action.CondValue{
 				Type:  "And",
-				Exprs: "user_position_type",
-				Args:  user_position_type,
+				Key: "user_position_type",
+				Val:  user_position_type,
 			})
 			appname := c.GetString("name")
 			if appname != "" {
-				cond1 = append(cond1, CondValue{
+				cond1 = append(cond1, action.CondValue{
 					Type:  "And",
-					Exprs: "name__icontains",
-					Args:  appname,
+					Key: "name__icontains",
+					Val:  appname,
 				})
 
 			}
 			currentPage, _ := c.GetInt64("current")
 			pageSize, _ := c.GetInt64("page_size")
-			err = client.Call(beego.AppConfig.String("EtcdURL"), "Application", "PageBy", &ApplicationListPaginator{
-				Cond:     cond1,
+			err = client.Call(beego.AppConfig.String("EtcdURL"), "Application", "PageByCond", &action.PageByCond{
+				CondList:     cond1,
 				Cols:     []string{"id", "create_time", "name", "image", "status", "application_tpl_id" },
 				OrderBy:  []string{"id"},
 				PageSize: pageSize,
 				Current:  currentPage,
-
 			}, &reply)
 
 			if err != nil {
@@ -105,25 +110,27 @@ func (c *ApplicationController) List() {
 				c.Data["json"] = res
 				c.ServeJSON()
 			} else {
+				replyList := []Application{}
+				err = json.Unmarshal([]byte(reply.Json), &replyList)
 				//获取应用其他信息tpl
 				var idarg []int64
 				idmap := make(map[int64]int64)
-				for _, value := range reply.List {
+				for _, value := range replyList {
 					idmap[value.ApplicationTplId] = value.ApplicationTplId
 				}
 				for _, value := range idmap {
 					idarg = append(idarg, value)
 				}
 
-				var cond2 []CondValue
-				cond2 = append(cond2, CondValue{
+				var cond2 []action.CondValue
+				cond2 = append(cond2, action.CondValue{
 					Type:  "And",
-					Exprs: "id__in",
-					Args:  idarg,
+					Key: "id__in",
+					Val:  idarg,
 				})
-				var replyApplicationTpl *ApplicationTplListPaginator
-				err = client.Call(beego.AppConfig.String("EtcdURL"), "ApplicationTpl", "ListAll", &ApplicationTplListPaginator{
-					Cond:     cond2,
+				var replyApplicationTpl []ApplicationTpl
+				err = client.Call(beego.AppConfig.String("EtcdURL"), "ApplicationTpl", "ListByCond", &action.ListByCond{
+					CondList:     cond2,
 					Cols:     []string{"id", "name", "image", "status", "site"},
 					OrderBy:  []string{"id"},
 					PageSize: -1,
@@ -138,10 +145,10 @@ func (c *ApplicationController) List() {
 					c.ServeJSON()
 				}
 				applicationTplByIds := make(map[int64]ApplicationTpl)
-				for _, value := range replyApplicationTpl.List {
+				for _, value := range replyApplicationTpl {
 					applicationTplByIds[value.Id] = value
 				}
-				for _, value := range reply.List {
+				for _, value := range replyList {
 					re := time.Unix(value.CreateTime/1000, 0).Format("2006-01-02")
 					var rename, reimage, restatus string
 					if value.Name == "" {
@@ -208,11 +215,15 @@ func (c *ApplicationController) Detail() {
 		c.ServeJSON()
 	}
 	//检测 accessToken
+	var args action.FindByCond
+	args.CondList = append(args.CondList, action.CondValue{
+		Type:  "And",
+		Key: "accessToken",
+		Val:  access_token,
+	})
+	args.Fileds = []string{"id", "user_id", "company_id", "type"}
 	var replyAccessToken UserPosition
-	var err error
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByAccessToken", &UserPosition{
-		AccessToken: access_token,
-	}, &replyAccessToken)
+	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
 	if err != nil {
 		res.Code = ResponseLogicErr
 		res.Messgae = "访问令牌失效"
@@ -274,7 +285,7 @@ func (c *ApplicationController) Detail() {
 				}
 				//开发者
 				var replyUser User
-				err = client.Call(beego.AppConfig.String("EtcdURL"), "User", "FindByIdNoStatus", &User{
+				err = client.Call(beego.AppConfig.String("EtcdURL"), "User", "FindById", &User{
 					Id: replyApplicationTpl.UserId,
 				}, &replyUser)
 				var username, cname string
@@ -346,7 +357,7 @@ func GetPayCycleName(ptype int8) string {
 // @Success 200 {"code":200,"messgae":"获取应用修改状态成功","data":{"access_ticket":"xxxx","expire_in":0}}
 // @Param   access_token     query   string true       "访问令牌"
 // @Param   id     query   string true       "id"
-// @Param   status     query   string true       " 0 上架 1 下架 "
+// @Param   status     query   string true       " 0 启用 1 停用 2 退订"
 // @Failure 400 {"code":400,"message":"获取应用修改状态失败"}
 // @router /modifystatus [get]
 func (c *ApplicationController) ModifyStatus() {
@@ -359,11 +370,15 @@ func (c *ApplicationController) ModifyStatus() {
 		c.ServeJSON()
 	}
 	//检测 accessToken
+	var args action.FindByCond
+	args.CondList = append(args.CondList, action.CondValue{
+		Type:  "And",
+		Key: "accessToken",
+		Val:  access_token,
+	})
+	args.Fileds = []string{"id", "user_id", "company_id", "type"}
 	var replyAccessToken UserPosition
-	var err error
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByAccessToken", &UserPosition{
-		AccessToken: access_token,
-	}, &replyAccessToken)
+	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
 	if err != nil {
 		res.Code = ResponseLogicErr
 		res.Messgae = "访问令牌失效"
@@ -383,9 +398,19 @@ func (c *ApplicationController) ModifyStatus() {
 		} else {
 			status, _ := c.GetInt8("status")
 			timestamp := time.Now().UnixNano() / 1e6
-			reply.UpdateTime = timestamp
-			reply.Status = status
-			err = client.Call(beego.AppConfig.String("EtcdURL"), "Application", "UpdateById", reply, nil)
+			var updateArgs []action.UpdateValue
+			updateArgs = append(updateArgs, action.UpdateValue{
+				Key: "update_time",
+				Val:  timestamp,
+			})
+			updateArgs = append(updateArgs, action.UpdateValue{
+				Key: "status",
+				Val:  status,
+			})
+			err = client.Call(beego.AppConfig.String("EtcdURL"), "Application", "UpdateById", &action.UpdateByIdCond{
+				Id: []int64{ap_id},
+				UpdateList:updateArgs,
+			}, nil)
 			if err != nil {
 				res.Code = ResponseSystemErr
 				res.Messgae = "应用信息修改失败！"

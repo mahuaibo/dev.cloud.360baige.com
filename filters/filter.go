@@ -10,9 +10,9 @@ func init() {
 	log := logs.NewLogger()
 	log.SetLogger(logs.AdapterConsole)
 	log.Debug("filter run start")
-
-	beego.InsertFilter("/v1/company/*",beego.BeforeRouter, UrlOriginManager)
-	beego.InsertFilter("/v1/user/*",beego.BeforeRouter, UrlOriginManager)
+	beego.InsertFilter("/*",beego.BeforeRouter, UrlOriginManager)
+	//beego.InsertFilter("/v1/company/*",beego.BeforeRouter, UrlOriginManager)
+	//beego.InsertFilter("/v1/user/*",beego.BeforeRouter, UrlOriginManager)
 
 	log.Debug("filter run end")
 }
