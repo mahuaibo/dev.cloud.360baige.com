@@ -158,35 +158,33 @@ func (c *UserPositionController) PositionToken() {
 		res.Messgae = "获取身份失败"
 		c.Data["json"] = res
 		c.ServeJSON()
-	} else {
-		timestamp := time.Now().UnixNano() / 1e6
-		newAccessTicket := strconv.FormatInt(replyUserPosition.Id, 10) + strconv.FormatInt(timestamp, 10)
-		var updateArgs []action.UpdateValue
-		updateArgs = append(updateArgs, action.UpdateValue{
-			Key: "update_time",
-			Val:  timestamp,
-		})
-		updateArgs = append(updateArgs, action.UpdateValue{
-			Key: "access_token",
-			Val:  newAccessTicket,
-		}) // 更新token 应该判断时效，再做更新
-		// 更新ExpireIn
-		err2 := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "UpdateById",  &action.UpdateByIdCond{
-			Id: []int64{user_position_id},
-			UpdateList:updateArgs,
-		}, nil)
-		if err2 != nil {
-			res.Code = ResponseSystemErr
-			res.Messgae = "获取身份失败"
-			c.Data["json"] = res
-			c.ServeJSON()
-		}
-		res.Code = ResponseNormal
-		res.Messgae = "获取身份成功"
-		res.Data.AccessToken = newAccessTicket
-		res.Data.ExpireIn = replyUserPosition.ExpireIn
+	}
+	timestamp := time.Now().UnixNano() / 1e6
+	newAccessTicket := strconv.FormatInt(replyUserPosition.Id, 10) + strconv.FormatInt(timestamp, 10)
+	var updateArgs []action.UpdateValue
+	updateArgs = append(updateArgs, action.UpdateValue{
+		Key: "update_time",
+		Val:  timestamp,
+	})
+	updateArgs = append(updateArgs, action.UpdateValue{
+		Key: "access_token",
+		Val:  newAccessTicket,
+	}) // 更新token 应该判断时效，再做更新
+	// 更新ExpireIn
+	err2 := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "UpdateById", &action.UpdateByIdCond{
+		Id: []int64{user_position_id},
+		UpdateList:updateArgs,
+	}, nil)
+	if err2 != nil {
+		res.Code = ResponseSystemErr
+		res.Messgae = "获取身份失败"
 		c.Data["json"] = res
 		c.ServeJSON()
 	}
-
+	res.Code = ResponseNormal
+	res.Messgae = "获取身份成功"
+	res.Data.AccessToken = replyUserPosition.AccessToken
+	res.Data.ExpireIn = replyUserPosition.ExpireIn
+	c.Data["json"] = res
+	c.ServeJSON()
 }

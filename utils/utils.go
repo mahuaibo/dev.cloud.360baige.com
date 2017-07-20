@@ -6,25 +6,21 @@ import (
 	"time"
 )
 
-func DetermineStringType(str string) (int, bool) {
-	var strType int
+func DetermineStringType(str string) (string, bool) {
+	var strType string
 	var b bool
 	if (strings.ContainsAny(str, "@")) {
-		strType = 2
-		//邮箱
+		strType = "email" // 邮箱
 		b = IsEmail(strings.ToLower(str))
 	} else {
 		isnum := IsInteger(str)
 		if (isnum) {
-			strType = 3
-			//手机号
+			strType = "phone" // 手机号
 			b = IsMobile(str)
 		} else {
-			strType = 1
-			//账号组合
+			strType = "username" // 账号组合
 			b = true
 		}
-
 	}
 	return strType, b
 }
