@@ -10,6 +10,7 @@ import (
 	"fmt"
 	. "dev.model.360baige.com/models/company"
 	"strconv"
+	"dev.model.360baige.com/action"
 )
 
 // USER API
@@ -26,11 +27,15 @@ type UserPositionController struct {
 func (c *UserPositionController) PositionList() {
 	res := UserPositionResponse{}
 	access_ticket := c.GetString("access_ticket")
-
 	var replyUser User
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "User", "FindByAccessTicket", &User{
-		AccessTicket: access_ticket,
-	}, &replyUser)
+	var args action.FindByCond
+	args.CondList = append(args.CondList, action.CondValue{
+		Type: "And",
+		Key:  "access_ticket",
+		Val:  access_ticket,
+	})
+	args.Fileds = []string{"id", "expire_in"}
+	err := client.Call(beego.AppConfig.String("EtcdURL"), "User", "FindByCond", args, &replyUser)
 	fmt.Println(replyUser)
 	if err != nil {
 		res.Code = ResponseSystemErr
@@ -49,23 +54,23 @@ func (c *UserPositionController) PositionList() {
 			c.ServeJSON()
 		}
 
-		var replyUserPosition *UserPositionPaginator
-		var cond1 []CondValue
-		cond1 = append(cond1, CondValue{
-			Type:  "And",
-			Exprs: "user_id",
-			Args:  replyUser.Id,
+		var replyUserPosition []UserPosition
+		var cond1 []action.CondValue
+		cond1 = append(cond1, action.CondValue{
+			Type: "And",
+			Key:  "user_id",
+			Val:  replyUser.Id,
 		})
-		cond1 = append(cond1, CondValue{
-			Type:  "And",
-			Exprs: "status__gt",
-			Args:  -1,
+		cond1 = append(cond1, action.CondValue{
+			Type: "And",
+			Key:  "status__gt",
+			Val:  -1,
 		})
-		err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "ListAll", &UserPositionPaginator{
-			Cond:     cond1,
+		err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "ListByCond", &action.ListByCond{
+			CondList: cond1,
 			Cols:     []string{"id", "user_id", "company_id", "type", "person_id"},
 			OrderBy:  []string{"id"},
-			PageSize: 0,
+			PageSize: -1,
 		}, &replyUserPosition)
 		if err != nil {
 			res.Code = ResponseSystemErr
@@ -76,25 +81,25 @@ func (c *UserPositionController) PositionList() {
 			//获取公司名称
 			var idarg []int64
 			idmap := make(map[int64]int64)
-			for _, value := range replyUserPosition.List {
+			for _, value := range replyUserPosition {
 				idmap[value.CompanyId] = value.CompanyId
 			}
 			for _, value := range idmap {
 				idarg = append(idarg, value)
 			}
 			fmt.Println(idarg)
-			var cond2 []CondValue
-			cond2 = append(cond2, CondValue{
-				Type:  "And",
-				Exprs: "id__in",
-				Args:  idarg,
+			var cond2 []action.CondValue
+			cond2 = append(cond2, action.CondValue{
+				Type: "And",
+				Key:  "id__in",
+				Val:  idarg,
 			})
-			var replyUserCompany *CompanyPaginator
-			err = client.Call(beego.AppConfig.String("EtcdURL"), "Company", "ListAll", &CompanyPaginator{
-				Cond:     cond2,
+			var replyUserCompany []Company
+			err = client.Call(beego.AppConfig.String("EtcdURL"), "Company", "ListByCond", &action.ListByCond{
+				CondList: cond2,
 				Cols:     []string{"id", "name", "short_name", "status"},
 				OrderBy:  []string{"id"},
-				PageSize: 0,
+				PageSize: -1,
 			}, &replyUserCompany)
 			var resData []UserPositionListItem
 			//循环赋值
@@ -105,10 +110,10 @@ func (c *UserPositionController) PositionList() {
 				c.ServeJSON()
 			}
 			companyByIds := make(map[int64]Company)
-			for _, value := range replyUserCompany.List {
+			for _, value := range replyUserCompany {
 				companyByIds[value.Id] = value
 			}
-			for _, value := range replyUserPosition.List {
+			for _, value := range replyUserPosition {
 				if (companyByIds[value.CompanyId].Status != -1) {
 					resData = append(resData, UserPositionListItem{
 						Id:               value.Id,
@@ -156,9 +161,20 @@ func (c *UserPositionController) PositionToken() {
 	}
 	timestamp := time.Now().UnixNano() / 1e6
 	newAccessTicket := strconv.FormatInt(replyUserPosition.Id, 10) + strconv.FormatInt(timestamp, 10)
-	replyUserPosition.UpdateTime = timestamp
-	replyUserPosition.AccessToken = newAccessTicket //更新token 应该判断时效，再做更新
-	err2 := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "UpdateById", replyUserPosition, nil)
+	var updateArgs []action.UpdateValue
+	updateArgs = append(updateArgs, action.UpdateValue{
+		Key: "update_time",
+		Val:  timestamp,
+	})
+	updateArgs = append(updateArgs, action.UpdateValue{
+		Key: "access_token",
+		Val:  newAccessTicket,
+	}) // 更新token 应该判断时效，再做更新
+	// 更新ExpireIn
+	err2 := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "UpdateById", &action.UpdateByIdCond{
+		Id: []int64{user_position_id},
+		UpdateList:updateArgs,
+	}, nil)
 	if err2 != nil {
 		res.Code = ResponseSystemErr
 		res.Messgae = "获取身份失败"

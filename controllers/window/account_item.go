@@ -5,7 +5,6 @@ import (
 	"dev.cloud.360baige.com/rpc/client"
 	. "dev.model.360baige.com/http/window"
 	. "dev.model.360baige.com/models/user"
-	//. "dev.model.360baige.com/models/response"
 	. "dev.model.360baige.com/models/account"
 	. "dev.model.360baige.com/models/company"
 	"dev.cloud.360baige.com/utils"
@@ -13,6 +12,8 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"dev.model.360baige.com/action"
+	"encoding/json"
 )
 
 type AccountItemController struct {
@@ -38,11 +39,15 @@ func (c *AccountItemController) List() {
 		c.ServeJSON()
 	}
 	//检测 accessToken
+	var args action.FindByCond
+	args.CondList = append(args.CondList, action.CondValue{
+		Type:  "And",
+		Key: "accessToken",
+		Val:  access_token,
+	})
+	args.Fileds = []string{"id", "user_id", "company_id", "type"}
 	var replyAccessToken UserPosition
-	var err error
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByAccessToken", &UserPosition{
-		AccessToken: access_token,
-	}, &replyAccessToken)
+	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
 	if err != nil {
 		res.Code = ResponseLogicErr
 		res.Messgae = "访问令牌失效"
@@ -61,12 +66,29 @@ func (c *AccountItemController) List() {
 			c.ServeJSON()
 		} else {
 			var reply Account
-			err = client.Call(beego.AppConfig.String("EtcdURL"), "Account", "FindByUserPos", &Account{
-				CompanyId:        com_id,
-				UserId:           user_id,
-				UserPositionId:   user_position_id,
-				UserPositionType: user_position_type,
-			}, &reply)
+			var args2 action.FindByCond
+			args2.CondList = append(args2.CondList, action.CondValue{
+				Type:  "And",
+				Key: "company_id",
+				Val:  com_id,
+			})
+			args2.CondList = append(args2.CondList, action.CondValue{
+				Type:  "And",
+				Key: "user_id",
+				Val:  user_id,
+			})
+			args2.CondList = append(args2.CondList, action.CondValue{
+				Type:  "And",
+				Key: "user_position_id",
+				Val:  user_position_id,
+			})
+			args2.CondList = append(args2.CondList, action.CondValue{
+				Type:  "And",
+				Key: "user_position_type",
+				Val:  user_position_type,
+			})
+			args2.Fileds = []string{"id"}
+			err = client.Call(beego.AppConfig.String("EtcdURL"), "Account", "FindByCond", args2, &reply)
 			fmt.Println("acccount-id:", reply.Id)
 			if err != nil {
 				res.Code = ResponseSystemErr
@@ -75,12 +97,12 @@ func (c *AccountItemController) List() {
 				c.ServeJSON()
 			} else {
 				account_id := reply.Id
-				var reply2 AccountItemListPaginator
-				var cond1 []CondValue
-				cond1 = append(cond1, CondValue{
+				var reply2 action.PageByCond
+				var cond1 []action.CondValue
+				cond1 = append(cond1,action.CondValue{
 					Type:  "And",
-					Exprs: "account_id",
-					Args:  account_id,
+					Key: "account_id",
+					Val:  account_id,
 				})
 				var stime, etime int64
 				current := c.GetString("date")
@@ -90,20 +112,20 @@ func (c *AccountItemController) List() {
 				//获取指定时间的月初、下个月初时间戳
 				stime = utils.GetMonthStartUnix(current + "-01")
 				etime = utils.GetNextMonthStartUnix(current + "-01")
-				cond1 = append(cond1, CondValue{
+				cond1 = append(cond1, action.CondValue{
 					Type:  "And",
-					Exprs: "create_time__gte",
-					Args:  stime,
+					Key: "create_time__gte",
+					Val:  stime,
 				})
-				cond1 = append(cond1, CondValue{
+				cond1 = append(cond1,action.CondValue{
 					Type:  "And",
-					Exprs: "create_time__lt",
-					Args:  etime,
+					Key: "create_time__lt",
+					Val:  etime,
 				})
 				currentPage, _ := c.GetInt64("current")
 				pageSize, _ := c.GetInt64("page_size")
-				err = client.Call(beego.AppConfig.String("EtcdURL"), "AccountItem", "PageBy", &AccountItemListPaginator{
-					Cond:     cond1,
+				err = client.Call(beego.AppConfig.String("EtcdURL"), "AccountItem", "PageByCond", &action.PageByCond{
+					CondList:     cond1,
 					Cols:     []string{"id", "create_time", "amount", },
 					OrderBy:  []string{"id"},
 					PageSize: pageSize,
@@ -115,10 +137,11 @@ func (c *AccountItemController) List() {
 					c.Data["json"] = res
 					c.ServeJSON()
 				} else {
-					//res.Data.List = reply2.List
+					reply2List := []AccountItem{}
+					err = json.Unmarshal([]byte(reply2.Json), &reply2List)
 					//List 循环赋值
 					var aType string
-					for _, value := range reply2.List {
+					for _, value := range reply2List{
 						if (value.Amount < 0) {
 							aType = "收入"
 							va, _ := strconv.ParseFloat(strings.Replace(strconv.FormatFloat(value.Amount, 'f', 5, 64), "-", "", 1), 64)
@@ -168,11 +191,15 @@ func (c *AccountItemController) TradingList() {
 		c.ServeJSON()
 	}
 	//检测 accessToken
+	var args action.FindByCond
+	args.CondList = append(args.CondList, action.CondValue{
+		Type:  "And",
+		Key: "accessToken",
+		Val:  access_token,
+	})
+	args.Fileds = []string{"id", "user_id", "company_id", "type"}
 	var replyAccessToken UserPosition
-	var err error
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByAccessToken", &UserPosition{
-		AccessToken: access_token,
-	}, &replyAccessToken)
+	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
 	if err != nil {
 		res.Code = ResponseLogicErr
 		res.Messgae = "访问令牌失效"
@@ -191,12 +218,29 @@ func (c *AccountItemController) TradingList() {
 			c.ServeJSON()
 		} else {
 			var reply Account
-			err = client.Call(beego.AppConfig.String("EtcdURL"), "Account", "FindByUserPos", &Account{
-				CompanyId:        com_id,
-				UserId:           user_id,
-				UserPositionId:   user_position_id,
-				UserPositionType: user_position_type,
-			}, &reply)
+			var args2 action.FindByCond
+			args2.CondList = append(args2.CondList, action.CondValue{
+				Type:  "And",
+				Key: "company_id",
+				Val:  com_id,
+			})
+			args2.CondList = append(args2.CondList, action.CondValue{
+				Type:  "And",
+				Key: "user_id",
+				Val:  user_id,
+			})
+			args2.CondList = append(args2.CondList, action.CondValue{
+				Type:  "And",
+				Key: "user_position_id",
+				Val:  user_position_id,
+			})
+			args2.CondList = append(args2.CondList, action.CondValue{
+				Type:  "And",
+				Key: "user_position_type",
+				Val:  user_position_type,
+			})
+			args2.Fileds = []string{"id"}
+			err = client.Call(beego.AppConfig.String("EtcdURL"), "Account", "FindByCond", args2, &reply)
 			fmt.Println("acccount-id:", reply.Id)
 			if err != nil {
 				res.Code = ResponseSystemErr
@@ -205,12 +249,12 @@ func (c *AccountItemController) TradingList() {
 				c.ServeJSON()
 			} else {
 				account_id := reply.Id
-				var reply2 AccountItemListPaginator
-				var cond1 []CondValue
-				cond1 = append(cond1, CondValue{
+				var reply2 action.PageByCond
+				var cond1 []action.CondValue
+				cond1 = append(cond1, action.CondValue{
 					Type:  "And",
-					Exprs: "account_id",
-					Args:  account_id,
+					Key: "account_id",
+					Val:  account_id,
 				})
 				var stime, etime int64
 				sdate := c.GetString("start_date")
@@ -218,20 +262,20 @@ func (c *AccountItemController) TradingList() {
 				tm2, _ := time.ParseInLocation("2006-01-02", sdate, time.Local)
 				stime = tm2.UnixNano() / 1e6
 				etime = utils.GetNextDayUnix(edate)
-				cond1 = append(cond1, CondValue{
+				cond1 = append(cond1, action.CondValue{
 					Type:  "And",
-					Exprs: "create_time__gte",
-					Args:  stime,
+					Key: "create_time__gte",
+					Val:  stime,
 				})
-				cond1 = append(cond1, CondValue{
+				cond1 = append(cond1, action.CondValue{
 					Type:  "And",
-					Exprs: "create_time__lt",
-					Args:  etime,
+					Key: "create_time__lt",
+					Val:  etime,
 				})
 				currentPage, _ := c.GetInt64("current")
 				pageSize, _ := c.GetInt64("page_size")
-				err = client.Call(beego.AppConfig.String("EtcdURL"), "AccountItem", "PageBy", &AccountItemListPaginator{
-					Cond:     cond1,
+				err = client.Call(beego.AppConfig.String("EtcdURL"), "AccountItem", "PageByCond", &action.PageByCond{
+					CondList:     cond1,
 					Cols:     []string{"id", "create_time", "amount", },
 					OrderBy:  []string{"id"},
 					PageSize: pageSize,
@@ -243,11 +287,11 @@ func (c *AccountItemController) TradingList() {
 					c.Data["json"] = res
 					c.ServeJSON()
 				} else {
-					fmt.Println(reply2.List)
-					//res.Data.List = reply2.List
+					reply2List := []AccountItem{}
+					err = json.Unmarshal([]byte(reply2.Json), &reply2List)
 					//List 循环赋值
 					var aType string
-					for _, value := range reply2.List {
+					for _, value := range reply2List{
 						if (value.Amount < 0) {
 							aType = "收入"
 							va, _ := strconv.ParseFloat(strings.Replace(strconv.FormatFloat(value.Amount, 'f', 5, 64), "-", "", 1), 64)
@@ -294,11 +338,15 @@ func (c *AccountItemController) Detail() {
 		c.ServeJSON()
 	}
 	//检测 accessToken
+	var args action.FindByCond
+	args.CondList = append(args.CondList, action.CondValue{
+		Type:  "And",
+		Key: "accessToken",
+		Val:  access_token,
+	})
+	args.Fileds = []string{"id", "user_id", "company_id", "type"}
 	var replyAccessToken UserPosition
-	var err error
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByAccessToken", &UserPosition{
-		AccessToken: access_token,
-	}, &replyAccessToken)
+	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
 	if err != nil {
 		res.Code = ResponseLogicErr
 		res.Messgae = "访问令牌失效"

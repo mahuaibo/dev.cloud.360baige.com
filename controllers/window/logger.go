@@ -5,11 +5,11 @@ import (
 	"dev.cloud.360baige.com/rpc/client"
 	//"dev.cloud.360baige.com/utils"
 	. "dev.model.360baige.com/models/logger"
-	//. "dev.model.360baige.com/models/response"
 	. "dev.model.360baige.com/models/user"
 	. "dev.model.360baige.com/http/window"
-	////"fmt"
 	"time"
+	"dev.model.360baige.com/action"
+	"encoding/json"
 )
 
 type LoggerController struct {
@@ -27,7 +27,7 @@ type LoggerController struct {
 // @Success 200 {object} models.logger
 // @Failure 403 :uid is empty
 // @router /add [post]
-func (c *LoggerController) Add() {
+func (c *LoggerController) Add()  {
 	res := ModifyApplicationTplStatusResponse{}
 	access_token := c.GetString("access_token")
 	if access_token == "" {
@@ -37,11 +37,15 @@ func (c *LoggerController) Add() {
 		c.ServeJSON()
 	}
 	//检测 accessToken
+	var args action.FindByCond
+	args.CondList = append(args.CondList, action.CondValue{
+		Type:  "And",
+		Key: "accessToken",
+		Val:  access_token,
+	})
+	args.Fileds = []string{"id", "user_id", "company_id", "type"}
 	var replyAccessToken UserPosition
-	var err error
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByAccessToken", &UserPosition{
-		AccessToken: access_token,
-	}, &replyAccessToken)
+	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
 	if err != nil {
 		res.Code = ResponseLogicErr
 		res.Messgae = "访问令牌失效"
@@ -105,11 +109,15 @@ func (c *LoggerController) List() {
 		c.ServeJSON()
 	}
 	//检测 accessToken
+	var args action.FindByCond
+	args.CondList = append(args.CondList, action.CondValue{
+		Type:  "And",
+		Key: "accessToken",
+		Val:  access_token,
+	})
+	args.Fileds = []string{"id", "user_id", "company_id", "type"}
 	var replyAccessToken UserPosition
-	var err error
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByAccessToken", &UserPosition{
-		AccessToken: access_token,
-	}, &replyAccessToken)
+	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
 	if err != nil {
 		res.Code = ResponseLogicErr
 		res.Messgae = "访问令牌失效"
@@ -127,37 +135,36 @@ func (c *LoggerController) List() {
 			c.Data["json"] = res
 			c.ServeJSON()
 		} else {
-			var reply LoggerListPaginator
-			var cond1 []CondValue
-			cond1 = append(cond1, CondValue{
-				Type:  "And",
-				Exprs: "company_id",
-				Args:  com_id,
+			var reply action.PageByCond
+			var cond1 []action.CondValue
+			cond1 = append(cond1, action.CondValue{
+				Type: "And",
+				Key:  "company_id",
+				Val:  com_id,
 			})
-			cond1 = append(cond1, CondValue{
-				Type:  "And",
-				Exprs: "user_id",
-				Args:  user_id,
+			cond1 = append(cond1, action.CondValue{
+				Type: "And",
+				Key:  "user_id",
+				Val:  user_id,
 			})
-			cond1 = append(cond1, CondValue{
-				Type:  "And",
-				Exprs: "user_position_id",
-				Args:  user_position_id,
+			cond1 = append(cond1, action.CondValue{
+				Type: "And",
+				Key:  "user_position_id",
+				Val:  user_position_id,
 			})
-			cond1 = append(cond1, CondValue{
-				Type:  "And",
-				Exprs: "user_position_type",
-				Args:  user_position_type,
+			cond1 = append(cond1, action.CondValue{
+				Type: "And",
+				Key:  "user_position_type",
+				Val:  user_position_type,
 			})
 			currentPage, _ := c.GetInt64("current")
 			pageSize, _ := c.GetInt64("page_size")
-			err = client.Call(beego.AppConfig.String("EtcdURL"), "Logger", "PageBy", &LoggerListPaginator{
-				Cond:     cond1,
-				Cols:     []string{"id", "create_time", "content", "remark", "type", },
+			err = client.Call(beego.AppConfig.String("EtcdURL"), "Logger", "PageByCond", &action.PageByCond{
+				CondList: cond1,
+				Cols:      []string{"id", "create_time", "content", "remark", "type", },
 				OrderBy:  []string{"id"},
 				PageSize: pageSize,
 				Current:  currentPage,
-
 			}, &reply)
 			if err != nil {
 				res.Code = ResponseSystemErr
@@ -166,7 +173,9 @@ func (c *LoggerController) List() {
 				c.ServeJSON()
 			} else {
 				var resData []LoggerValue
-				for _, value := range reply.List {
+				replyList := []Logger{}
+				err = json.Unmarshal([]byte(reply.Json), &replyList)
+				for _, value := range replyList {
 					re := time.Unix(value.CreateTime/1000, 0).Format("2006-01-02")
 					var retype string
 					if value.Type == 1 {

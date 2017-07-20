@@ -8,7 +8,7 @@ import (
 	. "dev.model.360baige.com/http/window"
 	. "dev.model.360baige.com/models/user"
 	"time"
-	"fmt"
+	"dev.model.360baige.com/action"
 )
 
 // COMPANY API
@@ -32,11 +32,15 @@ func (c *CompanyController) Detail() {
 		c.ServeJSON()
 	}
 	//检测 accessToken
+	var args action.FindByCond
+	args.CondList = append(args.CondList, action.CondValue{
+		Type: "And",
+		Key:  "accessToken",
+		Val:  access_token,
+	})
+	args.Fileds = []string{"id", "user_id", "company_id", "type"}
 	var replyAccessToken UserPosition
-	var err error
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByAccessToken", &UserPosition{
-		AccessToken: access_token,
-	}, &replyAccessToken)
+	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
 	if err != nil {
 		res.Code = ResponseLogicErr
 		res.Messgae = "访问令牌失效"
@@ -96,13 +100,15 @@ func (c *CompanyController) Modify() {
 		c.ServeJSON()
 	} else {
 		//检测 accessToken
+		var args action.FindByCond
+		args.CondList = append(args.CondList, action.CondValue{
+			Type: "And",
+			Key:  "accessToken",
+			Val:  access_token,
+		})
+		args.Fileds = []string{"id", "user_id", "company_id", "type"}
 		var replyAccessToken UserPosition
-		var err error
-		err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByAccessToken", &UserPosition{
-			AccessToken: access_token,
-		}, &replyAccessToken)
-		fmt.Println(err)
-		fmt.Println(replyAccessToken)
+		err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
 		if err != nil {
 			res.Code = ResponseLogicErr
 			res.Messgae = "访问令牌失效"
@@ -147,20 +153,60 @@ func (c *CompanyController) Modify() {
 					brief := c.GetString("brief")
 
 					timestamp := time.Now().UnixNano() / 1e6
-					reply.UpdateTime = timestamp
-					reply.Logo = logo
-					reply.Name = name
-					reply.ShortName = shortName
-					reply.ProvinceId = provinceId
-					reply.CityId = cityId
-					reply.DistrictId = districtId
-					reply.Address = address
-					reply.PositionX = positionX
-					reply.PositionY = positionY
-					reply.Remark = remark
-					reply.Brief = brief
+					var updateArgs []action.UpdateValue
+					updateArgs = append(updateArgs, action.UpdateValue{
+						Key: "update_time",
+						Val: timestamp,
+					})
+					updateArgs = append(updateArgs, action.UpdateValue{
+						Key: "logo",
+						Val: logo,
+					})
+					updateArgs = append(updateArgs, action.UpdateValue{
+						Key: "name",
+						Val: name,
+					})
+					updateArgs = append(updateArgs, action.UpdateValue{
+						Key: "short_name",
+						Val: shortName,
+					})
+					updateArgs = append(updateArgs, action.UpdateValue{
+						Key: "province_id",
+						Val: provinceId,
+					})
+					updateArgs = append(updateArgs, action.UpdateValue{
+						Key: "city_id",
+						Val: cityId,
+					})
+					updateArgs = append(updateArgs, action.UpdateValue{
+						Key: "district_id",
+						Val: districtId,
+					})
+					updateArgs = append(updateArgs, action.UpdateValue{
+						Key: "address",
+						Val: address,
+					})
+					updateArgs = append(updateArgs, action.UpdateValue{
+						Key: "position_x",
+						Val: positionX,
+					})
+					updateArgs = append(updateArgs, action.UpdateValue{
+						Key: "position_y",
+						Val: positionY,
+					})
+					updateArgs = append(updateArgs, action.UpdateValue{
+						Key: "remark",
+						Val: remark,
+					})
+					updateArgs = append(updateArgs, action.UpdateValue{
+						Key: "brief",
+						Val: brief,
+					})
 
-					err = client.Call(beego.AppConfig.String("EtcdURL"), "Company", "UpdateById", reply, nil)
+					err = client.Call(beego.AppConfig.String("EtcdURL"), "Company", "UpdateById", &action.UpdateByIdCond{
+						Id:         []int64{com_id},
+						UpdateList: updateArgs,
+					}, nil)
 
 					if err != nil {
 						res.Code = ResponseSystemErr
@@ -171,17 +217,17 @@ func (c *CompanyController) Modify() {
 
 					res.Code = ResponseNormal
 					res.Messgae = "企业信息修改成功！"
-					res.Data.Logo = reply.Logo
-					res.Data.Name = reply.Name
-					res.Data.ShortName = reply.ShortName
-					res.Data.ProvinceId = reply.ProvinceId
-					res.Data.CityId = reply.CityId
-					res.Data.DistrictId = reply.DistrictId
-					res.Data.Address = reply.Address
-					res.Data.PositionX = reply.PositionX
-					res.Data.PositionY = reply.PositionY
-					res.Data.Remark = reply.Remark
-					res.Data.Brief = reply.Brief
+					res.Data.Logo = logo
+					res.Data.Name = name
+					res.Data.ShortName = shortName
+					res.Data.ProvinceId = provinceId
+					res.Data.CityId = cityId
+					res.Data.DistrictId = districtId
+					res.Data.Address = address
+					res.Data.PositionX = positionX
+					res.Data.PositionY = positionY
+					res.Data.Remark = remark
+					res.Data.Brief = brief
 					res.Data.Status = reply.Status
 					c.Data["json"] = res
 					c.ServeJSON()
