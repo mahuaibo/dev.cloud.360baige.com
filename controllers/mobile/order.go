@@ -1,11 +1,10 @@
-package window
+package mobile
 
 import (
 	"github.com/astaxie/beego"
 	"dev.cloud.360baige.com/rpc/client"
-	. "dev.model.360baige.com/http/window"
+	. "dev.model.360baige.com/http/mobile"
 	. "dev.model.360baige.com/models/user"
-	//. "dev.model.360baige.com/models/response"
 	. "dev.model.360baige.com/models/order"
 	"time"
 	"dev.model.360baige.com/action"
@@ -20,7 +19,6 @@ type OrderController struct {
 // @Description 订单列表接口
 // @Success 200 {"code":200,"messgae":"获取订单列表成功","data":{"access_ticket":"xxxx","expire_in":0}}
 // @Param   access_token     query   string true       "访问令牌"
-// @Param   date     query   string true       "账单日期：2017-07"
 // @Param   current     query   string true       "当前页"
 // @Param   page_size     query   string true       "每页数量"
 // @Param   status     query   string true       "订单状态：-2 全部 0:撤回 1：待审核 2：已通过 3：未通过 4：发货中 5：完成"
@@ -290,7 +288,7 @@ func (c *OrderController) DetailByCode() {
 				Key: "code",
 				Val:  code,
 			})
-			args2.Fileds = []string{"id", "create_time","code", "price", "type","pay_type","brief","status"}
+			args2.Fileds = []string{"id","create_time", "code", "price", "type","pay_type","brief","status"}
 			err = client.Call(beego.AppConfig.String("EtcdURL"), "Order", "FindByCond", args2, &reply)
 			if err != nil {
 				res.Code = ResponseSystemErr
