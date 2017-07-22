@@ -14,5 +14,10 @@
         }
     },
     "basePath": "/cloud",
-    "paths": null
+    "paths": null,
+    "definitions": {
+        ".logger": {
+            "type": "object"
+        }
+    }
 }

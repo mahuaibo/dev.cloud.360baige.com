@@ -30,6 +30,10 @@ type ApplicationController struct {
 func (c *ApplicationController) List() {
 	res := ApplicationListResponse{}
 	access_token := c.GetString("access_token")
+	appname := c.GetString("name")
+	pageSize, _ := c.GetInt64("page_size")
+	currentPage, _ := c.GetInt64("current")
+
 	if access_token == "" {
 		res.Code = ResponseSystemErr
 		res.Messgae = "访问令牌无效"
@@ -40,162 +44,144 @@ func (c *ApplicationController) List() {
 	var args action.FindByCond
 	args.CondList = append(args.CondList, action.CondValue{
 		Type:  "And",
-		Key: "accessToken",
+		Key: "access_token",
 		Val:  access_token,
 	})
 	args.Fileds = []string{"id", "user_id", "company_id", "type"}
-	var replyAccessToken UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
+	var positionReply UserPosition
+	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &positionReply)
 	if err != nil {
 		res.Code = ResponseLogicErr
 		res.Messgae = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
-	} else {
-		//company_id、user_id、user_position_id、user_position_type
-		com_id := replyAccessToken.CompanyId
-		user_id := replyAccessToken.UserId
-		user_position_id := replyAccessToken.Id
-		user_position_type := replyAccessToken.Type
-		if com_id == 0 || user_id == 0 || user_position_id == 0 {
-			res.Code = ResponseSystemErr
-			res.Messgae = "获取信息失败"
-			c.Data["json"] = res
-			c.ServeJSON()
-		} else {
-			var reply action.PageByCond
-			var cond1 []action.CondValue
-			cond1 = append(cond1, action.CondValue{
-				Type:  "And",
-				Key: "company_id",
-				Val:  com_id,
-			})
-			cond1 = append(cond1, action.CondValue{
-				Type:  "And",
-				Key: "user_id",
-				Val:  user_id,
-			})
-			cond1 = append(cond1, action.CondValue{
-				Type:  "And",
-				Key: "user_position_id",
-				Val:  user_position_id,
-			})
-			cond1 = append(cond1, action.CondValue{
-				Type:  "And",
-				Key: "user_position_type",
-				Val:  user_position_type,
-			})
-			appname := c.GetString("name")
-			if appname != "" {
-				cond1 = append(cond1, action.CondValue{
-					Type:  "And",
-					Key: "name__icontains",
-					Val:  appname,
-				})
-
-			}
-			currentPage, _ := c.GetInt64("current")
-			pageSize, _ := c.GetInt64("page_size")
-			err = client.Call(beego.AppConfig.String("EtcdURL"), "Application", "PageByCond", &action.PageByCond{
-				CondList:     cond1,
-				Cols:     []string{"id", "create_time", "name", "image", "status", "application_tpl_id" },
-				OrderBy:  []string{"id"},
-				PageSize: pageSize,
-				Current:  currentPage,
-			}, &reply)
-
-			if err != nil {
-				res.Code = ResponseSystemErr
-				res.Messgae = "获取应用信息失败"
-				c.Data["json"] = res
-				c.ServeJSON()
-			} else {
-				replyList := []Application{}
-				err = json.Unmarshal([]byte(reply.Json), &replyList)
-				//获取应用其他信息tpl
-				var idarg []int64
-				idmap := make(map[int64]int64)
-				for _, value := range replyList {
-					idmap[value.ApplicationTplId] = value.ApplicationTplId
-				}
-				for _, value := range idmap {
-					idarg = append(idarg, value)
-				}
-
-				var cond2 []action.CondValue
-				cond2 = append(cond2, action.CondValue{
-					Type:  "And",
-					Key: "id__in",
-					Val:  idarg,
-				})
-				var replyApplicationTpl []ApplicationTpl
-				err = client.Call(beego.AppConfig.String("EtcdURL"), "ApplicationTpl", "ListByCond", &action.ListByCond{
-					CondList:     cond2,
-					Cols:     []string{"id", "name", "image", "status", "site"},
-					OrderBy:  []string{"id"},
-					PageSize: -1,
-				}, &replyApplicationTpl)
-
-				var resData []ApplicationValue
-				//循环赋值
-				if err != nil {
-					res.Code = ResponseSystemErr
-					res.Messgae = "获取应用失败"
-					c.Data["json"] = res
-					c.ServeJSON()
-				}
-				applicationTplByIds := make(map[int64]ApplicationTpl)
-				for _, value := range replyApplicationTpl {
-					applicationTplByIds[value.Id] = value
-				}
-				for _, value := range replyList {
-					re := time.Unix(value.CreateTime/1000, 0).Format("2006-01-02")
-					var rename, reimage, restatus string
-					if value.Name == "" {
-						if applicationTplByIds[value.ApplicationTplId].Name != "" {
-							rename = applicationTplByIds[value.ApplicationTplId].Name
-						}
-					} else {
-						rename = value.Name
-					}
-					if value.Image == "" {
-						if applicationTplByIds[value.ApplicationTplId].Image != "" {
-							reimage = applicationTplByIds[value.ApplicationTplId].Image
-						}
-					} else {
-						reimage = value.Image
-					}
-					if value.Status == 0 {
-						restatus = "启用"
-					} else if value.Status == 1 {
-						restatus = "停用"
-					} else {
-						restatus = "退订"
-					}
-					resData = append(resData, ApplicationValue{
-						Id:         value.Id,
-						CreateTime: re,
-						Name:       rename,
-						Image:      reimage,
-						Status:     restatus,
-						Site:       applicationTplByIds[value.ApplicationTplId].Site,
-					})
-
-				}
-				res.Code = ResponseNormal
-				res.Messgae = "获取应用成功"
-				res.Data.Total = reply.Total
-				res.Data.Current = currentPage
-				res.Data.CurrentSize = reply.CurrentSize
-				res.Data.OrderBy = reply.OrderBy
-				res.Data.PageSize = pageSize
-				res.Data.Name = appname
-				res.Data.List = resData
-				c.Data["json"] = res
-				c.ServeJSON()
-			}
-		}
 	}
+
+	//company_id、user_id、user_position_id、user_position_type
+	com_id := positionReply.CompanyId
+	user_id := positionReply.UserId
+	user_position_id := positionReply.Id
+	user_position_type := positionReply.Type
+	if com_id == 0 || user_id == 0 || user_position_id == 0 {
+		res.Code = ResponseSystemErr
+		res.Messgae = "获取信息失败"
+		c.Data["json"] = res
+		c.ServeJSON()
+	}
+
+	var applicationArge action.PageByCond
+	applicationArge.CondList = append(applicationArge.CondList, action.CondValue{
+		Type:  "And",
+		Key: "company_id",
+		Val:  com_id,
+	}, action.CondValue{
+		Type:  "And",
+		Key: "user_id",
+		Val:  user_id,
+	}, action.CondValue{
+		Type:  "And",
+		Key: "user_position_id",
+		Val:  user_position_id,
+	}, action.CondValue{
+		Type:  "And",
+		Key: "user_position_type",
+		Val:  user_position_type,
+	})
+	if appname != "" {
+		applicationArge.CondList = append(applicationArge.CondList, action.CondValue{
+			Type:  "And",
+			Key: "name__icontains",
+			Val:  appname,
+		})
+	}
+	applicationArge.Cols = []string{"id", "create_time", "name", "image", "status", "application_tpl_id" }
+	applicationArge.OrderBy = []string{"id"}
+	applicationArge.PageSize = pageSize
+	applicationArge.Current = currentPage
+	var reply action.PageByCond
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "Application", "PageByCond", applicationArge, &reply)
+	if err != nil {
+		res.Code = ResponseSystemErr
+		res.Messgae = "获取应用信息失败"
+		c.Data["json"] = res
+		c.ServeJSON()
+	}
+
+	replyList := []Application{}
+	err = json.Unmarshal([]byte(reply.Json), &replyList)
+	//获取应用其他信息tpl
+	var idarg []int64
+	idmap := make(map[int64]int64)
+	for _, value := range replyList {
+		idmap[value.ApplicationTplId] = value.ApplicationTplId
+	}
+	for _, value := range idmap {
+		idarg = append(idarg, value)
+	}
+
+	var applicationTplArgs action.ListByCond
+	applicationTplArgs.CondList = append(applicationTplArgs.CondList, action.CondValue{
+		Type:  "And",
+		Key: "id__in",
+		Val:  idarg,
+	})
+	applicationTplArgs.Cols = []string{"id", "name", "image", "status", "site"}
+	applicationTplArgs.OrderBy = []string{"id"}
+	applicationTplArgs.PageSize = -1
+	var applicationTplReply []ApplicationTpl
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "ApplicationTpl", "ListByCond", applicationTplArgs, &applicationTplReply)
+	if err != nil {
+		res.Code = ResponseSystemErr
+		res.Messgae = "获取应用失败"
+		c.Data["json"] = res
+		c.ServeJSON()
+	}
+
+	//循环赋值
+	var resData []ApplicationValue
+	applicationTplByIds := make(map[int64]ApplicationTpl)
+	for _, value := range applicationTplReply {
+		applicationTplByIds[value.Id] = value
+	}
+	for _, value := range replyList {
+		var rename, reimage, restatus string
+		if value.Name == "" && applicationTplByIds[value.ApplicationTplId].Name != "" {
+			rename = applicationTplByIds[value.ApplicationTplId].Name
+		} else {
+			rename = value.Name
+		}
+		if value.Image == "" && applicationTplByIds[value.ApplicationTplId].Image != "" {
+			reimage = applicationTplByIds[value.ApplicationTplId].Image
+		} else {
+			reimage = value.Image
+		}
+		if value.Status == 0 {
+			restatus = "启用"
+		} else if value.Status == 1 {
+			restatus = "停用"
+		} else {
+			restatus = "退订"
+		}
+		resData = append(resData, ApplicationValue{
+			Id:         value.Id,
+			CreateTime: time.Unix(value.CreateTime / 1000, 0).Format("2006-01-02"),
+			Name:       rename,
+			Image:      reimage,
+			Status:     restatus,
+			Site:       applicationTplByIds[value.ApplicationTplId].Site,
+		})
+	}
+	res.Code = ResponseNormal
+	res.Messgae = "获取应用成功"
+	res.Data.Total = reply.Total
+	res.Data.Current = currentPage
+	res.Data.CurrentSize = reply.CurrentSize
+	res.Data.OrderBy = reply.OrderBy
+	res.Data.PageSize = pageSize
+	res.Data.Name = appname
+	res.Data.List = resData
+	c.Data["json"] = res
+	c.ServeJSON()
 }
 
 // @Title 应用详情接口
@@ -229,94 +215,87 @@ func (c *ApplicationController) Detail() {
 		res.Messgae = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
-	} else {
-		//company_id、user_id、user_position_id、user_position_type
-		ap_id, _ := c.GetInt64("id")
-
-		if ap_id == 0 {
-			res.Code = ResponseSystemErr
-			res.Messgae = "获取信息失败"
-			c.Data["json"] = res
-			c.ServeJSON()
-		} else {
-			var reply Application
-			err = client.Call(beego.AppConfig.String("EtcdURL"), "Application", "FindById", &Application{
-				Id: ap_id,
-			}, &reply)
-
-			if err != nil {
-				res.Code = ResponseSystemErr
-				res.Messgae = "获取应用信息失败"
-				c.Data["json"] = res
-				c.ServeJSON()
-			} else {
-				if reply.ApplicationTplId == 0 {
-					res.Code = ResponseSystemErr
-					res.Messgae = "获取应用信息失败"
-					c.Data["json"] = res
-					c.ServeJSON()
-				}
-				//获取应用其他信息tpl
-				var replyApplicationTpl ApplicationTpl
-				err = client.Call(beego.AppConfig.String("EtcdURL"), "ApplicationTpl", "FindById", &ApplicationTpl{
-					Id: reply.ApplicationTplId,
-				}, &replyApplicationTpl)
-				if err != nil {
-					res.Code = ResponseSystemErr
-					res.Messgae = "获取应用信息失败"
-					c.Data["json"] = res
-					c.ServeJSON()
-				}
-				re := time.Unix(reply.CreateTime/1000, 0).Format("2006-01-02")
-				var rename, reimage string
-				if reply.Name == "" {
-					if replyApplicationTpl.Name != "" {
-						rename = replyApplicationTpl.Name
-					}
-				} else {
-					rename = reply.Name
-				}
-				if reply.Image == "" {
-					if replyApplicationTpl.Image != "" {
-						reimage = replyApplicationTpl.Image
-					}
-				} else {
-					reimage = reply.Image
-				}
-				//开发者
-				var replyUser User
-				err = client.Call(beego.AppConfig.String("EtcdURL"), "User", "FindById", &User{
-					Id: replyApplicationTpl.UserId,
-				}, &replyUser)
-				var username, cname string
-				if err == nil {
-					username = replyUser.Username
-				}
-				//开发公司
-				var replyCompany Company
-				err = client.Call(beego.AppConfig.String("EtcdURL"), "Company", "FindById", &Company{
-					Id: replyApplicationTpl.CompanyId,
-				}, &replyCompany)
-				if err == nil {
-					cname = replyCompany.Name
-				}
-				res.Code = ResponseNormal
-				res.Messgae = "获取应用成功"
-				res.Data.CreateTime = re
-				res.Data.Name = rename
-				res.Data.Image = reimage
-				res.Data.Desc = replyApplicationTpl.Desc
-				res.Data.Price = replyApplicationTpl.Price
-				res.Data.PayType = GetPayTypeName(replyApplicationTpl.PayType)
-				res.Data.PayCycle = GetPayCycleName(replyApplicationTpl.PayCycle)
-				res.Data.CompanyName = cname
-				res.Data.UserName = username
-				c.Data["json"] = res
-				c.ServeJSON()
-			}
-		}
-
 	}
+	//company_id、user_id、user_position_id、user_position_type
+	ap_id, _ := c.GetInt64("id")
+
+	if ap_id == 0 {
+		res.Code = ResponseSystemErr
+		res.Messgae = "获取信息失败"
+		c.Data["json"] = res
+		c.ServeJSON()
+	}
+	var reply Application
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "Application", "FindById", &Application{
+		Id: ap_id,
+	}, &reply)
+
+	if err != nil {
+		res.Code = ResponseSystemErr
+		res.Messgae = "获取应用信息失败"
+		c.Data["json"] = res
+		c.ServeJSON()
+	}
+	if reply.ApplicationTplId == 0 {
+		res.Code = ResponseSystemErr
+		res.Messgae = "获取应用信息失败"
+		c.Data["json"] = res
+		c.ServeJSON()
+	}
+	//获取应用其他信息tpl
+	var replyApplicationTpl ApplicationTpl
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "ApplicationTpl", "FindById", &ApplicationTpl{
+		Id: reply.ApplicationTplId,
+	}, &replyApplicationTpl)
+	if err != nil {
+		res.Code = ResponseSystemErr
+		res.Messgae = "获取应用信息失败"
+		c.Data["json"] = res
+		c.ServeJSON()
+	}
+	re := time.Unix(reply.CreateTime / 1000, 0).Format("2006-01-02")
+	var rename, reimage string
+	if reply.Name == "" && replyApplicationTpl.Name != "" {
+		rename = replyApplicationTpl.Name
+	} else {
+		rename = reply.Name
+	}
+	if reply.Image == "" && replyApplicationTpl.Image != "" {
+		reimage = replyApplicationTpl.Image
+	} else {
+		reimage = reply.Image
+	}
+	//开发者
+	var replyUser User
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "User", "FindById", &User{
+		Id: replyApplicationTpl.UserId,
+	}, &replyUser)
+	var username, cname string
+	if err == nil {
+		username = replyUser.Username
+	}
+	//开发公司
+	var replyCompany Company
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "Company", "FindById", &Company{
+		Id: replyApplicationTpl.CompanyId,
+	}, &replyCompany)
+	if err == nil {
+		cname = replyCompany.Name
+	}
+
+	res.Code = ResponseNormal
+	res.Messgae = "获取应用成功"
+	res.Data.CreateTime = re
+	res.Data.Name = rename
+	res.Data.Image = reimage
+	res.Data.Desc = replyApplicationTpl.Desc
+	res.Data.Price = replyApplicationTpl.Price
+	res.Data.PayType = GetPayTypeName(replyApplicationTpl.PayType)
+	res.Data.PayCycle = GetPayCycleName(replyApplicationTpl.PayCycle)
+	res.Data.CompanyName = cname
+	res.Data.UserName = username
+	c.Data["json"] = res
+	c.ServeJSON()
 }
 func GetPayTypeName(ptype int8) string {
 	// 0:限免 1:永久免费 2:1次性收费 3:周期收费tpl
@@ -384,44 +363,41 @@ func (c *ApplicationController) ModifyStatus() {
 		res.Messgae = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
-	} else {
-		ap_id, _ := c.GetInt64("id")
-		var reply Application
-		err = client.Call(beego.AppConfig.String("EtcdURL"), "Application", "FindById", &Application{
-			Id: ap_id,
-		}, &reply)
-		if err != nil {
-			res.Code = ResponseSystemErr
-			res.Messgae = "获取应用信息失败"
-			c.Data["json"] = res
-			c.ServeJSON()
-		} else {
-			status, _ := c.GetInt8("status")
-			timestamp := time.Now().UnixNano() / 1e6
-			var updateArgs []action.UpdateValue
-			updateArgs = append(updateArgs, action.UpdateValue{
-				Key: "update_time",
-				Val:  timestamp,
-			})
-			updateArgs = append(updateArgs, action.UpdateValue{
-				Key: "status",
-				Val:  status,
-			})
-			err = client.Call(beego.AppConfig.String("EtcdURL"), "Application", "UpdateById", &action.UpdateByIdCond{
-				Id: []int64{ap_id},
-				UpdateList:updateArgs,
-			}, nil)
-			if err != nil {
-				res.Code = ResponseSystemErr
-				res.Messgae = "应用信息修改失败！"
-				c.Data["json"] = res
-				c.ServeJSON()
-			}
-			res.Code = ResponseNormal
-			res.Messgae = "应用信息修改成功！"
-			c.Data["json"] = res
-			c.ServeJSON()
-		}
 	}
-
+	ap_id, _ := c.GetInt64("id")
+	var reply Application
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "Application", "FindById", &Application{
+		Id: ap_id,
+	}, &reply)
+	if err != nil {
+		res.Code = ResponseSystemErr
+		res.Messgae = "获取应用信息失败"
+		c.Data["json"] = res
+		c.ServeJSON()
+	}
+	status, _ := c.GetInt8("status")
+	timestamp := time.Now().UnixNano() / 1e6
+	var updateArgs []action.UpdateValue
+	updateArgs = append(updateArgs, action.UpdateValue{
+		Key: "update_time",
+		Val:  timestamp,
+	})
+	updateArgs = append(updateArgs, action.UpdateValue{
+		Key: "status",
+		Val:  status,
+	})
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "Application", "UpdateById", &action.UpdateByIdCond{
+		Id: []int64{ap_id},
+		UpdateList:updateArgs,
+	}, nil)
+	if err != nil {
+		res.Code = ResponseSystemErr
+		res.Messgae = "应用信息修改失败！"
+		c.Data["json"] = res
+		c.ServeJSON()
+	}
+	res.Code = ResponseNormal
+	res.Messgae = "应用信息修改成功！"
+	c.Data["json"] = res
+	c.ServeJSON()
 }

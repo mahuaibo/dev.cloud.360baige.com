@@ -67,6 +67,7 @@ func (c *CompanyController) Detail() {
 	}
 	res.Code = ResponseNormal
 	res.Messgae = "获取公司信息成功"
+	res.Data.Id = reply.Id
 	res.Data.Logo = reply.Logo
 	res.Data.Name = reply.Name
 	res.Data.ShortName = reply.ShortName
@@ -81,7 +82,6 @@ func (c *CompanyController) Detail() {
 	res.Data.Status = reply.Status
 	c.Data["json"] = res
 	c.ServeJSON()
-
 }
 
 // @Title 企业信息修改接口
@@ -98,145 +98,103 @@ func (c *CompanyController) Modify() {
 		res.Messgae = "访问令牌无效"
 		c.Data["json"] = res
 		c.ServeJSON()
-	} else {
-		//检测 accessToken
-		var args action.FindByCond
-		args.CondList = append(args.CondList, action.CondValue{
-			Type: "And",
-			Key:  "accessToken",
-			Val:  access_token,
-		})
-		args.Fileds = []string{"id", "user_id", "company_id", "type"}
-		var replyAccessToken UserPosition
-		err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
-		if err != nil {
-			res.Code = ResponseLogicErr
-			res.Messgae = "访问令牌失效"
-			c.Data["json"] = res
-			c.ServeJSON()
-		} else {
-			com_id := replyAccessToken.CompanyId
-			if com_id == 0 {
-				res.Code = ResponseSystemErr
-				res.Messgae = "获取公司信息失败"
-				c.Data["json"] = res
-				c.ServeJSON()
-			} else {
-				var reply Company
-				err = client.Call(beego.AppConfig.String("EtcdURL"), "Company", "FindById", &Company{
-					Id: com_id,
-				}, &reply)
+	}
+	//检测 accessToken
+	var args action.FindByCond
+	args.CondList = append(args.CondList, action.CondValue{
+		Type: "And",
+		Key:  "accessToken",
+		Val:  access_token,
+	})
+	args.Fileds = []string{"id", "user_id", "company_id", "type"}
+	var replyAccessToken UserPosition
+	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
+	if err != nil {
+		res.Code = ResponseLogicErr
+		res.Messgae = "访问令牌失效"
+		c.Data["json"] = res
+		c.ServeJSON()
+	}
+	com_id := replyAccessToken.CompanyId
+	if com_id == 0 {
+		res.Code = ResponseSystemErr
+		res.Messgae = "获取公司信息失败"
+		c.Data["json"] = res
+		c.ServeJSON()
+	}
+	var reply Company
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "Company", "FindById", &Company{
+		Id: com_id,
+	}, &reply)
 
-				if err != nil {
-					res.Code = ResponseSystemErr
-					res.Messgae = "获取公司信息失败"
-					c.Data["json"] = res
-					c.ServeJSON()
-				}
-
-				if (reply.Status != 1) {
-					res.Code = ResponseSystemErr
-					res.Messgae = "公司状态不可修改"
-					c.Data["json"] = res
-					c.ServeJSON()
-				} else {
-					logo := c.GetString("logo")
-					name := c.GetString("name")
-					shortName := c.GetString("short_name")
-					provinceId, _ := c.GetInt64("province_id")
-					cityId, _ := c.GetInt64("city_id")
-					districtId, _ := c.GetInt64("district_id")
-					address := c.GetString("address")
-					positionX, _ := c.GetFloat("position_x", 64)
-					positionY, _ := c.GetFloat("position_y", 64)
-					remark := c.GetString("remark")
-					brief := c.GetString("brief")
-
-					timestamp := time.Now().UnixNano() / 1e6
-					var updateArgs []action.UpdateValue
-					updateArgs = append(updateArgs, action.UpdateValue{
-						Key: "update_time",
-						Val: timestamp,
-					})
-					updateArgs = append(updateArgs, action.UpdateValue{
-						Key: "logo",
-						Val: logo,
-					})
-					updateArgs = append(updateArgs, action.UpdateValue{
-						Key: "name",
-						Val: name,
-					})
-					updateArgs = append(updateArgs, action.UpdateValue{
-						Key: "short_name",
-						Val: shortName,
-					})
-					updateArgs = append(updateArgs, action.UpdateValue{
-						Key: "province_id",
-						Val: provinceId,
-					})
-					updateArgs = append(updateArgs, action.UpdateValue{
-						Key: "city_id",
-						Val: cityId,
-					})
-					updateArgs = append(updateArgs, action.UpdateValue{
-						Key: "district_id",
-						Val: districtId,
-					})
-					updateArgs = append(updateArgs, action.UpdateValue{
-						Key: "address",
-						Val: address,
-					})
-					updateArgs = append(updateArgs, action.UpdateValue{
-						Key: "position_x",
-						Val: positionX,
-					})
-					updateArgs = append(updateArgs, action.UpdateValue{
-						Key: "position_y",
-						Val: positionY,
-					})
-					updateArgs = append(updateArgs, action.UpdateValue{
-						Key: "remark",
-						Val: remark,
-					})
-					updateArgs = append(updateArgs, action.UpdateValue{
-						Key: "brief",
-						Val: brief,
-					})
-
-					err = client.Call(beego.AppConfig.String("EtcdURL"), "Company", "UpdateById", &action.UpdateByIdCond{
-						Id:         []int64{com_id},
-						UpdateList: updateArgs,
-					}, nil)
-
-					if err != nil {
-						res.Code = ResponseSystemErr
-						res.Messgae = "企业信息修改失败！"
-						c.Data["json"] = res
-						c.ServeJSON()
-					}
-
-					res.Code = ResponseNormal
-					res.Messgae = "企业信息修改成功！"
-					res.Data.Logo = logo
-					res.Data.Name = name
-					res.Data.ShortName = shortName
-					res.Data.ProvinceId = provinceId
-					res.Data.CityId = cityId
-					res.Data.DistrictId = districtId
-					res.Data.Address = address
-					res.Data.PositionX = positionX
-					res.Data.PositionY = positionY
-					res.Data.Remark = remark
-					res.Data.Brief = brief
-					res.Data.Status = reply.Status
-					c.Data["json"] = res
-					c.ServeJSON()
-				}
-
-			}
-
-		}
-
+	if err != nil {
+		res.Code = ResponseSystemErr
+		res.Messgae = "获取公司信息失败"
+		c.Data["json"] = res
+		c.ServeJSON()
 	}
 
+	if (reply.Status != 1) {
+		res.Code = ResponseSystemErr
+		res.Messgae = "公司状态不可修改"
+		c.Data["json"] = res
+		c.ServeJSON()
+	}
+
+	provinceId, _ := c.GetInt64("province_id")
+	cityId, _ := c.GetInt64("city_id")
+	districtId, _ := c.GetInt64("district_id")
+	positionX, _ := c.GetFloat("position_x", 64)
+	positionY, _ := c.GetFloat("position_y", 64)
+	var updateArgs action.UpdateByIdCond
+	updateArgs.UpdateList = append(updateArgs.UpdateList, action.UpdateValue{
+		Key: "update_time",
+		Val: time.Now().UnixNano() / 1e6,
+	}, action.UpdateValue{
+		Key: "logo",
+		Val: c.GetString("logo"),
+	}, action.UpdateValue{
+		Key: "name",
+		Val: c.GetString("name"),
+	}, action.UpdateValue{
+		Key: "short_name",
+		Val: c.GetString("short_name"),
+	}, action.UpdateValue{
+		Key: "province_id",
+		Val: provinceId,
+	}, action.UpdateValue{
+		Key: "city_id",
+		Val: cityId,
+	}, action.UpdateValue{
+		Key: "district_id",
+		Val: districtId,
+	}, action.UpdateValue{
+		Key: "address",
+		Val: c.GetString("address"),
+	}, action.UpdateValue{
+		Key: "position_x",
+		Val: positionX,
+	}, action.UpdateValue{
+		Key: "position_y",
+		Val: positionY,
+	}, action.UpdateValue{
+		Key: "remark",
+		Val: c.GetString("remark"),
+	}, action.UpdateValue{
+		Key: "brief",
+		Val: c.GetString("brief"),
+	})
+	updateArgs.Id = []int64{com_id}
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "Company", "UpdateById", updateArgs, &action.Num{})
+	if err != nil {
+		res.Code = ResponseSystemErr
+		res.Messgae = "企业信息修改失败！"
+		c.Data["json"] = res
+		c.ServeJSON()
+	}
+
+	res.Code = ResponseNormal
+	res.Messgae = "企业信息修改成功！"
+	c.Data["json"] = res
+	c.ServeJSON()
 }
