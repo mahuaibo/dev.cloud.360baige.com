@@ -46,19 +46,19 @@ func (c *UserController) Login() {
 	var args action.FindByCond
 	args.Fileds = []string{"id", "username", "access_ticket", "expire_in"}
 	switch username_type {
-	case 1:
+	case "1":
 		args.CondList = append(args.CondList, action.CondValue{
 			Type: "And",
 			Key:  "username",
 			Val:  username,
 		})
-	case 2:
+	case "2":
 		args.CondList = append(args.CondList, action.CondValue{
 			Type: "And",
 			Key:  "email",
 			Val:  username,
 		})
-	case 3:
+	case "3":
 		args.CondList = append(args.CondList, action.CondValue{
 			Type: "And",
 			Key:  "phone",
