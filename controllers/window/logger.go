@@ -28,7 +28,7 @@ type LoggerController struct {
 // @Failure 403 :uid is empty
 // @router /add [post]
 func (c *LoggerController) Add()  {
-	res := ModifyApplicationTplStatusResponse{}
+	res := LoggerAddResponse{}
 	access_token := c.GetString("access_token")
 	if access_token == "" {
 		res.Code = ResponseSystemErr

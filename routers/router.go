@@ -77,6 +77,47 @@ func init() {
 						&mobile.UserController{},
 					),
 				),
+				beego.NSNamespace("/userposition",
+					beego.NSInclude(
+						&mobile.UserPositionController{},
+					),
+				),
+				beego.NSNamespace("/account",
+					beego.NSInclude(
+						&mobile.AccountController{},
+					),
+				),
+				beego.NSNamespace("/account_item",
+					beego.NSInclude(
+						&mobile.AccountItemController{},
+					),
+				),
+				beego.NSNamespace("/order",
+					beego.NSInclude(
+						&mobile.OrderController{},
+					),
+				),
+				beego.NSNamespace("/application",
+					beego.NSInclude(
+						&mobile.ApplicationController{},
+					),
+				),
+				beego.NSNamespace("/application_tpl",
+					beego.NSInclude(
+						&mobile.ApplicationTplController{},
+					),
+				),
+				beego.NSNamespace("/message_temp",
+					beego.NSInclude(
+						&mobile.MessageTempController{},
+					),
+				),
+				beego.NSNamespace("/logger",
+					beego.NSInclude(
+						&mobile.LoggerController{},
+					),
+				),
+
 			),
 		))
 	beego.AddNamespace(mobileApi)
