@@ -26,6 +26,7 @@ type AccountController struct {
 func (c *AccountController) AccountStatistics() {
 	res := AccountStatisticsResponse{}
 	access_token := c.GetString("access_token")
+	current := c.GetString("date")
 	if access_token == "" {
 		res.Code = ResponseSystemErr
 		res.Messgae = "访问令牌无效"
@@ -47,85 +48,79 @@ func (c *AccountController) AccountStatistics() {
 		res.Messgae = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
-	} else {
-		//company_id、user_id、user_position_id、user_position_type
-		com_id := replyAccessToken.CompanyId
-		user_id := replyAccessToken.UserId
-		user_position_id := replyAccessToken.Id
-		user_position_type := replyAccessToken.Type
-		if com_id == 0 || user_id == 0 || user_position_id == 0 {
-			res.Code = ResponseSystemErr
-			res.Messgae = "获取账务统计信息失败"
-			c.Data["json"] = res
-			c.ServeJSON()
-		} else {
-			var reply Account
-			//检测 accessToken
-			var args2 action.FindByCond
-			args2.CondList = append(args2.CondList, action.CondValue{
-				Type:  "And",
-				Key: "company_id",
-				Val:  com_id,
-			})
-			args2.CondList = append(args2.CondList, action.CondValue{
-				Type:  "And",
-				Key: "user_id",
-				Val:  user_id,
-			})
-			args2.CondList = append(args2.CondList, action.CondValue{
-				Type:  "And",
-				Key: "user_position_id",
-				Val:  user_position_id,
-			})
-			args2.CondList = append(args2.CondList, action.CondValue{
-				Type:  "And",
-				Key: "user_position_type",
-				Val:  user_position_type,
-			})
-			args2.Fileds = []string{"id", "balance"}
-			err = client.Call(beego.AppConfig.String("EtcdURL"), "Account", "FindByCond", args2, &reply)
-			if err != nil {
-				res.Code = ResponseSystemErr
-				res.Messgae = "获取账务统计信息失败"
-				c.Data["json"] = res
-				c.ServeJSON()
-			} else {
-				account_id := reply.Id
-				var reply2 AccountItemStatisticsCond
-				err = client.Call(beego.AppConfig.String("EtcdURL"), "AccountItem", "AccountItemStatistics", &AccountItemStatisticsCond{
-					AccountId: account_id,
-				}, &reply2)
-				if err != nil {
-					res.Code = ResponseSystemErr
-					res.Messgae = "获取账务统计信息失败"
-					c.Data["json"] = res
-					c.ServeJSON()
-				} else {
-					res.Data.TotalDischarge = reply2.Pay
-					res.Data.TotalEntry = reply2.Income
-					var reply3 AccountItemStatisticsCond
-					var stime, etime int64
-					current := c.GetString("date")
-					if (current == "") {
-						current = time.Now().Format("2006-01")
-					}
-					//获取指定时间的月初、下个月初时间戳
-					stime = utils.GetMonthStartUnix(current + "-01")
-					etime = utils.GetNextMonthStartUnix(current + "-01")
-					err = client.Call(beego.AppConfig.String("EtcdURL"), "AccountItem", "AccountItemStatistics", &AccountItemStatisticsCond{
-						AccountId: account_id,
-						StartTime: stime,
-						EndTime:   etime,
-					}, &reply3)
-					res.Code = ResponseNormal
-					res.Messgae = "获取账务统计信息成功"
-					res.Data.Balance = reply.Balance
-					res.Data.MonthPay = reply3.Pay
-					res.Data.MonthIncome = reply3.Income
-					c.Data["json"] = res
-					c.ServeJSON()
-				}
-			}
-		}
 	}
+	//company_id、user_id、user_position_id、user_position_type
+	com_id := replyAccessToken.CompanyId
+	user_id := replyAccessToken.UserId
+	user_position_id := replyAccessToken.Id
+	user_position_type := replyAccessToken.Type
+	if com_id == 0 || user_id == 0 || user_position_id == 0 {
+		res.Code = ResponseSystemErr
+		res.Messgae = "获取账务统计信息失败"
+		c.Data["json"] = res
+		c.ServeJSON()
+	}
+	var reply Account
+	//检测 accessToken
+	var accountArgs action.FindByCond
+	accountArgs.CondList = append(accountArgs.CondList, action.CondValue{
+		Type:  "And",
+		Key: "company_id",
+		Val:  com_id,
+	}, action.CondValue{
+		Type:  "And",
+		Key: "user_id",
+		Val:  user_id,
+	}, action.CondValue{
+		Type:  "And",
+		Key: "user_position_id",
+		Val:  user_position_id,
+	}, action.CondValue{
+		Type:  "And",
+		Key: "user_position_type",
+		Val:  user_position_type,
+	})
+	accountArgs.Fileds = []string{"id", "balance"}
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "Account", "FindByCond", accountArgs, &reply)
+	if err != nil {
+		res.Code = ResponseSystemErr
+		res.Messgae = "获取账务统计信息失败"
+		c.Data["json"] = res
+		c.ServeJSON()
+	}
+	account_id := reply.Id
+	var reply2 AccountItemStatisticsCond
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "AccountItem", "AccountItemStatistics", &AccountItemStatisticsCond{
+		AccountId: account_id,
+	}, &reply2)
+	if err != nil {
+		res.Code = ResponseSystemErr
+		res.Messgae = "获取账务统计信息失败"
+		c.Data["json"] = res
+		c.ServeJSON()
+	}
+	res.Data.TotalDischarge = reply2.Pay
+	res.Data.TotalEntry = reply2.Income
+
+	if (current == "") {
+		current = time.Now().Format("2006-01")
+	}
+	//获取指定时间的月初、下个月初时间戳
+	stime := utils.GetMonthStartUnix(current + "-01")
+	etime := utils.GetNextMonthStartUnix(current + "-01")
+	var AccountItemArgs AccountItemStatisticsCond
+	AccountItemArgs.AccountId = account_id
+	AccountItemArgs.StartTime = stime
+	AccountItemArgs.EndTime = etime
+	var AccountItemReply AccountItemStatisticsCond
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "AccountItem", "AccountItemStatistics", AccountItemArgs, &AccountItemReply)
+
+	res.Code = ResponseNormal
+	res.Messgae = "获取账务统计信息成功"
+	res.Data.Balance = reply.Balance
+	res.Data.MonthPay = AccountItemReply.Pay
+	res.Data.MonthIncome = AccountItemReply.Income
+	c.Data["json"] = res
+	c.ServeJSON()
+
 }

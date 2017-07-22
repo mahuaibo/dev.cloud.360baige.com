@@ -27,9 +27,10 @@ type LoggerController struct {
 // @Success 200 {object} models.logger
 // @Failure 403 :uid is empty
 // @router /add [post]
-func (c *LoggerController) Add()  {
+func (c *LoggerController) Add() {
 	res := LoggerAddResponse{}
 	access_token := c.GetString("access_token")
+	Type, _ := c.GetInt8("type")
 	if access_token == "" {
 		res.Code = ResponseSystemErr
 		res.Messgae = "访问令牌无效"
@@ -51,44 +52,41 @@ func (c *LoggerController) Add()  {
 		res.Messgae = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
-	} else {
-		com_id := replyAccessToken.CompanyId
-		user_id := replyAccessToken.UserId
-		user_position_id := replyAccessToken.Id
-		user_position_type := replyAccessToken.Type
-		if com_id == 0 || user_id == 0 || user_position_id == 0 {
-			res.Code = ResponseSystemErr
-			res.Messgae = "获取应用信息失败"
-			c.Data["json"] = res
-			c.ServeJSON()
-		} else {
-			res := LoggerAddResponse{}
-			Type, _ := c.GetInt8("type")
-			var reply Logger
-			args := Logger{
-				CreateTime:       time.Now().Unix(),
-				Content:          c.GetString("content"),
-				Remark:           c.GetString("remark"),
-				Type:             Type,
-				UserId:           user_id,
-				CompanyId:        com_id,
-				UserPositionId:   user_position_id,
-				UserPositionType: user_position_type,
-			}
-			err = client.Call(beego.AppConfig.String("EtcdURL"), "Logger", "Add", args, &reply)
-			if err == nil {
-				res.Code = ResponseNormal
-				res.Messgae = "新增成功"
-				res.Data.Id = reply.Id
-			} else {
-				res.Code = ResponseSystemErr
-				res.Messgae = "新增失败"
-			}
-			c.Data["json"] = res
-			c.ServeJSON()
-		}
 	}
 
+	com_id := replyAccessToken.CompanyId
+	user_id := replyAccessToken.UserId
+	user_position_id := replyAccessToken.Id
+	user_position_type := replyAccessToken.Type
+	if com_id == 0 || user_id == 0 || user_position_id == 0 {
+		res.Code = ResponseSystemErr
+		res.Messgae = "获取应用信息失败"
+		c.Data["json"] = res
+		c.ServeJSON()
+	}
+
+	var reply Logger
+	loggerArgs := Logger{
+		CreateTime:       time.Now().Unix(),
+		Content:          c.GetString("content"),
+		Remark:           c.GetString("remark"),
+		Type:             Type,
+		UserId:           user_id,
+		CompanyId:        com_id,
+		UserPositionId:   user_position_id,
+		UserPositionType: user_position_type,
+	}
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "Logger", "Add", loggerArgs, &reply)
+	if err == nil {
+		res.Code = ResponseNormal
+		res.Messgae = "新增成功"
+		res.Data.Id = reply.Id
+	} else {
+		res.Code = ResponseSystemErr
+		res.Messgae = "新增失败"
+	}
+	c.Data["json"] = res
+	c.ServeJSON()
 }
 
 // @Title 列表接口
@@ -102,6 +100,8 @@ func (c *LoggerController) Add()  {
 func (c *LoggerController) List() {
 	res := LoggerListResponse{}
 	access_token := c.GetString("access_token")
+	currentPage, _ := c.GetInt64("current")
+	pageSize, _ := c.GetInt64("page_size")
 	if access_token == "" {
 		res.Code = ResponseSystemErr
 		res.Messgae = "访问令牌无效"
@@ -123,89 +123,84 @@ func (c *LoggerController) List() {
 		res.Messgae = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
-	} else {
-		//company_id、user_id、user_position_id、user_position_type
-		com_id := replyAccessToken.CompanyId
-		user_id := replyAccessToken.UserId
-		user_position_id := replyAccessToken.Id
-		user_position_type := replyAccessToken.Type
-		if com_id == 0 || user_id == 0 || user_position_id == 0 {
-			res.Code = ResponseSystemErr
-			res.Messgae = "获取信息失败"
-			c.Data["json"] = res
-			c.ServeJSON()
-		} else {
-			var reply action.PageByCond
-			var cond1 []action.CondValue
-			cond1 = append(cond1, action.CondValue{
-				Type: "And",
-				Key:  "company_id",
-				Val:  com_id,
-			})
-			cond1 = append(cond1, action.CondValue{
-				Type: "And",
-				Key:  "user_id",
-				Val:  user_id,
-			})
-			cond1 = append(cond1, action.CondValue{
-				Type: "And",
-				Key:  "user_position_id",
-				Val:  user_position_id,
-			})
-			cond1 = append(cond1, action.CondValue{
-				Type: "And",
-				Key:  "user_position_type",
-				Val:  user_position_type,
-			})
-			currentPage, _ := c.GetInt64("current")
-			pageSize, _ := c.GetInt64("page_size")
-			err = client.Call(beego.AppConfig.String("EtcdURL"), "Logger", "PageByCond", &action.PageByCond{
-				CondList: cond1,
-				Cols:      []string{"id", "create_time", "content", "remark", "type", },
-				OrderBy:  []string{"id"},
-				PageSize: pageSize,
-				Current:  currentPage,
-			}, &reply)
-			if err != nil {
-				res.Code = ResponseSystemErr
-				res.Messgae = "获取信息失败"
-				c.Data["json"] = res
-				c.ServeJSON()
-			} else {
-				var resData []LoggerValue
-				replyList := []Logger{}
-				err = json.Unmarshal([]byte(reply.Json), &replyList)
-				for _, value := range replyList {
-					re := time.Unix(value.CreateTime/1000, 0).Format("2006-01-02")
-					var retype string
-					if value.Type == 1 {
-						retype = "增"
-					} else if value.Type == 2 {
-						retype = "删"
-					} else if value.Type == 3 {
-						retype = "改"
-					} else {
-						retype = "查"
-					}
-					resData = append(resData, LoggerValue{
-						CreateTime: re,
-						Content:    value.Content,
-						Remark:     value.Remark,
-						Type:       retype,
-					})
-
-				}
-				res.Code = ResponseNormal
-				res.Messgae = "获取成功"
-				res.Data.Total = reply.Total
-				res.Data.Current = currentPage
-				res.Data.CurrentSize = reply.CurrentSize
-				res.Data.OrderBy = reply.OrderBy
-				res.Data.PageSize = pageSize
-				res.Data.List = resData
-				c.Data["json"] = res
-				c.ServeJSON()
-			}
-		}
 	}
+
+	//company_id、user_id、user_position_id、user_position_type
+	com_id := replyAccessToken.CompanyId
+	user_id := replyAccessToken.UserId
+	user_position_id := replyAccessToken.Id
+	user_position_type := replyAccessToken.Type
+	if com_id == 0 || user_id == 0 || user_position_id == 0 {
+		res.Code = ResponseSystemErr
+		res.Messgae = "获取信息失败"
+		c.Data["json"] = res
+		c.ServeJSON()
+	}
+
+	var reply action.PageByCond
+	var cond1 []action.CondValue
+	cond1 = append(cond1, action.CondValue{
+		Type: "And",
+		Key:  "company_id",
+		Val:  com_id,
+	}, action.CondValue{
+		Type: "And",
+		Key:  "user_id",
+		Val:  user_id,
+	}, action.CondValue{
+		Type: "And",
+		Key:  "user_position_id",
+		Val:  user_position_id,
+	}, action.CondValue{
+		Type: "And",
+		Key:  "user_position_type",
+		Val:  user_position_type,
+	})
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "Logger", "PageByCond", &action.PageByCond{
+		CondList: cond1,
+		Cols:      []string{"id", "create_time", "content", "remark", "type", },
+		OrderBy:  []string{"id"},
+		PageSize: pageSize,
+		Current:  currentPage,
+	}, &reply)
+	if err != nil {
+		res.Code = ResponseSystemErr
+		res.Messgae = "获取信息失败"
+		c.Data["json"] = res
+		c.ServeJSON()
+	}
+
+	var resData []LoggerValue
+	replyList := []Logger{}
+	err = json.Unmarshal([]byte(reply.Json), &replyList)
+	for _, value := range replyList {
+		re := time.Unix(value.CreateTime / 1000, 0).Format("2006-01-02")
+		var retype string
+		if value.Type == 1 {
+			retype = "增"
+		} else if value.Type == 2 {
+			retype = "删"
+		} else if value.Type == 3 {
+			retype = "改"
+		} else {
+			retype = "查"
+		}
+		resData = append(resData, LoggerValue{
+			CreateTime: re,
+			Content:    value.Content,
+			Remark:     value.Remark,
+			Type:       retype,
+		})
+	}
+
+	res.Code = ResponseNormal
+	res.Messgae = "获取成功"
+	res.Data.Total = reply.Total
+	res.Data.Current = currentPage
+	res.Data.CurrentSize = reply.CurrentSize
+	res.Data.OrderBy = reply.OrderBy
+	res.Data.PageSize = pageSize
+	res.Data.List = resData
+	c.Data["json"] = res
+	c.ServeJSON()
 }

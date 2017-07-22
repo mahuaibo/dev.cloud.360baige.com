@@ -29,6 +29,9 @@ type OrderController struct {
 func (c *OrderController) List() {
 	res := OrderListResponse{}
 	access_token := c.GetString("access_token")
+	status, _ := c.GetInt8("status")
+	currentPage, _ := c.GetInt64("current")
+	pageSize, _ := c.GetInt64("page_size")
 	if access_token == "" {
 		res.Code = ResponseSystemErr
 		res.Messgae = "访问令牌无效"
@@ -50,107 +53,102 @@ func (c *OrderController) List() {
 		res.Messgae = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
-	} else {
-		//company_id、user_id、user_position_id、user_position_type
-		com_id := replyAccessToken.CompanyId
-		user_id := replyAccessToken.UserId
-		user_position_id := replyAccessToken.Id
-		user_position_type := replyAccessToken.Type
-		if com_id == 0 || user_id == 0 || user_position_id == 0 {
-			res.Code = ResponseSystemErr
-			res.Messgae = "获取信息失败"
-			c.Data["json"] = res
-			c.ServeJSON()
-		} else {
-			var reply action.PageByCond
-			var cond1 []action.CondValue
-			cond1 = append(cond1, action.CondValue{
-				Type: "And",
-				Key:  "company_id",
-				Val:  com_id,
-			})
-			cond1 = append(cond1, action.CondValue{
-				Type: "And",
-				Key:  "user_id",
-				Val:  user_id,
-			})
-			cond1 = append(cond1, action.CondValue{
-				Type: "And",
-				Key:  "user_position_id",
-				Val:  user_position_id,
-			})
-			cond1 = append(cond1, action.CondValue{
-				Type: "And",
-				Key:  "user_position_type",
-				Val:  user_position_type,
-			})
-			status, _ := c.GetInt8("status")
-			if status != -2 {
-				cond1 = append(cond1,  action.CondValue{
-					Type:  "And",
-					Key: "status",
-					Val:  status,
-				})
-			} else {
-				cond1 = append(cond1, action.CondValue{
-					Type:  "And",
-					Key: "status__gt",
-					Val:  -1,
-				})
-			}
-			currentPage, _ := c.GetInt64("current")
-			pageSize, _ := c.GetInt64("page_size")
-			err = client.Call(beego.AppConfig.String("EtcdURL"), "Order", "PageByCond", &action.PageByCond{
-				CondList:     cond1,
-				Cols:     []string{"id", "create_time", "code", "price", "type", "pay_type", "brief", "status"},
-				OrderBy:  []string{"id"},
-				PageSize: pageSize,
-				Current:  currentPage,
-			}, &reply)
-			if err != nil {
-				res.Code = ResponseSystemErr
-				res.Messgae = "获取订单信息失败"
-				c.Data["json"] = res
-				c.ServeJSON()
-			} else {
-				replyList := []Order{}
-				err = json.Unmarshal([]byte(reply.Json), &replyList)
-				//List 循环赋值
-				for _, value := range replyList {
-					re := time.Unix(value.CreateTime/1000, 0).Format("2006-01-02")
-					var rPayType, rStatus string
-					if value.PayType == 1 {
-						rPayType = "在线支付"
-					} else {
-						rPayType = "线下支付"
-					}
-					rStatus = GetStatus(value.Status)
-					res.Data.List = append(res.Data.List, OrderValue{
-						Id:         value.Id,
-						CreateTime: re,
-						Code:       value.Code,
-						Price:      value.Price,
-						Type:       value.Type,
-						PayType:    rPayType,
-						Brief:      value.Brief,
-						Status:     rStatus,
-					})
-				}
-				res.Data.Total = reply.Total
-				res.Data.Current = currentPage
-				res.Data.CurrentSize = reply.CurrentSize
-				res.Data.OrderBy = reply.OrderBy
-				res.Data.PageSize = pageSize
-				res.Data.Status = status
-				res.Code = ResponseNormal
-				res.Messgae = "获取账务统计信息成功"
-				c.Data["json"] = res
-				c.ServeJSON()
-
-			}
-		}
 	}
+
+	//company_id、user_id、user_position_id、user_position_type
+	com_id := replyAccessToken.CompanyId
+	user_id := replyAccessToken.UserId
+	user_position_id := replyAccessToken.Id
+	user_position_type := replyAccessToken.Type
+	if com_id == 0 || user_id == 0 || user_position_id == 0 {
+		res.Code = ResponseSystemErr
+		res.Messgae = "获取信息失败"
+		c.Data["json"] = res
+		c.ServeJSON()
+	}
+
+	var reply action.PageByCond
+	var cond1 []action.CondValue
+	var statusKey string
+	var statusVal interface{}
+	if status != -2 {
+		statusKey = "status"
+		statusVal = status
+	} else {
+		statusKey = "status__gt"
+		statusVal = -1
+	}
+	cond1 = append(cond1, action.CondValue{
+		Type: "And",
+		Key:  "company_id",
+		Val:  com_id,
+	}, action.CondValue{
+		Type: "And",
+		Key:  "user_id",
+		Val:  user_id,
+	}, action.CondValue{
+		Type: "And",
+		Key:  "user_position_id",
+		Val:  user_position_id,
+	}, action.CondValue{
+		Type: "And",
+		Key:  "user_position_type",
+		Val:  user_position_type,
+	}, action.CondValue{
+		Type:  "And",
+		Key: statusKey,
+		Val:  statusVal,
+	})
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "Order", "PageByCond", &action.PageByCond{
+		CondList:     cond1,
+		Cols:     []string{"id", "create_time", "code", "price", "type", "pay_type", "brief", "status"},
+		OrderBy:  []string{"id"},
+		PageSize: pageSize,
+		Current:  currentPage,
+	}, &reply)
+	if err != nil {
+		res.Code = ResponseSystemErr
+		res.Messgae = "获取订单信息失败"
+		c.Data["json"] = res
+		c.ServeJSON()
+	}
+
+	replyList := []Order{}
+	err = json.Unmarshal([]byte(reply.Json), &replyList)
+	//List 循环赋值
+	for _, value := range replyList {
+		re := time.Unix(value.CreateTime / 1000, 0).Format("2006-01-02")
+		var rPayType, rStatus string
+		if value.PayType == 1 {
+			rPayType = "在线支付"
+		} else {
+			rPayType = "线下支付"
+		}
+		rStatus = GetStatus(value.Status)
+		res.Data.List = append(res.Data.List, OrderValue{
+			Id:         value.Id,
+			CreateTime: re,
+			Code:       value.Code,
+			Price:      value.Price,
+			Type:       value.Type,
+			PayType:    rPayType,
+			Brief:      value.Brief,
+			Status:     rStatus,
+		})
+	}
+
+	res.Data.Total = reply.Total
+	res.Data.Current = currentPage
+	res.Data.CurrentSize = reply.CurrentSize
+	res.Data.OrderBy = reply.OrderBy
+	res.Data.PageSize = pageSize
+	res.Data.Status = status
+	res.Code = ResponseNormal
+	res.Messgae = "获取账务统计信息成功"
+	c.Data["json"] = res
+	c.ServeJSON()
 }
+
 func GetStatus(status int8) string {
 	var rStatus string
 	switch  status {
@@ -201,47 +199,45 @@ func (c *OrderController) Detail() {
 		res.Messgae = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
-	} else {
-		ai_id, _ := c.GetInt64("id")
-		if ai_id == 0 {
-			res.Code = ResponseSystemErr
-			res.Messgae = "获取信息失败"
-			c.Data["json"] = res
-			c.ServeJSON()
-		} else {
-
-			var reply Order
-			err = client.Call(beego.AppConfig.String("EtcdURL"), "Order", "FindById", &Order{
-				Id: ai_id,
-			}, &reply)
-			if err != nil {
-				res.Code = ResponseSystemErr
-				res.Messgae = "获取信息失败"
-				c.Data["json"] = res
-				c.ServeJSON()
-			} else {
-				re := time.Unix(reply.CreateTime/1000, 0).Format("2006-01-02")
-				var rPayType, rStatus string
-				rStatus = GetStatus(reply.Status)
-				if reply.PayType == 1 {
-					rPayType = "在线支付"
-				} else {
-					rPayType = "线下支付"
-				}
-				res.Code = ResponseSystemErr
-				res.Messgae = "获取账户信息成功"
-				res.Data.CreateTime = re
-				res.Data.Code = reply.Code
-				res.Data.Price = reply.Price
-				res.Data.Type = reply.Type
-				res.Data.PayType = rPayType
-				res.Data.Brief = reply.Brief
-				res.Data.Status = rStatus
-				c.Data["json"] = res
-				c.ServeJSON()
-			}
-		}
 	}
+
+	ai_id, _ := c.GetInt64("id")
+	if ai_id == 0 {
+		res.Code = ResponseSystemErr
+		res.Messgae = "获取信息失败"
+		c.Data["json"] = res
+		c.ServeJSON()
+	}
+
+	var reply Order
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "Order", "FindById", &Order{
+		Id: ai_id,
+	}, &reply)
+	if err != nil {
+		res.Code = ResponseSystemErr
+		res.Messgae = "获取信息失败"
+		c.Data["json"] = res
+		c.ServeJSON()
+	}
+
+	re := time.Unix(reply.CreateTime / 1000, 0).Format("2006-01-02")
+	var rPayType string
+	if reply.PayType == 1 {
+		rPayType = "在线支付"
+	} else {
+		rPayType = "线下支付"
+	}
+	res.Code = ResponseSystemErr
+	res.Messgae = "获取账户信息成功"
+	res.Data.CreateTime = re
+	res.Data.Code = reply.Code
+	res.Data.Price = reply.Price
+	res.Data.Type = reply.Type
+	res.Data.PayType = rPayType
+	res.Data.Brief = reply.Brief
+	res.Data.Status = GetStatus(reply.Status)
+	c.Data["json"] = res
+	c.ServeJSON()
 }
 
 // @Title 账务详情接口
@@ -275,49 +271,47 @@ func (c *OrderController) DetailByCode() {
 		res.Messgae = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
-	} else {
-		code := c.GetString("code")
-		if code == "" {
-			res.Code = ResponseSystemErr
-			res.Messgae = "获取信息失败"
-			c.Data["json"] = res
-			c.ServeJSON()
-		} else {
-			var reply Order
-			var args2 action.FindByCond
-			args2.CondList = append(args2.CondList, action.CondValue{
-				Type:  "And",
-				Key: "code",
-				Val:  code,
-			})
-			args2.Fileds = []string{"id", "create_time","code", "price", "type","pay_type","brief","status"}
-			err = client.Call(beego.AppConfig.String("EtcdURL"), "Order", "FindByCond", args2, &reply)
-			if err != nil {
-				res.Code = ResponseSystemErr
-				res.Messgae = "获取信息失败"
-				c.Data["json"] = res
-				c.ServeJSON()
-			} else {
-				re := time.Unix(reply.CreateTime/1000, 0).Format("2006-01-02")
-				var rPayType, rStatus string
-				rStatus = GetStatus(reply.Status)
-				if reply.PayType == 1 {
-					rPayType = "在线支付"
-				} else {
-					rPayType = "线下支付"
-				}
-				res.Code = ResponseSystemErr
-				res.Messgae = "获取账户信息成功"
-				res.Data.CreateTime = re
-				res.Data.Code = reply.Code
-				res.Data.Price = reply.Price
-				res.Data.Type = reply.Type
-				res.Data.PayType = rPayType
-				res.Data.Brief = reply.Brief
-				res.Data.Status = rStatus
-				c.Data["json"] = res
-				c.ServeJSON()
-			}
-		}
 	}
+
+	code := c.GetString("code")
+	if code == "" {
+		res.Code = ResponseSystemErr
+		res.Messgae = "获取信息失败"
+		c.Data["json"] = res
+		c.ServeJSON()
+	}
+
+	var reply Order
+	var args2 action.FindByCond
+	args2.CondList = append(args2.CondList, action.CondValue{
+		Type:  "And",
+		Key: "code",
+		Val:  code,
+	})
+	args2.Fileds = []string{"id", "create_time", "code", "price", "type", "pay_type", "brief", "status"}
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "Order", "FindByCond", args2, &reply)
+	if err != nil {
+		res.Code = ResponseSystemErr
+		res.Messgae = "获取信息失败"
+		c.Data["json"] = res
+		c.ServeJSON()
+	}
+	
+	var rPayType string
+	if reply.PayType == 1 {
+		rPayType = "在线支付"
+	} else {
+		rPayType = "线下支付"
+	}
+	res.Code = ResponseSystemErr
+	res.Messgae = "获取账户信息成功"
+	res.Data.CreateTime = time.Unix(reply.CreateTime / 1000, 0).Format("2006-01-02")
+	res.Data.Code = reply.Code
+	res.Data.Price = reply.Price
+	res.Data.Type = reply.Type
+	res.Data.PayType = rPayType
+	res.Data.Brief = reply.Brief
+	res.Data.Status = GetStatus(reply.Status)
+	c.Data["json"] = res
+	c.ServeJSON()
 }
