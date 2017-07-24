@@ -36,6 +36,7 @@ func (c *LoggerController) Add() {
 		res.Messgae = "访问令牌无效"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 	//检测 accessToken
 	var args action.FindByCond
@@ -52,6 +53,7 @@ func (c *LoggerController) Add() {
 		res.Messgae = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 
 	com_id := replyAccessToken.CompanyId
@@ -63,6 +65,7 @@ func (c *LoggerController) Add() {
 		res.Messgae = "获取应用信息失败"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 
 	var reply Logger
@@ -107,6 +110,7 @@ func (c *LoggerController) List() {
 		res.Messgae = "访问令牌无效"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 	//检测 accessToken
 	var args action.FindByCond
@@ -123,6 +127,7 @@ func (c *LoggerController) List() {
 		res.Messgae = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 
 	//company_id、user_id、user_position_id、user_position_type
@@ -135,11 +140,12 @@ func (c *LoggerController) List() {
 		res.Messgae = "获取信息失败"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 
+	var loggerArgs action.PageByCond
 	var reply action.PageByCond
-	var cond1 []action.CondValue
-	cond1 = append(cond1, action.CondValue{
+	loggerArgs.CondList = append(loggerArgs.CondList, action.CondValue{
 		Type: "And",
 		Key:  "company_id",
 		Val:  com_id,
@@ -156,25 +162,23 @@ func (c *LoggerController) List() {
 		Key:  "user_position_type",
 		Val:  user_position_type,
 	})
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "Logger", "PageByCond", &action.PageByCond{
-		CondList: cond1,
-		Cols:      []string{"id", "create_time", "content", "remark", "type", },
-		OrderBy:  []string{"id"},
-		PageSize: pageSize,
-		Current:  currentPage,
-	}, &reply)
+	loggerArgs.OrderBy = []string{"id"}
+	loggerArgs.Cols = []string{"id", "create_time", "content", "remark", "type", }
+	loggerArgs.PageSize = pageSize
+	loggerArgs.Current = currentPage
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "Logger", "PageByCond", loggerArgs, &reply)
 	if err != nil {
 		res.Code = ResponseSystemErr
 		res.Messgae = "获取信息失败"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 
 	var resData []LoggerValue
 	replyList := []Logger{}
 	err = json.Unmarshal([]byte(reply.Json), &replyList)
 	for _, value := range replyList {
-		re := time.Unix(value.CreateTime / 1000, 0).Format("2006-01-02")
 		var retype string
 		if value.Type == 1 {
 			retype = "增"
@@ -186,7 +190,7 @@ func (c *LoggerController) List() {
 			retype = "查"
 		}
 		resData = append(resData, LoggerValue{
-			CreateTime: re,
+			CreateTime: time.Unix(value.CreateTime / 1000, 0).Format("2006-01-02"),
 			Content:    value.Content,
 			Remark:     value.Remark,
 			Type:       retype,

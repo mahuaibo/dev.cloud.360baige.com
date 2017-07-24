@@ -37,6 +37,7 @@ func (c *OrderController) List() {
 		res.Messgae = "访问令牌无效"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 	//检测 accessToken
 	var args action.FindByCond
@@ -53,6 +54,7 @@ func (c *OrderController) List() {
 		res.Messgae = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 
 	//company_id、user_id、user_position_id、user_position_type
@@ -65,6 +67,7 @@ func (c *OrderController) List() {
 		res.Messgae = "获取信息失败"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 
 	var reply action.PageByCond
@@ -111,6 +114,7 @@ func (c *OrderController) List() {
 		res.Messgae = "获取订单信息失败"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 
 	replyList := []Order{}
@@ -183,6 +187,7 @@ func (c *OrderController) Detail() {
 		res.Messgae = "访问令牌无效"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 	//检测 accessToken
 	var args action.FindByCond
@@ -199,6 +204,7 @@ func (c *OrderController) Detail() {
 		res.Messgae = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 
 	ai_id, _ := c.GetInt64("id")
@@ -207,6 +213,7 @@ func (c *OrderController) Detail() {
 		res.Messgae = "获取信息失败"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 
 	var reply Order
@@ -218,6 +225,7 @@ func (c *OrderController) Detail() {
 		res.Messgae = "获取信息失败"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 
 	re := time.Unix(reply.CreateTime / 1000, 0).Format("2006-01-02")
@@ -255,6 +263,7 @@ func (c *OrderController) DetailByCode() {
 		res.Messgae = "访问令牌无效"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 	//检测 accessToken
 	var args action.FindByCond
@@ -271,6 +280,7 @@ func (c *OrderController) DetailByCode() {
 		res.Messgae = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 
 	code := c.GetString("code")
@@ -279,6 +289,7 @@ func (c *OrderController) DetailByCode() {
 		res.Messgae = "获取信息失败"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 
 	var reply Order
@@ -295,6 +306,7 @@ func (c *OrderController) DetailByCode() {
 		res.Messgae = "获取信息失败"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 	
 	var rPayType string

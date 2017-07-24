@@ -39,6 +39,7 @@ func (c *AccountItemController) List() {
 		res.Messgae = "访问令牌无效"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 	//检测 accessToken
 	var args action.FindByCond
@@ -55,6 +56,7 @@ func (c *AccountItemController) List() {
 		res.Messgae = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 	//company_id、user_id、user_position_id、user_position_type
 	com_id := replyAccessToken.CompanyId
@@ -63,10 +65,12 @@ func (c *AccountItemController) List() {
 	user_position_type := replyAccessToken.Type
 	if com_id == 0 || user_id == 0 || user_position_id == 0 {
 		res.Code = ResponseSystemErr
-		res.Messgae = "获取信息失败"
+		res.Messgae = "获取失败"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
+
 	var accountReply Account
 	var accountArgs action.FindByCond
 	accountArgs.CondList = append(accountArgs.CondList, action.CondValue{
@@ -90,51 +94,45 @@ func (c *AccountItemController) List() {
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Account", "FindByCond", accountArgs, &accountReply)
 	if err != nil {
 		res.Code = ResponseSystemErr
-		res.Messgae = "获取账户信息失败"
+		res.Messgae = "获取失败"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 
-	account_id := accountReply.Id
-	var reply2 action.PageByCond
-	var cond1 []action.CondValue
-	cond1 = append(cond1, action.CondValue{
-		Type:  "And",
-		Key: "account_id",
-		Val:  account_id,
-	})
+	var accountItemArgs action.PageByCond
+	var accountItemReply action.PageByCond
 	if (current == "") {
 		current = time.Now().Format("2006-01")
 	}
-	//获取指定时间的月初、下个月初时间戳
-	stime := utils.GetMonthStartUnix(current + "-01")
-	etime := utils.GetNextMonthStartUnix(current + "-01")
-	cond1 = append(cond1, action.CondValue{
+	accountItemArgs.CondList = append(accountItemArgs.CondList, action.CondValue{
+		Type:  "And",
+		Key: "account_id",
+		Val:  accountReply.Id,
+	}, action.CondValue{
 		Type:  "And",
 		Key: "create_time__gte",
-		Val:  stime,
+		Val:  utils.GetMonthStartUnix(current + "-01"),
 	}, action.CondValue{
 		Type:  "And",
 		Key: "create_time__lt",
-		Val:  etime,
+		Val:  utils.GetNextMonthStartUnix(current + "-01"),
 	})
-
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "AccountItem", "PageByCond", &action.PageByCond{
-		CondList:     cond1,
-		Cols:     []string{"id", "create_time", "amount", },
-		OrderBy:  []string{"id"},
-		PageSize: pageSize,
-		Current:  currentPage,
-	}, &reply2)
+	accountItemArgs.Cols = []string{"id", "create_time", "amount", }
+	accountItemArgs.OrderBy = []string{"id"}
+	accountItemArgs.PageSize = pageSize
+	accountItemArgs.Current = currentPage
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "AccountItem", "PageByCond", accountItemArgs, &accountItemReply)
 	if err != nil {
 		res.Code = ResponseSystemErr
-		res.Messgae = "获取账务信息失败"
+		res.Messgae = "获取失败"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
+
 	reply2List := []AccountItem{}
-	err = json.Unmarshal([]byte(reply2.Json), &reply2List)
-	//List 循环赋值
+	err = json.Unmarshal([]byte(accountItemReply.Json), &reply2List)
 	var aType string
 	for _, value := range reply2List {
 		if (value.Amount < 0) {
@@ -151,18 +149,18 @@ func (c *AccountItemController) List() {
 		})
 	}
 
-	res.Data.Total = reply2.Total
+	res.Data.Total = accountItemReply.Total
 	res.Data.Current = currentPage
-	res.Data.CurrentSize = reply2.CurrentSize
-	res.Data.OrderBy = reply2.OrderBy
+	res.Data.CurrentSize = accountItemReply.CurrentSize
+	res.Data.OrderBy = accountItemReply.OrderBy
 	res.Data.PageSize = pageSize
 	res.Code = ResponseNormal
-	res.Messgae = "获取账务统计信息成功"
+	res.Messgae = "获取信息成功"
 	c.Data["json"] = res
 	c.ServeJSON()
 }
-// @Title 账务列表接口
-// @Description 账务列表接口
+// @Title 交易详情接口
+// @Description 交易详情接口
 // @Success 200 {"code":200,"messgae":"获取账务列表成功","data":{"access_ticket":"xxxx","expire_in":0}}
 // @Param   access_token     query   string true       "访问令牌"
 // @Param   start_date     query   string true       "开始日期：2017-01-01"
@@ -183,6 +181,7 @@ func (c *AccountItemController) TradingList() {
 		res.Messgae = "访问令牌无效"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 	//检测 accessToken
 	var args action.FindByCond
@@ -199,6 +198,7 @@ func (c *AccountItemController) TradingList() {
 		res.Messgae = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 
 	//company_id、user_id、user_position_id、user_position_type
@@ -211,6 +211,7 @@ func (c *AccountItemController) TradingList() {
 		res.Messgae = "获取信息失败"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 
 	var reply Account
@@ -236,47 +237,43 @@ func (c *AccountItemController) TradingList() {
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Account", "FindByCond", args2, &reply)
 	if err != nil {
 		res.Code = ResponseSystemErr
-		res.Messgae = "获取账户信息失败"
+		res.Messgae = "获取失败"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 
-	account_id := reply.Id
-	var reply2 action.PageByCond
-	var cond1 []action.CondValue
-	cond1 = append(cond1, action.CondValue{
+	var accountItemArgs action.PageByCond
+	var AccountItemReply action.PageByCond
+	tm2, _ := time.ParseInLocation("2006-01-02", sdate, time.Local)
+	accountItemArgs.CondList = append(accountItemArgs.CondList, action.CondValue{
 		Type:  "And",
 		Key: "account_id",
-		Val:  account_id,
-	})
-	tm2, _ := time.ParseInLocation("2006-01-02", sdate, time.Local)
-	stime := tm2.UnixNano() / 1e6
-	etime := utils.GetNextDayUnix(edate)
-	cond1 = append(cond1, action.CondValue{
+		Val:  reply.Id,
+	}, action.CondValue{
 		Type:  "And",
 		Key: "create_time__gte",
-		Val:  stime,
+		Val:  tm2.UnixNano() / 1e6,
 	}, action.CondValue{
 		Type:  "And",
 		Key: "create_time__lt",
-		Val:  etime,
+		Val:  utils.GetNextDayUnix(edate),
 	})
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "AccountItem", "PageByCond", &action.PageByCond{
-		CondList:     cond1,
-		Cols:     []string{"id", "create_time", "amount", },
-		OrderBy:  []string{"id"},
-		PageSize: pageSize,
-		Current:  currentPage,
-	}, &reply2)
+	accountItemArgs.Cols = []string{"id", "create_time", "amount", }
+	accountItemArgs.OrderBy = []string{"id"}
+	accountItemArgs.PageSize = pageSize
+	accountItemArgs.Current = currentPage
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "AccountItem", "PageByCond", accountItemArgs, &AccountItemReply)
 	if err != nil {
 		res.Code = ResponseSystemErr
-		res.Messgae = "获取账务信息失败"
+		res.Messgae = "获取失败"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 
 	reply2List := []AccountItem{}
-	err = json.Unmarshal([]byte(reply2.Json), &reply2List)
+	err = json.Unmarshal([]byte(AccountItemReply.Json), &reply2List)
 	//List 循环赋值
 	var aType string
 	for _, value := range reply2List {
@@ -295,13 +292,13 @@ func (c *AccountItemController) TradingList() {
 		})
 	}
 
-	res.Data.Total = reply2.Total
+	res.Data.Total = AccountItemReply.Total
 	res.Data.Current = currentPage
-	res.Data.CurrentSize = reply2.CurrentSize
-	res.Data.OrderBy = reply2.OrderBy
+	res.Data.CurrentSize = AccountItemReply.CurrentSize
+	res.Data.OrderBy = AccountItemReply.OrderBy
 	res.Data.PageSize = pageSize
 	res.Code = ResponseNormal
-	res.Messgae = "获取账务统计信息成功"
+	res.Messgae = "获取信息成功"
 	c.Data["json"] = res
 	c.ServeJSON()
 }
@@ -320,6 +317,7 @@ func (c *AccountItemController) Detail() {
 		res.Messgae = "访问令牌无效"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 	//检测 accessToken
 	var args action.FindByCond
@@ -336,6 +334,7 @@ func (c *AccountItemController) Detail() {
 		res.Messgae = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 	ai_id, _ := c.GetInt64("id")
 	if ai_id == 0 {
@@ -343,6 +342,7 @@ func (c *AccountItemController) Detail() {
 		res.Messgae = "获取信息失败"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 
 	var reply AccountItem
@@ -354,6 +354,7 @@ func (c *AccountItemController) Detail() {
 		res.Messgae = "获取信息失败"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 
 	var aType string

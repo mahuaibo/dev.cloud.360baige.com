@@ -10,6 +10,7 @@ import (
 	"time"
 	"dev.model.360baige.com/action"
 	"encoding/json"
+	"fmt"
 )
 
 // APPLICATIONTPL API
@@ -31,11 +32,14 @@ func (c *ApplicationTplController) List() {
 	access_token := c.GetString("access_token")
 	currentPage, _ := c.GetInt64("current")
 	pageSize, _ := c.GetInt64("page_size")
+	appname := c.GetString("name")
+	Type, _ := c.GetInt8("type")
 	if access_token == "" {
 		res.Code = ResponseSystemErr
 		res.Messgae = "访问令牌无效"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 
 	//检测 accessToken
@@ -53,6 +57,7 @@ func (c *ApplicationTplController) List() {
 		res.Messgae = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 
 	//company_id、user_id、user_position_id、user_position_type
@@ -65,17 +70,23 @@ func (c *ApplicationTplController) List() {
 		res.Messgae = "获取信息失败"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 
 	var appTplArgs action.PageByCond
-	appname := c.GetString("name")
 	if appname != "" {
 		appTplArgs.CondList = append(appTplArgs.CondList, action.CondValue{
 			Type: "And",
 			Key:  "name__icontains",
 			Val:  appname,
 		})
-
+	}
+	if Type != 0 {
+		appTplArgs.CondList = append(appTplArgs.CondList, action.CondValue{
+			Type: "And",
+			Key:  "type",
+			Val:  Type,
+		})
 	}
 	appTplArgs.CondList = append(appTplArgs.CondList, action.CondValue{
 		Type: "And",
@@ -93,6 +104,7 @@ func (c *ApplicationTplController) List() {
 		res.Messgae = "获取应用信息失败"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 
 	var appArgs action.ListByCond
@@ -114,8 +126,8 @@ func (c *ApplicationTplController) List() {
 		Val:  user_position_type,
 	}, action.CondValue{
 		Type: "And",
-		Key:  "status__gt",
-		Val:  0,
+		Key:  "status__in",
+		Val:  []string{"0", "1"},
 	})
 	appArgs.Cols = []string{"id", "application_tpl_id" }
 	appArgs.OrderBy = []string{"id"}
@@ -176,6 +188,7 @@ func (c *ApplicationTplController) Detail() {
 		res.Messgae = "访问令牌无效"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 	//检测 accessToken
 	var args action.FindByCond
@@ -192,6 +205,7 @@ func (c *ApplicationTplController) Detail() {
 		res.Messgae = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 
 	var appTplArgs ApplicationTpl // 获取应用信息tpl
@@ -201,6 +215,7 @@ func (c *ApplicationTplController) Detail() {
 		res.Messgae = "获取信息失败"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 	var replyApplicationTpl ApplicationTpl
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "ApplicationTpl", "FindById", appTplArgs, &replyApplicationTpl)
@@ -209,6 +224,7 @@ func (c *ApplicationTplController) Detail() {
 		res.Messgae = "获取应用信息失败"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 
 	var userArgs User // 开发者
@@ -256,6 +272,7 @@ func (c *ApplicationTplController) Subscription() {
 		res.Messgae = "访问令牌无效"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 	//检测 accessToken
 	var args action.FindByCond
@@ -272,6 +289,7 @@ func (c *ApplicationTplController) Subscription() {
 		res.Messgae = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 
 	//company_id、user_id、user_position_id、user_position_type
@@ -284,6 +302,7 @@ func (c *ApplicationTplController) Subscription() {
 		res.Messgae = "获取应用信息失败"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 
 	//判断此应用是否订阅过
@@ -317,23 +336,27 @@ func (c *ApplicationTplController) Subscription() {
 		res.Messgae = "此应用已经订阅过"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 
 	var appTplArgs ApplicationTpl
 	appTplArgs.Id = ap_id
 	var reply ApplicationTpl
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "ApplicationTpl", "FindById", appTplArgs, &reply)
+	fmt.Println("reply>>>", reply)
 	if err != nil {
 		res.Code = ResponseSystemErr
 		res.Messgae = "获取应用信息失败"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
-	if reply.Status > 0 {
+	if reply.Status == 0 {
 		res.Code = ResponseSystemErr
 		res.Messgae = "此应用已经下架"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 
 	var addReply Application
@@ -356,6 +379,7 @@ func (c *ApplicationTplController) Subscription() {
 		res.Messgae = "应用订阅失败！"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 
 	res.Code = ResponseNormal
@@ -383,6 +407,7 @@ func (c *ApplicationTplController) ModifyStatus() {
 		res.Messgae = "访问令牌无效"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 
 	//检测 accessToken
@@ -396,6 +421,7 @@ func (c *ApplicationTplController) ModifyStatus() {
 		res.Messgae = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 
 	ap_id, _ := c.GetInt64("id")
@@ -408,6 +434,7 @@ func (c *ApplicationTplController) ModifyStatus() {
 		res.Messgae = "获取应用信息失败"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 
 	reply.UpdateTime = time.Now().UnixNano() / 1e6
@@ -418,6 +445,7 @@ func (c *ApplicationTplController) ModifyStatus() {
 		res.Messgae = "应用信息修改失败！"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 
 	res.Code = ResponseNormal

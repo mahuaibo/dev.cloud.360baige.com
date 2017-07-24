@@ -33,6 +33,7 @@ func (c *UserController) Login() {
 		res.Messgae = "登录失败"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 
 	username_type, _ := utils.DetermineStringType(username) // 2 判断username 类型 属于 百鸽账号、邮箱、手机号码中的哪一种？
@@ -46,6 +47,10 @@ func (c *UserController) Login() {
 		Type:"And",
 		Key:"status",
 		Val:"0",
+	}, action.CondValue{
+		Type:"And",
+		Key:"password",
+		Val:password,
 	})
 	var reply User
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "User", "FindByCond", args, &reply)
@@ -54,6 +59,7 @@ func (c *UserController) Login() {
 		res.Messgae = "登录失败"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 
 	var updateArgs action.UpdateByIdCond
@@ -73,6 +79,7 @@ func (c *UserController) Login() {
 		res.Messgae = "登录失败"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 
 	res.Code = ResponseNormal
@@ -158,6 +165,7 @@ func (c *UserController) Detail() {
 		res.Messgae = "访问令牌无效"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 
 	var args action.FindByCond
@@ -174,6 +182,7 @@ func (c *UserController) Detail() {
 		res.Messgae = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 
 	if replyAccessToken.UserId == 0 {
@@ -181,6 +190,7 @@ func (c *UserController) Detail() {
 		res.Messgae = "获取用户信息失败"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 
 	var userArgs User
@@ -192,6 +202,7 @@ func (c *UserController) Detail() {
 		res.Messgae = "获取用户信息失败"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 
 	res.Code = ResponseNormal
@@ -212,29 +223,31 @@ func (c *UserController) Detail() {
 // @router /logout [post]
 func (c *UserController) Logout() {
 	res := UserDetailResponse{}
-	access_token := c.GetString("access_token")
-	if access_token == "" {
-		res.Code = ResponseSystemErr
-		res.Messgae = "访问令牌无效"
-		c.Data["json"] = res
-		c.ServeJSON()
-	}
-
-	var args action.FindByCond
-	args.CondList = append(args.CondList, action.CondValue{
-		Type:"And",
-		Key:"access_ticket",
-		Val:access_token,
-	})
-	var reply User
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "User", "FindByCond", args, &reply) // 检测 accessToken
-
-	if err != nil {
-		res.Code = ResponseLogicErr
-		res.Messgae = "访问令牌失效"
-		c.Data["json"] = res
-		c.ServeJSON()
-	}
+	//access_token := c.GetString("access_token")
+	//if access_token == "" {
+	//	res.Code = ResponseSystemErr
+	//	res.Messgae = "访问令牌无效"
+	//	c.Data["json"] = res
+	//	c.ServeJSON()
+	//	return
+	//}
+	//
+	//var args action.FindByCond
+	//args.CondList = append(args.CondList, action.CondValue{
+	//	Type:"And",
+	//	Key:"access_ticket",
+	//	Val:access_token,
+	//})
+	//var reply User
+	//err := client.Call(beego.AppConfig.String("EtcdURL"), "User", "FindByCond", args, &reply) // 检测 accessToken
+	//
+	//if err != nil {
+	//	res.Code = ResponseLogicErr
+	//	res.Messgae = "访问令牌失效"
+	//	c.Data["json"] = res
+	//	c.ServeJSON()
+	//	return
+	//}
 
 	res.Code = ResponseNormal
 	res.Messgae = "验证成功"
@@ -258,6 +271,7 @@ func (c *UserController) ModifyPassword() {
 		res.Messgae = "访问令牌无效"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 
 	//检测 accessToken
@@ -274,6 +288,7 @@ func (c *UserController) ModifyPassword() {
 		res.Messgae = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 
 	var userArgs action.FindByCond
@@ -294,6 +309,7 @@ func (c *UserController) ModifyPassword() {
 		res.Messgae = "用户密码错误！"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 
 	var updateArgs action.UpdateByIdCond
@@ -312,6 +328,7 @@ func (c *UserController) ModifyPassword() {
 		res.Messgae = "密码修改失败！"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 
 	res.Code = ResponseNormal
@@ -337,6 +354,7 @@ func (c *UserController) Modify() {
 		res.Messgae = "访问令牌无效"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 
 	//检测 accessToken
@@ -353,6 +371,7 @@ func (c *UserController) Modify() {
 		res.Messgae = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 
 	var updateArgs action.UpdateByIdCond
@@ -374,6 +393,7 @@ func (c *UserController) Modify() {
 		res.Messgae = "用户信息修改失败！"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 
 	res.Code = ResponseNormal

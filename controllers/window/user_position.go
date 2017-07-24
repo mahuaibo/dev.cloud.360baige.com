@@ -42,6 +42,7 @@ func (c *UserPositionController) PositionList() {
 		res.Messgae = "访问票据无效"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 	//判断时效是否超时 TODO
 	timestamp := time.Now().UnixNano() / 1e6
@@ -52,6 +53,7 @@ func (c *UserPositionController) PositionList() {
 		res.Messgae = "访问票据超时"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 
 	var replyUserPosition []UserPosition
@@ -76,6 +78,7 @@ func (c *UserPositionController) PositionList() {
 		res.Messgae = "获取用户身份失败"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 	//获取公司名称
 	var idarg []int64
@@ -107,6 +110,7 @@ func (c *UserPositionController) PositionList() {
 		res.Messgae = "获取用户身份失败"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 	companyByIds := make(map[int64]Company)
 	for _, value := range replyUserCompany {
@@ -153,6 +157,7 @@ func (c *UserPositionController) PositionToken() {
 		res.Messgae = "获取身份失败"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 	timestamp := time.Now().UnixNano() / 1e6
 	newAccessTicket := strconv.FormatInt(replyUserPosition.Id, 10) + strconv.FormatInt(timestamp, 10)
@@ -175,6 +180,7 @@ func (c *UserPositionController) PositionToken() {
 		res.Messgae = "获取身份失败"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 	res.Code = ResponseNormal
 	res.Messgae = "获取身份成功"

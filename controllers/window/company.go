@@ -30,6 +30,7 @@ func (c *CompanyController) Detail() {
 		res.Messgae = "访问令牌无效"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 	//检测 accessToken
 	var args action.FindByCond
@@ -46,6 +47,7 @@ func (c *CompanyController) Detail() {
 		res.Messgae = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 	com_id := replyAccessToken.CompanyId
 	if com_id == 0 {
@@ -53,6 +55,7 @@ func (c *CompanyController) Detail() {
 		res.Messgae = "获取公司信息失败"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 	var reply Company
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Company", "FindById", &Company{
@@ -64,6 +67,7 @@ func (c *CompanyController) Detail() {
 		res.Messgae = "获取公司信息失败"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 	res.Code = ResponseNormal
 	res.Messgae = "获取公司信息成功"
@@ -98,6 +102,7 @@ func (c *CompanyController) Modify() {
 		res.Messgae = "访问令牌无效"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 	//检测 accessToken
 	var args action.FindByCond
@@ -114,6 +119,7 @@ func (c *CompanyController) Modify() {
 		res.Messgae = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 	com_id := replyAccessToken.CompanyId
 	if com_id == 0 {
@@ -121,6 +127,7 @@ func (c *CompanyController) Modify() {
 		res.Messgae = "获取公司信息失败"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 	var reply Company
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Company", "FindById", &Company{
@@ -132,13 +139,14 @@ func (c *CompanyController) Modify() {
 		res.Messgae = "获取公司信息失败"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
-
 	if (reply.Status != 1) {
 		res.Code = ResponseSystemErr
 		res.Messgae = "公司状态不可修改"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 
 	provinceId, _ := c.GetInt64("province_id")
@@ -191,6 +199,7 @@ func (c *CompanyController) Modify() {
 		res.Messgae = "企业信息修改失败！"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 
 	res.Code = ResponseNormal

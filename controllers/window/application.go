@@ -39,6 +39,7 @@ func (c *ApplicationController) List() {
 		res.Messgae = "访问令牌无效"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 	//检测 accessToken
 	var args action.FindByCond
@@ -55,6 +56,7 @@ func (c *ApplicationController) List() {
 		res.Messgae = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 
 	//company_id、user_id、user_position_id、user_position_type
@@ -67,6 +69,7 @@ func (c *ApplicationController) List() {
 		res.Messgae = "获取信息失败"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 
 	var applicationArge action.PageByCond
@@ -105,6 +108,7 @@ func (c *ApplicationController) List() {
 		res.Messgae = "获取应用信息失败"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 
 	replyList := []Application{}
@@ -135,6 +139,7 @@ func (c *ApplicationController) List() {
 		res.Messgae = "获取应用失败"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 
 	//循环赋值
@@ -156,9 +161,9 @@ func (c *ApplicationController) List() {
 			reimage = value.Image
 		}
 		if value.Status == 0 {
-			restatus = "启用"
-		} else if value.Status == 1 {
 			restatus = "停用"
+		} else if value.Status == 1 {
+			restatus = "启用"
 		} else {
 			restatus = "退订"
 		}
@@ -199,6 +204,7 @@ func (c *ApplicationController) Detail() {
 		res.Messgae = "访问令牌无效"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 	//检测 accessToken
 	var args action.FindByCond
@@ -215,6 +221,7 @@ func (c *ApplicationController) Detail() {
 		res.Messgae = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 	//company_id、user_id、user_position_id、user_position_type
 	ap_id, _ := c.GetInt64("id")
@@ -224,6 +231,7 @@ func (c *ApplicationController) Detail() {
 		res.Messgae = "获取信息失败"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 	var reply Application
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Application", "FindById", &Application{
@@ -235,12 +243,14 @@ func (c *ApplicationController) Detail() {
 		res.Messgae = "获取应用信息失败"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 	if reply.ApplicationTplId == 0 {
 		res.Code = ResponseSystemErr
 		res.Messgae = "获取应用信息失败"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 	//获取应用其他信息tpl
 	var replyApplicationTpl ApplicationTpl
@@ -252,6 +262,7 @@ func (c *ApplicationController) Detail() {
 		res.Messgae = "获取应用信息失败"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 	re := time.Unix(reply.CreateTime / 1000, 0).Format("2006-01-02")
 	var rename, reimage string
@@ -342,11 +353,14 @@ func GetPayCycleName(ptype int8) string {
 func (c *ApplicationController) ModifyStatus() {
 	res := ModifyApplicationStatusResponse{}
 	access_token := c.GetString("access_token")
+	ap_id, _ := c.GetInt64("id")
+	status, _ := c.GetInt8("status")
 	if access_token == "" {
 		res.Code = ResponseSystemErr
 		res.Messgae = "访问令牌无效"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 	//检测 accessToken
 	var args action.FindByCond
@@ -363,8 +377,9 @@ func (c *ApplicationController) ModifyStatus() {
 		res.Messgae = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
-	ap_id, _ := c.GetInt64("id")
+
 	var reply Application
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Application", "FindById", &Application{
 		Id: ap_id,
@@ -374,15 +389,14 @@ func (c *ApplicationController) ModifyStatus() {
 		res.Messgae = "获取应用信息失败"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
-	status, _ := c.GetInt8("status")
-	timestamp := time.Now().UnixNano() / 1e6
+
 	var updateArgs []action.UpdateValue
 	updateArgs = append(updateArgs, action.UpdateValue{
 		Key: "update_time",
-		Val:  timestamp,
-	})
-	updateArgs = append(updateArgs, action.UpdateValue{
+		Val:  time.Now().UnixNano() / 1e6,
+	}, action.UpdateValue{
 		Key: "status",
 		Val:  status,
 	})
@@ -395,6 +409,7 @@ func (c *ApplicationController) ModifyStatus() {
 		res.Messgae = "应用信息修改失败！"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 	res.Code = ResponseNormal
 	res.Messgae = "应用信息修改成功！"

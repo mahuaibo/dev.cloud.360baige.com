@@ -9,6 +9,7 @@ import (
 	"dev.model.360baige.com/action"
 	"dev.cloud.360baige.com/utils"
 	"time"
+	"fmt"
 )
 
 // USER API
@@ -16,8 +17,8 @@ type AccountController struct {
 	beego.Controller
 }
 
-// @Title 账务统计接口
-// @Description 账务统计接口
+// @Title 账户统计接口
+// @Description 账户统计接口
 // @Success 200 {"code":200,"messgae":"获取账务统计信息成功","data":{"access_ticket":"xxxx","expire_in":0}}
 // @Param   access_token     query   string true       "访问令牌"
 // @Param   date     query   string true       "账单日期：2017-07"
@@ -32,6 +33,7 @@ func (c *AccountController) AccountStatistics() {
 		res.Messgae = "访问令牌无效"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 	//检测 accessToken
 	var args action.FindByCond
@@ -48,6 +50,7 @@ func (c *AccountController) AccountStatistics() {
 		res.Messgae = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 	//company_id、user_id、user_position_id、user_position_type
 	com_id := replyAccessToken.CompanyId
@@ -59,6 +62,7 @@ func (c *AccountController) AccountStatistics() {
 		res.Messgae = "获取账务统计信息失败"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 	var reply Account
 	//检测 accessToken
@@ -82,22 +86,26 @@ func (c *AccountController) AccountStatistics() {
 	})
 	accountArgs.Fileds = []string{"id", "balance"}
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Account", "FindByCond", accountArgs, &reply)
+	fmt.Println("reply>>>>", reply)
 	if err != nil {
 		res.Code = ResponseSystemErr
 		res.Messgae = "获取账务统计信息失败"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 	account_id := reply.Id
 	var reply2 AccountItemStatisticsCond
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "AccountItem", "AccountItemStatistics", &AccountItemStatisticsCond{
 		AccountId: account_id,
 	}, &reply2)
+	fmt.Println("reply2>>>>", reply2)
 	if err != nil {
 		res.Code = ResponseSystemErr
 		res.Messgae = "获取账务统计信息失败"
 		c.Data["json"] = res
 		c.ServeJSON()
+		return
 	}
 	res.Data.TotalDischarge = reply2.Pay
 	res.Data.TotalEntry = reply2.Income
@@ -114,6 +122,7 @@ func (c *AccountController) AccountStatistics() {
 	AccountItemArgs.EndTime = etime
 	var AccountItemReply AccountItemStatisticsCond
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "AccountItem", "AccountItemStatistics", AccountItemArgs, &AccountItemReply)
+	fmt.Println("AccountItemReply>>>>", AccountItemReply)
 
 	res.Code = ResponseNormal
 	res.Messgae = "获取账务统计信息成功"
