@@ -4,6 +4,7 @@ import (
 	"github.com/smallnest/rpcx"
 	"github.com/smallnest/rpcx/clientselector"
 	"time"
+	"context"
 )
 
 /**
@@ -16,8 +17,7 @@ func Call(etcdURL, serviceName, methodName string, args, reply interface{}) erro
 	client := rpcx.NewClient(s)
 	// Failfast Failover Failtry Broadcast Forking
 	client.FailMode = rpcx.Failover
-	err := client.Call(serviceName+"."+methodName, args, &reply)
-	//err := client.Call(context.Background(),serviceName+"."+methodName, args, &reply)
+	err := client.Call(context.Background(),serviceName+"."+methodName, args, &reply)
 	client.Close()
 	return err
 }
