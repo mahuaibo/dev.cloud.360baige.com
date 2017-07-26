@@ -9,11 +9,16 @@ package routers
 
 import (
 	"dev.cloud.360baige.com/controllers/window"
-	//"dev.cloud.360baige.com/controllers/mobile"
+	"dev.cloud.360baige.com/controllers/mobile"
 	"github.com/astaxie/beego"
 )
 
 func init() {
+	windowRouter()
+	//mobileRouter()
+}
+
+func windowRouter() {
 	windowApi := beego.NewNamespace("/cloud/window/v1",
 		beego.NSNamespace("/user",
 			beego.NSInclude(
@@ -62,54 +67,56 @@ func init() {
 		),
 	)
 	beego.AddNamespace(windowApi)
+}
 
-	//mobileApi := beego.NewNamespace("/cloud/mobile/v1",
-	//	beego.NSNamespace("/user",
-	//		beego.NSInclude(
-	//			&mobile.UserController{},
-	//		),
-	//	),
-	//	beego.NSNamespace("/userposition",
-	//		beego.NSInclude(
-	//			&mobile.UserPositionController{},
-	//		),
-	//	),
-	//	beego.NSNamespace("/account",
-	//		beego.NSInclude(
-	//			&mobile.AccountController{},
-	//		),
-	//	),
-	//	beego.NSNamespace("/account_item",
-	//		beego.NSInclude(
-	//			&mobile.AccountItemController{},
-	//		),
-	//	),
-	//	beego.NSNamespace("/order",
-	//		beego.NSInclude(
-	//			&mobile.OrderController{},
-	//		),
-	//	),
-	//	beego.NSNamespace("/application",
-	//		beego.NSInclude(
-	//			&mobile.ApplicationController{},
-	//		),
-	//	),
-	//	beego.NSNamespace("/application_tpl",
-	//		beego.NSInclude(
-	//			&mobile.ApplicationTplController{},
-	//		),
-	//	),
-	//	beego.NSNamespace("/message_temp",
-	//		beego.NSInclude(
-	//			&mobile.MessageTempController{},
-	//		),
-	//	),
-	//	beego.NSNamespace("/logger",
-	//		beego.NSInclude(
-	//			&mobile.LoggerController{},
-	//		),
-	//	),
-	//
-	//)
-	//beego.AddNamespace(mobileApi)
+func mobileRouter() {
+	mobileApi := beego.NewNamespace("/cloud/mobile/v1",
+		beego.NSNamespace("/user",
+			beego.NSInclude(
+				&mobile.UserController{},
+			),
+		),
+		beego.NSNamespace("/userposition",
+			beego.NSInclude(
+				&mobile.UserPositionController{},
+			),
+		),
+		beego.NSNamespace("/account",
+			beego.NSInclude(
+				&mobile.AccountController{},
+			),
+		),
+		beego.NSNamespace("/account_item",
+			beego.NSInclude(
+				&mobile.AccountItemController{},
+			),
+		),
+		beego.NSNamespace("/order",
+			beego.NSInclude(
+				&mobile.OrderController{},
+			),
+		),
+		beego.NSNamespace("/application",
+			beego.NSInclude(
+				&mobile.ApplicationController{},
+			),
+		),
+		beego.NSNamespace("/application_tpl",
+			beego.NSInclude(
+				&mobile.ApplicationTplController{},
+			),
+		),
+		beego.NSNamespace("/message_temp",
+			beego.NSInclude(
+				&mobile.MessageTempController{},
+			),
+		),
+		beego.NSNamespace("/logger",
+			beego.NSInclude(
+				&mobile.LoggerController{},
+			),
+		),
+
+	)
+	beego.AddNamespace(mobileApi)
 }
