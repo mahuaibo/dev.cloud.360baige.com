@@ -9,8 +9,7 @@ package routers
 
 import (
 	"dev.cloud.360baige.com/controllers/window"
-	"dev.cloud.360baige.com/controllers/mobile"
-
+	//"dev.cloud.360baige.com/controllers/mobile"
 	"github.com/astaxie/beego"
 )
 
