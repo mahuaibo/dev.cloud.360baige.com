@@ -147,10 +147,15 @@ func (c *UserPositionController) PositionList() {
 func (c *UserPositionController) PositionToken() {
 	res := UserPositionTokenResponse{}
 	user_position_id, _ := c.GetInt64("user_position_id", 0)
+	var userPositionArgsvar action.FindByCond
+	userPositionArgsvar.CondList = append(userPositionArgsvar.CondList, action.CondValue{
+		Type: "And",
+		Key:  "user_id",
+		Val:  user_position_id,
+	})
+	userPositionArgsvar.Fileds = []string{"id", "expire_in"}
 	var replyUserPosition UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindById", &UserPosition{
-		Id: user_position_id,
-	}, &replyUserPosition)
+	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", userPositionArgsvar, &replyUserPosition)
 
 	if err != nil {
 		res.Code = ResponseSystemErr
