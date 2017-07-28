@@ -9,6 +9,7 @@ import (
 	"time"
 	"strconv"
 	"dev.model.360baige.com/action"
+	"fmt"
 )
 
 // USER API
@@ -52,8 +53,10 @@ func (c *UserController) Login() {
 		Key:"password",
 		Val:password,
 	})
+	fmt.Print("args>>>", args)
 	var reply User
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "User", "FindByCond", args, &reply)
+	fmt.Print("reply>>>", reply)
 	if err != nil {
 		res.Code = ResponseSystemErr
 		res.Messgae = "登录失败"

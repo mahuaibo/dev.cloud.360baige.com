@@ -95,11 +95,10 @@ func (c *AccountController) AccountStatistics() {
 		return
 	}
 	account_id := reply.Id
+	var AccountItemStatisticsArgs AccountItemStatisticsCond
+	AccountItemStatisticsArgs.AccountId = account_id
 	var reply2 AccountItemStatisticsCond
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "AccountItem", "AccountItemStatistics", &AccountItemStatisticsCond{
-		AccountId: account_id,
-	}, &reply2)
-	fmt.Println("reply2>>>>", reply2)
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "AccountItem", "AccountItemStatistics", AccountItemStatisticsArgs, &reply2)
 	if err != nil {
 		res.Code = ResponseSystemErr
 		res.Messgae = "获取账务统计信息失败"
@@ -122,7 +121,6 @@ func (c *AccountController) AccountStatistics() {
 	AccountItemArgs.EndTime = etime
 	var AccountItemReply AccountItemStatisticsCond
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "AccountItem", "AccountItemStatistics", AccountItemArgs, &AccountItemReply)
-	fmt.Println("AccountItemReply>>>>", AccountItemReply)
 
 	res.Code = ResponseNormal
 	res.Messgae = "获取账务统计信息成功"

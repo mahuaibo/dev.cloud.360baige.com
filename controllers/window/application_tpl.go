@@ -95,7 +95,7 @@ func (c *ApplicationTplController) List() {
 	})
 	appTplArgs.Cols = []string{"id", "name", "image", "status", "desc"}
 	appTplArgs.OrderBy = []string{"id"}
-	appTplArgs.PageSize = pageSize
+	appTplArgs.PageSize = -1 // 目前显示全部
 	appTplArgs.Current = currentPage
 	var reply action.PageByCond
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "ApplicationTpl", "PageByCond", appTplArgs, &reply)

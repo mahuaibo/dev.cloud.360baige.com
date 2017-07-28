@@ -5,7 +5,6 @@ import (
 	"dev.cloud.360baige.com/rpc/client"
 	. "dev.model.360baige.com/http/window"
 	. "dev.model.360baige.com/models/user"
-	//. "dev.model.360baige.com/models/response"
 	. "dev.model.360baige.com/models/application"
 	. "dev.model.360baige.com/models/company"
 	"time"
@@ -142,14 +141,12 @@ func (c *ApplicationController) List() {
 		return
 	}
 
-	//循环赋值
-	var resData []ApplicationValue
 	applicationTplByIds := make(map[int64]ApplicationTpl)
 	for _, value := range applicationTplReply {
 		applicationTplByIds[value.Id] = value
 	}
 	for _, value := range replyList {
-		var rename, reimage, restatus string
+		var rename, reimage string
 		if value.Name == "" && applicationTplByIds[value.ApplicationTplId].Name != "" {
 			rename = applicationTplByIds[value.ApplicationTplId].Name
 		} else {
@@ -160,22 +157,16 @@ func (c *ApplicationController) List() {
 		} else {
 			reimage = value.Image
 		}
-		if value.Status == 0 {
-			restatus = "停用"
-		} else if value.Status == 1 {
-			restatus = "启用"
-		} else {
-			restatus = "退订"
-		}
-		resData = append(resData, ApplicationValue{
+		res.Data.List = append(res.Data.List, ApplicationValue{
 			Id:         value.Id,
 			CreateTime: time.Unix(value.CreateTime / 1000, 0).Format("2006-01-02"),
 			Name:       rename,
 			Image:      reimage,
-			Status:     restatus,
+			Status:     value.Status,
 			Site:       applicationTplByIds[value.ApplicationTplId].Site,
 		})
 	}
+
 	res.Code = ResponseNormal
 	res.Messgae = "获取应用成功"
 	res.Data.Total = reply.Total
@@ -184,7 +175,6 @@ func (c *ApplicationController) List() {
 	res.Data.OrderBy = reply.OrderBy
 	res.Data.PageSize = pageSize
 	res.Data.Name = appname
-	res.Data.List = resData
 	c.Data["json"] = res
 	c.ServeJSON()
 }
@@ -295,7 +285,7 @@ func (c *ApplicationController) Detail() {
 	}
 
 	res.Code = ResponseNormal
-	res.Messgae = "获取应用成功"
+	res.Messgae = "获取应用信息成功"
 	res.Data.CreateTime = re
 	res.Data.Name = rename
 	res.Data.Image = reimage
