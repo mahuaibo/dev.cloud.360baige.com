@@ -25,6 +25,7 @@ type AccountController struct {
 // @Failure 400 {"code":400,"message":"获取账务统计信息失败"}
 // @router /accountstatistics [get]
 func (c *AccountController) AccountStatistics() {
+
 	res := AccountStatisticsResponse{}
 	access_token := c.GetString("access_token")
 	current := c.GetString("date")

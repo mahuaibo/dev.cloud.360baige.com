@@ -22,3 +22,4 @@
 /.idea
 /swagger
 *tar.gz
+/routers/comments*

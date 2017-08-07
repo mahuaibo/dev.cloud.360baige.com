@@ -1,8 +1,8 @@
 // @APIVersion 1.0.0
-// @Title beego Test API
-// @Description beego has a very cool tools to autogenerate documents for your API
-// @Contact astaxie@gmail.com
-// @TermsOfServiceUrl http://beego.me/
+// @Title 360baige.com Cloud API
+// @Description 360baige.com Cloud API
+// @Contact mahuaibo@360baige.com
+// @TermsOfServiceUrl http://www.360baige.com
 // @License Apache 2.0
 // @LicenseUrl http://www.apache.org/licenses/LICENSE-2.0.html
 package routers
@@ -10,12 +10,48 @@ package routers
 import (
 	"dev.cloud.360baige.com/controllers/window"
 	"dev.cloud.360baige.com/controllers/mobile"
+	"dev.cloud.360baige.com/controllers/schoolfeeapp"
+	"dev.cloud.360baige.com/controllers/schoolfeewin"
 	"github.com/astaxie/beego"
 )
 
 func init() {
-	windowRouter()
+	//windowRouter()
 	//mobileRouter()
+	schoolfeewinRouter()
+	//schoolfeeappRouter()
+}
+
+func schoolfeewinRouter() {
+	schoolfeewinApi := beego.NewNamespace("/win/schoolfee/v1",
+		beego.NSNamespace("/project",
+			beego.NSInclude(
+				&schoolfeewin.ProjectController{},
+			),
+		),
+		beego.NSNamespace("/record",
+			beego.NSInclude(
+				&schoolfeewin.RecordController{},
+			),
+		),
+	)
+	beego.AddNamespace(schoolfeewinApi)
+}
+
+func schoolfeeappRouter() {
+	schoolfeeappApi := beego.NewNamespace("/app/schoolfee/v1",
+		beego.NSNamespace("/project",
+			beego.NSInclude(
+				&schoolfeeapp.ProjectController{},
+			),
+		),
+		beego.NSNamespace("/record",
+			beego.NSInclude(
+				&schoolfeeapp.RecordController{},
+			),
+		),
+	)
+	beego.AddNamespace(schoolfeeappApi)
 }
 
 func windowRouter() {
