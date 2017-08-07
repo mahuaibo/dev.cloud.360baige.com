@@ -183,6 +183,16 @@ func (c *ApplicationTplController) List() {
 func (c *ApplicationTplController) Detail() {
 	res := ApplicationDetailResponse{}
 	access_token := c.GetString("access_token")
+	id, _ := c.GetInt64("id")
+	Type, _ := c.GetInt64("type")
+	if id == 0 {
+		res.Code = ResponseSystemErr
+		res.Messgae = "获取信息失败"
+		c.Data["json"] = res
+		c.ServeJSON()
+		return
+	}
+
 	if access_token == "" {
 		res.Code = ResponseSystemErr
 		res.Messgae = "访问令牌无效"
@@ -208,17 +218,25 @@ func (c *ApplicationTplController) Detail() {
 		return
 	}
 
-	var appTplArgs ApplicationTpl // 获取应用信息tpl
-	appTplArgs.Id, _ = c.GetInt64("id")
-	if appTplArgs.Id == 0 {
-		res.Code = ResponseSystemErr
-		res.Messgae = "获取信息失败"
-		c.Data["json"] = res
-		c.ServeJSON()
-		return
+	var applicationArgs Application
+	var applicationReply Application
+	if Type == 1 {
+		applicationArgs.Id = id
+		err = client.Call(beego.AppConfig.String("EtcdURL"), "Application", "FindById", applicationArgs, &applicationReply)
+		if err != nil {
+			res.Code = ResponseSystemErr
+			res.Messgae = "获取应用信息失败"
+			c.Data["json"] = res
+			c.ServeJSON()
+			return
+		}
 	}
+	var appTplArgs ApplicationTpl // 获取应用信息tpl
+	fmt.Println("appTplArgs", appTplArgs)
+	appTplArgs.Id = applicationReply.ApplicationTplId
 	var replyApplicationTpl ApplicationTpl
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "ApplicationTpl", "FindById", appTplArgs, &replyApplicationTpl)
+	fmt.Println("err", err)
 	if err != nil {
 		res.Code = ResponseSystemErr
 		res.Messgae = "获取应用信息失败"
@@ -226,7 +244,7 @@ func (c *ApplicationTplController) Detail() {
 		c.ServeJSON()
 		return
 	}
-
+	fmt.Println("replyApplicationTpl", replyApplicationTpl)
 	var userArgs User // 开发者
 	userArgs.Id = replyApplicationTpl.UserId
 	var replyUser User
@@ -250,6 +268,7 @@ func (c *ApplicationTplController) Detail() {
 	res.Data.Image = replyApplicationTpl.Image
 	res.Data.Desc = replyApplicationTpl.Desc
 	res.Data.Price = replyApplicationTpl.Price
+	res.Data.Site = replyApplicationTpl.Site
 	res.Data.PayType = GetPayTypeName(replyApplicationTpl.PayType)
 	res.Data.PayCycle = GetPayCycleName(replyApplicationTpl.PayCycle)
 	c.Data["json"] = res

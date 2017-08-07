@@ -4,7 +4,7 @@ import (
 	_ "dev.cloud.360baige.com/routers"
 	_ "dev.cloud.360baige.com/filters"
 	"github.com/astaxie/beego"
-	
+
 )
 
 func main() {
