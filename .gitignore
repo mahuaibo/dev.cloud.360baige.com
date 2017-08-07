@@ -21,3 +21,4 @@
 /default.etcd
 /.idea
 /swagger
+*tar.gz
