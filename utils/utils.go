@@ -4,6 +4,7 @@ import (
 	"strings"
 	"regexp"
 	"time"
+	"strconv"
 )
 
 func DetermineStringType(str string) (string, bool) {
@@ -75,6 +76,7 @@ func GetNextMonthStartUnix(current string) int64 {
 	etime := estm2.UnixNano() / 1e6
 	return etime
 }
+
 //第二天
 func GetNextDayUnix(current string) int64 {
 	tm2, _ := time.ParseInLocation("2006-01-02", current, time.Local)
@@ -84,4 +86,13 @@ func GetNextDayUnix(current string) int64 {
 	estm2, _ := time.ParseInLocation("2006-01-02", es, time.Local)
 	etime := estm2.UnixNano() / 1e6
 	return etime
+}
+
+//
+func StrArrToInt64Arr(strArr []string) []int64 {
+	var int64Arr []int64 = make([]int64, len(strArr), len(strArr))
+	for index, str := range strArr {
+		int64Arr[index], _ = strconv.ParseInt(str, 10, 64)
+	}
+	return int64Arr
 }
