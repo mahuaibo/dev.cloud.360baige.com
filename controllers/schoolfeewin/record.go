@@ -11,6 +11,9 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"github.com/tealeg/xlsx"
+	"strconv"
+	"net/http"
 )
 
 // Record API
@@ -159,6 +162,11 @@ func (c *RecordController) DeleteRecord() {
 // @Failure 400 {"code":400,"message":"上传缴费名单失败"}
 // @router /upload [get]
 func (c *RecordController) UploadRecord() {
+	excelFileName := "file.xlsx"
+	xlFile, err := xlsx.OpenFile(excelFileName)
+	if err != nil {
+		return
+	}
 	res := UploadRecordResponse{}
 	access_token := c.GetString("access_token")
 	project_id, _ := c.GetInt64("project_id", 1)
@@ -175,7 +183,7 @@ func (c *RecordController) UploadRecord() {
 	args.CondList = append(args.CondList, action.CondValue{Type: "And", Key: "access_token", Val: access_token })
 	args.Fileds = []string{"id", "user_id", "company_id", "type"}
 	var replyAccessToken user.UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
 	if err != nil {
 		res.Code = ResponseLogicErr
 		res.Messgae = "访问令牌失效"
@@ -187,57 +195,33 @@ func (c *RecordController) UploadRecord() {
 
 	// 2.
 	timestamp := time.Now().UnixNano() / 1e6
-	args2 := []schoolfee.Record{
-		schoolfee.Record{
-			CreateTime: timestamp,
-			UpdateTime: timestamp,
-			CompanyId:  replyAccessToken.CompanyId,
-			ProjectId:  project_id,
-			Name:       "张1三",
-			ClassName:  "三1",
-			IdCard:     "2004",
-			Num:        "2004",
-			Phone:      "18911545460",
-			Status:     0,
-			Price:      1.01,
-			IsFee:      0,
-			FeeTime:    0,
-			Desc:       "",
-		},
-		schoolfee.Record{
-			CreateTime: timestamp,
-			UpdateTime: timestamp,
-			CompanyId:  replyAccessToken.CompanyId,
-			ProjectId:  project_id,
-			Name:       "张2三",
-			ClassName:  "三1",
-			IdCard:     "2004",
-			Num:        "2004",
-			Phone:      "18911545460",
-			Status:     0,
-			Price:      1.02,
-			IsFee:      0,
-			FeeTime:    0,
-			Desc:       "",
-
-		},
-		schoolfee.Record{
-			CreateTime: timestamp,
-			UpdateTime: timestamp,
-			CompanyId:  replyAccessToken.CompanyId,
-			ProjectId:  project_id,
-			Name:       "张3三",
-			ClassName:  "三1",
-			IdCard:     "2004",
-			Num:        "2004",
-			Phone:      "18911545460",
-			Status:     0,
-			Price:      1.01,
-			IsFee:      0,
-			FeeTime:    0,
-			Desc:       "",
-		},
+	var args2 []schoolfee.Record
+	for _, sheet := range xlFile.Sheets {
+		for index, row := range sheet.Rows {
+			if index != 0 {
+				feeTime, _ := strconv.ParseInt(row.Cells[7].Value, 10, 64)
+				price, _ := strconv.ParseFloat(row.Cells[5].Value, 64) //row.Cells[5].Value.(float64)
+				isFee,_ :=  strconv.ParseInt(row.Cells[6].Value, 10, 64)
+				args2 = append(args2, schoolfee.Record{
+					CreateTime: timestamp,
+					UpdateTime: timestamp,
+					CompanyId:  replyAccessToken.CompanyId,
+					ProjectId:  project_id,
+					Name:       row.Cells[0].Value,
+					ClassName:  row.Cells[1].Value,
+					IdCard:     row.Cells[2].Value,
+					Num:        row.Cells[3].Value,
+					Phone:      row.Cells[4].Value,
+					Price:      price,
+					IsFee:      int8(isFee),
+					FeeTime:    feeTime,
+					Desc:       row.Cells[8].Value,
+					Status:     0,
+				})
+			}
+		}
 	}
+
 	var replyRecord action.Num
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Record", "AddMultiple", args2, &replyRecord)
 	if err != nil {
@@ -264,7 +248,7 @@ func (c *RecordController) UploadRecord() {
 // @Param   access_token     query   string true       "访问令牌"
 // @Param   record_ids     query   int true       "项目记录IDs"
 // @Failure 400 {"code":400,"message":"下载缴费记录失败"}
-// @router /download [post]
+// @router /download [get,post]
 func (c *RecordController) DownloadRecord() {
 	res := DownloadRecordResponse{}
 	access_token := c.GetString("access_token")
@@ -309,30 +293,66 @@ func (c *RecordController) DownloadRecord() {
 	}
 	fmt.Println("2:", replyRecord)
 	// 3.
-	listOfRecord := make([]Record, len(replyRecord), len(replyRecord))
-	for index, rec := range replyRecord {
-		listOfRecord[index] = Record{
-			Id:         rec.Id,
-			CreateTime: rec.CreateTime,
-			UpdateTime: rec.UpdateTime,
-			CompanyId:  rec.CompanyId,
-			ProjectId:  rec.ProjectId,
-			Name:       rec.Name,
-			ClassName:  rec.ClassName,
-			IdCard:     rec.IdCard,
-			Num:        rec.Num,
-			Phone:      rec.Phone,
-			Price:      rec.Price,
-			IsFee:      rec.IsFee,
-			FeeTime:    rec.FeeTime,
-			Desc:       rec.Desc,
-			Status:     rec.Status,
-		}
+	file := xlsx.NewFile()
+	sheet, _ := file.AddSheet("Sheet1")
+	row := sheet.AddRow()
+	row.SetHeightCM(1) //设置每行的高度
+	cell := row.AddCell()
+	cell.Value = "姓名"
+	cell = row.AddCell()
+	cell.Value = "班级"
+	cell = row.AddCell()
+	cell.Value = "身份证号码"
+	cell = row.AddCell()
+	cell.Value = "编号"
+	cell = row.AddCell()
+	cell.Value = "联系电话"
+	cell = row.AddCell()
+	cell.Value = "应缴费用"
+	cell = row.AddCell()
+	cell.Value = "是否缴费"
+	cell = row.AddCell()
+	cell.Value = "缴费时间"
+	cell = row.AddCell()
+	cell.Value = "备注"
+	//姓名、班级、身份证号码、编号、联系电话、应缴费用、是否缴费、缴费时间、备注
+	for _, rec := range replyRecord {
+		row := sheet.AddRow()
+		row.SetHeightCM(1) //设置每行的高度
+		cell = row.AddCell()
+		cell.Value = rec.Name
+		cell = row.AddCell()
+		cell.Value = rec.ClassName
+		cell = row.AddCell()
+		cell.Value = rec.IdCard
+		cell = row.AddCell()
+		cell.Value = rec.Num
+		cell = row.AddCell()
+		cell.Value = rec.Phone
+		cell = row.AddCell()
+		cell.Value = strconv.FormatFloat(rec.Price, 'f', -1, 64)
+		cell = row.AddCell()
+		var isfee int64 = int64(rec.IsFee)
+		cell.Value = strconv.FormatInt(isfee, 10)
+		cell = row.AddCell()
+		cell.Value = strconv.FormatInt(rec.FeeTime, 10)
+		cell = row.AddCell()
+		cell.Value = rec.Desc
+	}
+	err = file.Save("file.xlsx")
+	if err != nil {
+		panic(err)
 	}
 
+	c.Ctx.Output.Header("Accept-Ranges", "bytes")
+	c.Ctx.Output.Header("Content-Disposition", "attachment; filename="+fmt.Sprintf("%s", "file.xls")) //文件名
+	c.Ctx.Output.Header("Cache-Control", "must-revalidate, post-check=0, pre-check=0")
+	c.Ctx.Output.Header("Pragma", "no-cache")
+	c.Ctx.Output.Header("Expires", "0")
+	//最主要的一句
+	http.ServeFile(c.Ctx.ResponseWriter, c.Ctx.Request, "file.xlsx")
 	res.Code = ResponseNormal
 	res.Messgae = "下载缴费记录成功"
-	res.Data.List = listOfRecord
 	c.Data["json"] = res
 	c.ServeJSON()
 	return
