@@ -8,7 +8,7 @@
 package routers
 
 import (
-	admin_window "dev.cloud.360baige.com/controllers/window/admin"
+	center_window "dev.cloud.360baige.com/controllers/window/center"
 	center_mobile "dev.cloud.360baige.com/controllers/mobile/center"
 	schoolfee_mobile "dev.cloud.360baige.com/controllers/mobile/schoolfee"
 	schoolfee_window "dev.cloud.360baige.com/controllers/window/schoolfee"
@@ -16,7 +16,7 @@ import (
 )
 
 func init() {
-	adminWindowRouter()
+	centerWindowRouter()
 	//centerMobileRouter()
 	schoolfeeWindowRouter()
 	//schoolfeeMobileRouter()
@@ -54,51 +54,51 @@ func schoolfeeMobileRouter() {
 	beego.AddNamespace(schoolfeeappApi)
 }
 
-func adminWindowRouter() {
+func centerWindowRouter() {
 	windowApi := beego.NewNamespace("/cloud/window/v1",
 		beego.NSNamespace("/user",
 			beego.NSInclude(
-				&admin_window.UserController{},
+				&center_window.UserController{},
 			),
 		),
 		beego.NSNamespace("/userposition",
 			beego.NSInclude(
-				&admin_window.UserPositionController{},
+				&center_window.UserPositionController{},
 			),
 		),
 		beego.NSNamespace("/company",
 			beego.NSInclude(
-				&admin_window.CompanyController{},
+				&center_window.CompanyController{},
 			),
 		),
 		beego.NSNamespace("/account",
 			beego.NSInclude(
-				&admin_window.AccountController{},
+				&center_window.AccountController{},
 			),
 		),
 		beego.NSNamespace("/account_item",
 			beego.NSInclude(
-				&admin_window.AccountItemController{},
+				&center_window.AccountItemController{},
 			),
 		),
 		beego.NSNamespace("/order",
 			beego.NSInclude(
-				&admin_window.OrderController{},
+				&center_window.OrderController{},
 			),
 		),
 		beego.NSNamespace("/application",
 			beego.NSInclude(
-				&admin_window.ApplicationController{},
+				&center_window.ApplicationController{},
 			),
 		),
 		beego.NSNamespace("/application_tpl",
 			beego.NSInclude(
-				&admin_window.ApplicationTplController{},
+				&center_window.ApplicationTplController{},
 			),
 		),
 		beego.NSNamespace("/logger",
 			beego.NSInclude(
-				&admin_window.LoggerController{},
+				&center_window.LoggerController{},
 			),
 		),
 	)
