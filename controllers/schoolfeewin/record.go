@@ -589,10 +589,9 @@ func (c *RecordController) DownloadRecord() {
 		action.CondValue{Type: "And", Key: "class_name__in", Val: strings.Split(class_name_s, ",")},
 		action.CondValue{Type: "And", Key: "is_fee__in", Val: strings.Split(is_fee_s, ",")},
 	}}
-	fmt.Println("args2", args2)
+
 	var replyRecord []schoolfee.Record
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Record", "ListByCond", args2, &replyRecord)
-	fmt.Println("replyRecord", replyRecord)
 	if err != nil {
 		res.Code = ResponseLogicErr
 		res.Messgae = "下载缴费记录失败"
@@ -605,47 +604,29 @@ func (c *RecordController) DownloadRecord() {
 	sheet, _ := file.AddSheet("Sheet1")
 	row := sheet.AddRow()
 	row.SetHeightCM(1) //设置每行的高度
-	cell := row.AddCell()
-	cell.Value = "姓名"
-	cell = row.AddCell()
-	cell.Value = "班级"
-	cell = row.AddCell()
-	cell.Value = "身份证号码"
-	cell = row.AddCell()
-	cell.Value = "编号"
-	cell = row.AddCell()
-	cell.Value = "联系电话"
-	cell = row.AddCell()
-	cell.Value = "应缴费用"
-	cell = row.AddCell()
-	cell.Value = "是否缴费"
-	cell = row.AddCell()
-	cell.Value = "缴费时间"
-	cell = row.AddCell()
-	cell.Value = "备注"
+	row.AddCell().Value = "姓名"
+	row.AddCell().Value = "班级"
+	row.AddCell().Value = "身份证号码"
+	row.AddCell().Value = "编号"
+	row.AddCell().Value = "联系电话"
+	row.AddCell().Value = "应缴费用"
+	row.AddCell().Value = "是否缴费"
+	row.AddCell().Value = "缴费时间"
+	row.AddCell().Value = "备注"
 	//姓名、班级、身份证号码、编号、联系电话、应缴费用、是否缴费、缴费时间、备注
 	for _, rec := range replyRecord {
 		row := sheet.AddRow()
 		row.SetHeightCM(1) //设置每行的高度
-		cell = row.AddCell()
-		cell.Value = rec.Name
-		cell = row.AddCell()
-		cell.Value = rec.ClassName
-		cell = row.AddCell()
-		cell.Value = rec.IdCard
-		cell = row.AddCell()
-		cell.Value = rec.Num
-		cell = row.AddCell()
-		cell.Value = rec.Phone
-		cell = row.AddCell()
-		cell.Value = strconv.FormatFloat(rec.Price, 'f', -1, 64)
-		cell = row.AddCell()
-		var isfee int64 = int64(rec.IsFee)
-		cell.Value = strconv.FormatInt(isfee, 10)
-		cell = row.AddCell()
-		cell.Value = strconv.FormatInt(rec.FeeTime, 10)
-		cell = row.AddCell()
-		cell.Value = rec.Desc
+		row.AddCell().Value = rec.Name
+		row.AddCell().Value = rec.ClassName
+		row.AddCell().Value = rec.IdCard
+		row.AddCell().Value = rec.Num
+		row.AddCell().Value = rec.Phone
+		row.AddCell().Value = strconv.FormatFloat(rec.Price, 'f', -1, 64)
+		var isFee int64 = int64(rec.IsFee)
+		row.AddCell().Value = strconv.FormatInt(isFee, 10)
+		row.AddCell().Value = strconv.FormatInt(rec.FeeTime, 10)
+		row.AddCell().Value = rec.Desc
 	}
 	objectKey := strconv.FormatInt(time.Now().UnixNano() / 1e6, 10) + "file.xlsx"
 	err = file.Save(objectKey)
@@ -654,12 +635,12 @@ func (c *RecordController) DownloadRecord() {
 	}
 
 	c.Ctx.Output.Header("Accept-Ranges", "bytes")
-	c.Ctx.Output.Header("Content-Disposition", "attachment; filename=" + fmt.Sprintf("%s", "file.xls")) //文件名
+	c.Ctx.Output.Header("Content-Disposition", "attachment; filename=" + fmt.Sprintf("%s", objectKey)) //文件名
 	c.Ctx.Output.Header("Cache-Control", "must-revalidate, post-check=0, pre-check=0")
 	c.Ctx.Output.Header("Pragma", "no-cache")
 	c.Ctx.Output.Header("Expires", "0")
 	//最主要的一句
-	http.ServeFile(c.Ctx.ResponseWriter, c.Ctx.Request, "file.xlsx")
+	http.ServeFile(c.Ctx.ResponseWriter, c.Ctx.Request, objectKey)
 	res.Code = ResponseNormal
 	res.Messgae = "下载缴费记录成功"
 	c.Data["json"] = res
@@ -703,7 +684,6 @@ func (c *RecordController) ClassList() {
 	args2.CondList = append(args2.CondList,
 		action.CondValue{Type: "And", Key: "company_id", Val: replyAccessToken.CompanyId},
 		action.CondValue{Type: "And", Key: "project_id", Val: project_id},
-		action.CondValue{Type: "And", Key: "status__gt", Val: -1},
 	)
 	args2.Cols = []string{"class_name" }
 	var replyRecord []schoolfee.Record
