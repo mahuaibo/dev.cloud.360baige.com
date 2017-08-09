@@ -10,6 +10,7 @@ import (
 	"time"
 	"dev.model.360baige.com/action"
 	"encoding/json"
+	"fmt"
 )
 
 // APPLICATION API
@@ -49,7 +50,9 @@ func (c *ApplicationController) List() {
 	})
 	args.Fileds = []string{"id", "user_id", "company_id", "type"}
 	var positionReply UserPosition
+	fmt.Println("args", args)
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &positionReply)
+	fmt.Println("positionReply", positionReply)
 	if err != nil {
 		res.Code = ResponseLogicErr
 		res.Messgae = "访问令牌失效"

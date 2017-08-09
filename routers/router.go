@@ -16,7 +16,7 @@ import (
 )
 
 func init() {
-	//windowRouter()
+	windowRouter()
 	//mobileRouter()
 	schoolfeewinRouter()
 	//schoolfeeappRouter()

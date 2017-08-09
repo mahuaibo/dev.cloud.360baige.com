@@ -25,6 +25,8 @@ type ProjectController struct {
 func (c *ProjectController) ListOfProject() {
 	res := ListOfProjectResponse{}
 	access_token := c.GetString("access_token")
+	pageSize, _ := c.GetInt64("page_size")
+	currentPage, _ := c.GetInt64("current")
 	if access_token == "" {
 		res.Code = ResponseLogicErr
 		res.Messgae = "访问令牌无效"
@@ -52,12 +54,16 @@ func (c *ProjectController) ListOfProject() {
 	fmt.Println("1:", replyAccessToken)
 
 	// 2.
-	var args2 action.FindByCond
+	var args2 action.PageByCond
 	args2.CondList = append(args2.CondList, action.CondValue{
 		Type: "And",
 		Key:  "company_id",
 		Val:  replyAccessToken.CompanyId,
 	})
+	args2.OrderBy = []string{"id"}
+	args2.Cols = []string{"id", "create_time", "company_id", "name", "is_limit", "desc", "link", "status" }
+	args2.PageSize = pageSize
+	args2.Current = currentPage
 	var replyProject []schoolfee.Project
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Project", "ListByCond", args2, &replyProject)
 	if err != nil {
@@ -74,8 +80,7 @@ func (c *ProjectController) ListOfProject() {
 	for index, pro := range replyProject {
 		listOfProject[index] = Project{
 			Id:         pro.Id,
-			CreateTime: pro.CreateTime,
-			UpdateTime: pro.UpdateTime,
+			CreateTime: time.Unix(pro.CreateTime / 1000, 0).Format("2006-01-02"),
 			CompanyId:  pro.CompanyId,
 			Name:       pro.Name,
 			IsLimit:    pro.IsLimit,
@@ -139,7 +144,7 @@ func (c *ProjectController) AddProject() {
 	fmt.Println("1:", replyAccessToken)
 
 	// 2.
-	operationTime := time.Now().UnixNano() / 10e6
+	operationTime := time.Now().UnixNano() / 1e6
 	args2 := &schoolfee.Project{
 		CreateTime: operationTime,
 		UpdateTime: operationTime,
@@ -234,7 +239,7 @@ func (c *ProjectController) ModifyProject() {
 	args3 := action.UpdateByIdCond{
 		Id: []int64{args2.Id},
 	}
-	operationTime := time.Now().UnixNano() / 10e6
+	operationTime := time.Now().UnixNano() / 1e6
 	args3.UpdateList = append(args3.UpdateList,
 		action.UpdateValue{Key: "UpdateTime", Val: operationTime},
 		action.UpdateValue{Key: "Name", Val: name},
