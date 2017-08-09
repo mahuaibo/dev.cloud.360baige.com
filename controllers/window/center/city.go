@@ -1,4 +1,4 @@
-package admin
+package center
 
 import "github.com/astaxie/beego"
 

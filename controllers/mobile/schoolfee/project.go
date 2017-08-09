@@ -3,7 +3,7 @@ package schoolfee
 import (
 	"github.com/astaxie/beego"
 	"dev.cloud.360baige.com/rpc/client"
-	. "dev.model.360baige.com/http/schoolfeeapp"
+	. "dev.model.360baige.com/http/mobile/schoolfee"
 	"dev.model.360baige.com/models/user"
 	"dev.model.360baige.com/models/schoolfee"
 	"dev.model.360baige.com/action"

@@ -1,11 +1,11 @@
-package admin
+package center
 
 import (
 	"github.com/astaxie/beego"
 	"dev.cloud.360baige.com/rpc/client"
 	. "dev.model.360baige.com/models/company"
 	//. "dev.model.360baige.com/models/response"
-	. "dev.model.360baige.com/http/window"
+	. "dev.model.360baige.com/http/window/center"
 	. "dev.model.360baige.com/models/user"
 	"time"
 	"dev.model.360baige.com/action"
