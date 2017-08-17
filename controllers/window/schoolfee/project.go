@@ -18,7 +18,7 @@ type ProjectController struct {
 
 // @Title 校园收费列表接口
 // @Description Project List 校园收费列表接口
-// @Success 200 {"code":200,"messgae":"获取缴费项目成功","data":{"access_ticket":"xxxx","expire_in":0}}
+// @Success 200 {"code":200,"message":"获取缴费项目成功","data":{"access_ticket":"xxxx","expire_in":0}}
 // @Param   access_token     query   string true       "访问令牌"
 // @Failure 400 {"code":400,"message":"获取缴费项目失败"}
 // @router /list [get]
@@ -29,7 +29,7 @@ func (c *ProjectController) ListOfProject() {
 	currentPage, _ := c.GetInt64("current")
 	if access_token == "" {
 		res.Code = ResponseLogicErr
-		res.Messgae = "访问令牌无效"
+		res.Message = "访问令牌无效"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -46,7 +46,7 @@ func (c *ProjectController) ListOfProject() {
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
 	if err != nil {
 		res.Code = ResponseLogicErr
-		res.Messgae = "访问令牌失效"
+		res.Message = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -68,7 +68,7 @@ func (c *ProjectController) ListOfProject() {
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Project", "ListByCond", args2, &replyProject)
 	if err != nil {
 		res.Code = ResponseLogicErr
-		res.Messgae = "获取缴费项目失败"
+		res.Message = "获取缴费项目失败"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -90,7 +90,7 @@ func (c *ProjectController) ListOfProject() {
 		}
 	}
 	res.Code = ResponseNormal
-	res.Messgae = "获取缴费项目成功"
+	res.Message = "获取缴费项目成功"
 	res.Data.List = listOfProject
 	c.Data["json"] = res
 	c.ServeJSON()
@@ -99,7 +99,7 @@ func (c *ProjectController) ListOfProject() {
 
 // @Title 添加校园收费项目接口
 // @Description Project Add 添加校园收费项目接口
-// @Success 200 {"code":200,"messgae":"添加缴费项目成功","data":{"access_ticket":"xxxx","expire_in":0}}
+// @Success 200 {"code":200,"message":"添加缴费项目成功","data":{"access_ticket":"xxxx","expire_in":0}}
 // @Param   access_token     query   string true       "访问令牌"
 // @Param   name     query   string true       "项目名称"
 // @Param   is_limit     query   string true       "是否限制缴费"
@@ -119,7 +119,7 @@ func (c *ProjectController) AddProject() {
 
 	if access_token == "" {
 		res.Code = ResponseLogicErr
-		res.Messgae = "访问令牌无效"
+		res.Message = "访问令牌无效"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -136,7 +136,7 @@ func (c *ProjectController) AddProject() {
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
 	if err != nil {
 		res.Code = ResponseLogicErr
-		res.Messgae = "访问令牌失效"
+		res.Message = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -159,14 +159,14 @@ func (c *ProjectController) AddProject() {
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Project", "Add", args2, &replyProject)
 	if err != nil {
 		res.Code = ResponseLogicErr
-		res.Messgae = "添加缴费项目失败"
+		res.Message = "添加缴费项目失败"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
 	}
 	fmt.Println("2:", replyProject)
 	res.Code = ResponseNormal
-	res.Messgae = "添加缴费项目成功"
+	res.Message = "添加缴费项目成功"
 	res.Data.Id = replyProject.Id
 	c.Data["json"] = res
 	c.ServeJSON()
@@ -175,7 +175,7 @@ func (c *ProjectController) AddProject() {
 
 // @Title 修改校园收费项目接口
 // @Description Project Add 修改校园收费项目接口
-// @Success 200 {"code":200,"messgae":"修改缴费项目成功","data":{"access_ticket":"xxxx","expire_in":0}}
+// @Success 200 {"code":200,"message":"修改缴费项目成功","data":{"access_ticket":"xxxx","expire_in":0}}
 // @Param   access_token     query   string true       "访问令牌"
 // @Param   name     query   string true       "项目名称"
 // @Param   is_limit     query   string true       "是否限制缴费"
@@ -196,7 +196,7 @@ func (c *ProjectController) ModifyProject() {
 
 	if access_token == "" {
 		res.Code = ResponseLogicErr
-		res.Messgae = "访问令牌无效"
+		res.Message = "访问令牌无效"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -213,7 +213,7 @@ func (c *ProjectController) ModifyProject() {
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
 	if err != nil {
 		res.Code = ResponseLogicErr
-		res.Messgae = "访问令牌失效"
+		res.Message = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -229,7 +229,7 @@ func (c *ProjectController) ModifyProject() {
 	fmt.Println("2:", args2)
 	if args2.CompanyId != replyAccessToken.CompanyId {
 		res.Code = ResponseLogicErr
-		res.Messgae = "非法操作"
+		res.Message = "非法操作"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -253,13 +253,13 @@ func (c *ProjectController) ModifyProject() {
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Project", "UpdateById", args3, &replyNum)
 	if err != nil {
 		res.Code = ResponseLogicErr
-		res.Messgae = "修改缴费项目失败"
+		res.Message = "修改缴费项目失败"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
 	}
 	res.Code = ResponseNormal
-	res.Messgae = "修改缴费项目成功"
+	res.Message = "修改缴费项目成功"
 	res.Data.Count = replyNum.Value
 	c.Data["json"] = res
 	c.ServeJSON()

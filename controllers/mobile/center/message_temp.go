@@ -18,7 +18,7 @@ type MessageTempController struct {
 
 // @Title 消息列表接口
 // @Description 消息列表接口
-// @Success 200 {"code":200,"messgae":"获取消息列表成功","data":{"access_ticket":"xxxx","expire_in":0}}
+// @Success 200 {"code":200,"message":"获取消息列表成功","data":{"access_ticket":"xxxx","expire_in":0}}
 // @Param   access_token     query   string true       "访问令牌"
 // @Param   user_position_id     query   string true       "user_position_id"
 // @Param   current     query   string true       "当前页"
@@ -30,7 +30,7 @@ func (c *MessageTempController) List() {
 	access_token := c.GetString("access_token")
 	if access_token == "" {
 		res.Code = ResponseSystemErr
-		res.Messgae = "访问令牌无效"
+		res.Message = "访问令牌无效"
 		c.Data["json"] = res
 		c.ServeJSON()
 	}
@@ -46,7 +46,7 @@ func (c *MessageTempController) List() {
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
 	if err != nil {
 		res.Code = ResponseLogicErr
-		res.Messgae = "访问令牌失效"
+		res.Message = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
 	} else {
@@ -56,7 +56,7 @@ func (c *MessageTempController) List() {
 		user_position_id := replyAccessToken.Id
 		if com_id == 0 || user_id == 0 || user_position_id == 0 {
 			res.Code = ResponseSystemErr
-			res.Messgae = "获取信息失败"
+			res.Message = "获取信息失败"
 			c.Data["json"] = res
 			c.ServeJSON()
 		} else {
@@ -87,7 +87,7 @@ func (c *MessageTempController) List() {
 			}, &reply)
 			if err != nil {
 				res.Code = ResponseSystemErr
-				res.Messgae = "获取消息信息失败"
+				res.Message = "获取消息信息失败"
 				c.Data["json"] = res
 				c.ServeJSON()
 			} else {
@@ -109,7 +109,7 @@ func (c *MessageTempController) List() {
 				res.Data.OrderBy = reply.OrderBy
 				res.Data.PageSize = pageSize
 				res.Code = ResponseNormal
-				res.Messgae = "获取消息信息成功"
+				res.Message = "获取消息信息成功"
 				c.Data["json"] = res
 				c.ServeJSON()
 			}

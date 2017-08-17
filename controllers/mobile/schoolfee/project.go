@@ -17,7 +17,7 @@ type ProjectController struct {
 
 // @Title 获取缴费项目列表接口
 // @Description No Limit Project List 获取缴费项目列表接口
-// @Success 200 {"code":200,"messgae":"获取缴费项目列表成功","data":{"access_ticket":"xxxx","expire_in":0}}
+// @Success 200 {"code":200,"message":"获取缴费项目列表成功","data":{"access_ticket":"xxxx","expire_in":0}}
 // @Param   access_token     query   string true       "访问令牌"
 // @Failure 400 {"code":400,"message":"获取缴费项目列表失败"}
 // @router /nolimitlist [get]
@@ -26,7 +26,7 @@ func (c *ProjectController) ListOfNoLimitProject() {
 	access_token := c.GetString("access_token")
 	if access_token == "" {
 		res.Code = ResponseLogicErr
-		res.Messgae = "访问令牌无效"
+		res.Message = "访问令牌无效"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -43,7 +43,7 @@ func (c *ProjectController) ListOfNoLimitProject() {
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
 	if err != nil {
 		res.Code = ResponseLogicErr
-		res.Messgae = "访问令牌失效"
+		res.Message = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -69,7 +69,7 @@ func (c *ProjectController) ListOfNoLimitProject() {
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Project", "ListByCond", args2, &replyProject)
 	if err != nil {
 		res.Code = ResponseLogicErr
-		res.Messgae = "获取非限制缴费项目列表失败"
+		res.Message = "获取非限制缴费项目列表失败"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -91,7 +91,7 @@ func (c *ProjectController) ListOfNoLimitProject() {
 		}
 	}
 	res.Code = ResponseNormal
-	res.Messgae = "获取非限制缴费项目列表成功"
+	res.Message = "获取非限制缴费项目列表成功"
 	res.Data.List = listOfProject
 	c.Data["json"] = res
 	c.ServeJSON()
@@ -99,7 +99,7 @@ func (c *ProjectController) ListOfNoLimitProject() {
 
 // @Title 查询缴费信息接口
 // @Description No Limit Project List 查询缴费信息接口
-// @Success 200 {"code":200,"messgae":"查询缴费信息成功","data":{"access_ticket":"xxxx","expire_in":0}}
+// @Success 200 {"code":200,"message":"查询缴费信息成功","data":{"access_ticket":"xxxx","expire_in":0}}
 // @Param   access_token     query   string true       "访问令牌"
 // @Failure 400 {"code":400,"message":"查询缴费信息失败"}
 // @router /search [get]
@@ -110,7 +110,7 @@ func (c *ProjectController) SearchProjectInfo() {
 	search_key := c.GetString("search_key")
 	if access_token == "" {
 		res.Code = ResponseLogicErr
-		res.Messgae = "访问令牌无效"
+		res.Message = "访问令牌无效"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -127,7 +127,7 @@ func (c *ProjectController) SearchProjectInfo() {
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
 	if err != nil {
 		res.Code = ResponseLogicErr
-		res.Messgae = "访问令牌失效"
+		res.Message = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -151,7 +151,7 @@ func (c *ProjectController) SearchProjectInfo() {
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Record", "ListByCond", args2, &replyRecord)
 	if err != nil {
 		res.Code = ResponseLogicErr
-		res.Messgae = "获取缴费项目列表失败"
+		res.Message = "获取缴费项目列表失败"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -209,7 +209,7 @@ func (c *ProjectController) SearchProjectInfo() {
 	}
 
 	res.Code = ResponseNormal
-	res.Messgae = "获取缴费项目列表成功"
+	res.Message = "获取缴费项目列表成功"
 	res.Data.List = list
 	c.Data["json"] = res
 	c.ServeJSON()

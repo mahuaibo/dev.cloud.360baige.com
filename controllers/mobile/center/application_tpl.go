@@ -20,7 +20,7 @@ type ApplicationTplController struct {
 
 // @Title 应用列表接口
 // @Description 应用列表接口
-// @Success 200 {"code":200,"messgae":"获取应用列表成功","data":{"access_ticket":"xxxx","expire_in":0}}
+// @Success 200 {"code":200,"message":"获取应用列表成功","data":{"access_ticket":"xxxx","expire_in":0}}
 // @Param   access_token     query   string true       "访问令牌"
 // @Param   current     query   string true       "当前页"
 // @Param   page_size     query   string true       "每页数量"
@@ -32,7 +32,7 @@ func (c *ApplicationTplController) List() {
 	access_token := c.GetString("access_token")
 	if access_token == "" {
 		res.Code = ResponseSystemErr
-		res.Messgae = "访问令牌无效"
+		res.Message = "访问令牌无效"
 		c.Data["json"] = res
 		c.ServeJSON()
 	}
@@ -48,7 +48,7 @@ func (c *ApplicationTplController) List() {
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
 	if err != nil {
 		res.Code = ResponseLogicErr
-		res.Messgae = "访问令牌失效"
+		res.Message = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
 	} else {
@@ -59,7 +59,7 @@ func (c *ApplicationTplController) List() {
 		user_position_type := replyAccessToken.Type
 		if com_id == 0 || user_id == 0 || user_position_id == 0 {
 			res.Code = ResponseSystemErr
-			res.Messgae = "获取信息失败"
+			res.Message = "获取信息失败"
 			c.Data["json"] = res
 			c.ServeJSON()
 		} else {
@@ -91,7 +91,7 @@ func (c *ApplicationTplController) List() {
 			}, &reply)
 			if err != nil {
 				res.Code = ResponseSystemErr
-				res.Messgae = "获取应用信息失败"
+				res.Message = "获取应用信息失败"
 				c.Data["json"] = res
 				c.ServeJSON()
 			} else {
@@ -154,7 +154,7 @@ func (c *ApplicationTplController) List() {
 
 				}
 				res.Code = ResponseNormal
-				res.Messgae = "获取应用成功"
+				res.Message = "获取应用成功"
 				res.Data.Total = reply.Total
 				res.Data.Current = currentPage
 				res.Data.CurrentSize = reply.CurrentSize
@@ -172,7 +172,7 @@ func (c *ApplicationTplController) List() {
 
 // @Title 应用详情接口
 // @Description 应用详情接口
-// @Success 200 {"code":200,"messgae":"获取应用详情成功","data":{"access_ticket":"xxxx","expire_in":0}}
+// @Success 200 {"code":200,"message":"获取应用详情成功","data":{"access_ticket":"xxxx","expire_in":0}}
 // @Param   access_token     query   string true       "访问令牌"
 // @Param   id     query   string true       "id"
 // @Failure 400 {"code":400,"message":"获取应用详情失败"}
@@ -182,7 +182,7 @@ func (c *ApplicationTplController) Detail() {
 	access_token := c.GetString("access_token")
 	if access_token == "" {
 		res.Code = ResponseSystemErr
-		res.Messgae = "访问令牌无效"
+		res.Message = "访问令牌无效"
 		c.Data["json"] = res
 		c.ServeJSON()
 	}
@@ -198,14 +198,14 @@ func (c *ApplicationTplController) Detail() {
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
 	if err != nil {
 		res.Code = ResponseLogicErr
-		res.Messgae = "访问令牌失效"
+		res.Message = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
 	} else {
 		ap_id, _ := c.GetInt64("id")
 		if ap_id == 0 {
 			res.Code = ResponseSystemErr
-			res.Messgae = "获取信息失败"
+			res.Message = "获取信息失败"
 			c.Data["json"] = res
 			c.ServeJSON()
 		} else {
@@ -216,7 +216,7 @@ func (c *ApplicationTplController) Detail() {
 			}, &replyApplicationTpl)
 			if err != nil {
 				res.Code = ResponseSystemErr
-				res.Messgae = "获取应用信息失败"
+				res.Message = "获取应用信息失败"
 				c.Data["json"] = res
 				c.ServeJSON()
 			}
@@ -241,7 +241,7 @@ func (c *ApplicationTplController) Detail() {
 				cname = replyCompany.Name
 			}
 			res.Code = ResponseNormal
-			res.Messgae = "获取应用成功"
+			res.Message = "获取应用成功"
 			res.Data.CreateTime = re
 			res.Data.Name = replyApplicationTpl.Name
 			res.Data.Image = replyApplicationTpl.Image
@@ -261,7 +261,7 @@ func (c *ApplicationTplController) Detail() {
 
 // @Title 应用详情接口
 // @Description 应用详情接口
-// @Success 200 {"code":200,"messgae":"获取应用详情成功","data":{"access_ticket":"xxxx","expire_in":0}}
+// @Success 200 {"code":200,"message":"获取应用详情成功","data":{"access_ticket":"xxxx","expire_in":0}}
 // @Param   access_token     query   string true       "访问令牌"
 // @Param   id     query   string true       "id"
 // @Failure 400 {"code":400,"message":"获取应用详情失败"}
@@ -271,7 +271,7 @@ func (c *ApplicationTplController) Subscription() {
 	access_token := c.GetString("access_token")
 	if access_token == "" {
 		res.Code = ResponseSystemErr
-		res.Messgae = "访问令牌无效"
+		res.Message = "访问令牌无效"
 		c.Data["json"] = res
 		c.ServeJSON()
 	}
@@ -287,7 +287,7 @@ func (c *ApplicationTplController) Subscription() {
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
 	if err != nil {
 		res.Code = ResponseLogicErr
-		res.Messgae = "访问令牌失效"
+		res.Message = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
 	} else {
@@ -299,7 +299,7 @@ func (c *ApplicationTplController) Subscription() {
 		user_position_type := replyAccessToken.Type
 		if ap_id == 0 || com_id == 0 || user_id == 0 || user_position_id == 0 {
 			res.Code = ResponseSystemErr
-			res.Messgae = "获取应用信息失败"
+			res.Message = "获取应用信息失败"
 			c.Data["json"] = res
 			c.ServeJSON()
 		} else {
@@ -337,7 +337,7 @@ func (c *ApplicationTplController) Subscription() {
 			}, &replyApplication)
 			if err == nil {
 				res.Code = ResponseSystemErr
-				res.Messgae = "此应用已经订阅过"
+				res.Message = "此应用已经订阅过"
 				c.Data["json"] = res
 				c.ServeJSON()
 			} else {
@@ -347,13 +347,13 @@ func (c *ApplicationTplController) Subscription() {
 				}, &reply)
 				if err != nil {
 					res.Code = ResponseSystemErr
-					res.Messgae = "获取应用信息失败"
+					res.Message = "获取应用信息失败"
 					c.Data["json"] = res
 					c.ServeJSON()
 				} else {
 					if reply.Status > 0 {
 						res.Code = ResponseSystemErr
-						res.Messgae = "此应用已经下架"
+						res.Message = "此应用已经下架"
 						c.Data["json"] = res
 						c.ServeJSON()
 					} else {
@@ -374,12 +374,12 @@ func (c *ApplicationTplController) Subscription() {
 						err = client.Call(beego.AppConfig.String("EtcdURL"), "Application", "Add", addReply, &addReply)
 						if err != nil {
 							res.Code = ResponseSystemErr
-							res.Messgae = "应用订阅失败！"
+							res.Message = "应用订阅失败！"
 							c.Data["json"] = res
 							c.ServeJSON()
 						}
 						res.Code = ResponseNormal
-						res.Messgae = "应用订阅成功！"
+						res.Message = "应用订阅成功！"
 						res.Data.ApplicationTplId = reply.Id
 						res.Data.AppId = addReply.Id
 						c.Data["json"] = res
@@ -396,7 +396,7 @@ func (c *ApplicationTplController) Subscription() {
 
 // @Title 应用修改状态接口
 // @Description 应用修改状态接口
-// @Success 200 {"code":200,"messgae":"获取应用修改状态成功","data":{"access_ticket":"xxxx","expire_in":0}}
+// @Success 200 {"code":200,"message":"获取应用修改状态成功","data":{"access_ticket":"xxxx","expire_in":0}}
 // @Param   access_token     query   string true       "访问令牌"
 // @Param   id     query   string true       "id"
 // @Param   status     query   string true      " 0 上架 1 下架 "
@@ -407,7 +407,7 @@ func (c *ApplicationTplController) ModifyStatus() {
 	access_token := c.GetString("access_token")
 	if access_token == "" {
 		res.Code = ResponseSystemErr
-		res.Messgae = "访问令牌无效"
+		res.Message = "访问令牌无效"
 		c.Data["json"] = res
 		c.ServeJSON()
 	}
@@ -419,7 +419,7 @@ func (c *ApplicationTplController) ModifyStatus() {
 	}, &replyAccessToken)
 	if err != nil {
 		res.Code = ResponseLogicErr
-		res.Messgae = "访问令牌失效"
+		res.Message = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
 	} else {
@@ -430,7 +430,7 @@ func (c *ApplicationTplController) ModifyStatus() {
 		}, &reply)
 		if err != nil {
 			res.Code = ResponseSystemErr
-			res.Messgae = "获取应用信息失败"
+			res.Message = "获取应用信息失败"
 			c.Data["json"] = res
 			c.ServeJSON()
 		} else {
@@ -451,12 +451,12 @@ func (c *ApplicationTplController) ModifyStatus() {
 			}, nil)
 			if err != nil {
 				res.Code = ResponseSystemErr
-				res.Messgae = "应用信息修改失败！"
+				res.Message = "应用信息修改失败！"
 				c.Data["json"] = res
 				c.ServeJSON()
 			}
 			res.Code = ResponseNormal
-			res.Messgae = "应用信息修改成功！"
+			res.Message = "应用信息修改成功！"
 			c.Data["json"] = res
 			c.ServeJSON()
 		}

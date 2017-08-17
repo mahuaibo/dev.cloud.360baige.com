@@ -33,7 +33,7 @@ func (c *LoggerController) Add() {
 	Type, _ := c.GetInt8("type")
 	if access_token == "" {
 		res.Code = ResponseSystemErr
-		res.Messgae = "访问令牌无效"
+		res.Message = "访问令牌无效"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -50,7 +50,7 @@ func (c *LoggerController) Add() {
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
 	if err != nil {
 		res.Code = ResponseLogicErr
-		res.Messgae = "访问令牌失效"
+		res.Message = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -62,7 +62,7 @@ func (c *LoggerController) Add() {
 	user_position_type := replyAccessToken.Type
 	if com_id == 0 || user_id == 0 || user_position_id == 0 {
 		res.Code = ResponseSystemErr
-		res.Messgae = "获取应用信息失败"
+		res.Message = "获取应用信息失败"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -82,11 +82,11 @@ func (c *LoggerController) Add() {
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Logger", "Add", loggerArgs, &reply)
 	if err == nil {
 		res.Code = ResponseNormal
-		res.Messgae = "新增成功"
+		res.Message = "新增成功"
 		res.Data.Id = reply.Id
 	} else {
 		res.Code = ResponseSystemErr
-		res.Messgae = "新增失败"
+		res.Message = "新增失败"
 	}
 	c.Data["json"] = res
 	c.ServeJSON()
@@ -94,7 +94,7 @@ func (c *LoggerController) Add() {
 
 // @Title 列表接口
 // @Description 列表接口
-// @Success 200 {"code":200,"messgae":"获取列表成功","data":{"access_ticket":"xxxx","expire_in":0}}
+// @Success 200 {"code":200,"message":"获取列表成功","data":{"access_ticket":"xxxx","expire_in":0}}
 // @Param   access_token     query   string true       "访问令牌"
 // @Param   current     query   string true       "当前页"
 // @Param   page_size     query   string true       "每页数量"
@@ -107,7 +107,7 @@ func (c *LoggerController) List() {
 	pageSize, _ := c.GetInt64("page_size")
 	if access_token == "" {
 		res.Code = ResponseSystemErr
-		res.Messgae = "访问令牌无效"
+		res.Message = "访问令牌无效"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -124,7 +124,7 @@ func (c *LoggerController) List() {
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
 	if err != nil {
 		res.Code = ResponseLogicErr
-		res.Messgae = "访问令牌失效"
+		res.Message = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -137,7 +137,7 @@ func (c *LoggerController) List() {
 	user_position_type := replyAccessToken.Type
 	if com_id == 0 || user_id == 0 || user_position_id == 0 {
 		res.Code = ResponseSystemErr
-		res.Messgae = "获取信息失败"
+		res.Message = "获取信息失败"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -169,7 +169,7 @@ func (c *LoggerController) List() {
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Logger", "PageByCond", loggerArgs, &reply)
 	if err != nil {
 		res.Code = ResponseSystemErr
-		res.Messgae = "获取信息失败"
+		res.Message = "获取信息失败"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -198,7 +198,7 @@ func (c *LoggerController) List() {
 	}
 
 	res.Code = ResponseNormal
-	res.Messgae = "获取成功"
+	res.Message = "获取成功"
 	res.Data.Total = reply.Total
 	res.Data.Current = currentPage
 	res.Data.CurrentSize = reply.CurrentSize

@@ -19,7 +19,7 @@ type UserPositionController struct {
 
 // @Title 获取用户身份接口
 // @Description 获取用户身份接口
-// @Success 200 {"code":200,"messgae":"获取用户身份成功","data":{"accessToken":"ok","expire_in":0}}
+// @Success 200 {"code":200,"message":"获取用户身份成功","data":{"accessToken":"ok","expire_in":0}}
 // @Param access_ticket     query   string true       "访问票据"
 // @Failure 400 {"code":400,"message":"获取用户身份失败"}
 // @router /positionlist [get]
@@ -38,7 +38,7 @@ func (c *UserPositionController) PositionList() {
 	fmt.Println(replyUser)
 	if err != nil {
 		res.Code = ResponseSystemErr
-		res.Messgae = "访问票据无效"
+		res.Message = "访问票据无效"
 		c.Data["json"] = res
 		c.ServeJSON()
 	} else {
@@ -48,7 +48,7 @@ func (c *UserPositionController) PositionList() {
 
 		} else {
 			res.Code = ResponseSystemErr
-			res.Messgae = "访问票据超时"
+			res.Message = "访问票据超时"
 			c.Data["json"] = res
 			c.ServeJSON()
 		}
@@ -73,7 +73,7 @@ func (c *UserPositionController) PositionList() {
 		}, &replyUserPosition)
 		if err != nil {
 			res.Code = ResponseSystemErr
-			res.Messgae = "获取用户身份失败"
+			res.Message = "获取用户身份失败"
 			c.Data["json"] = res
 			c.ServeJSON()
 		} else {
@@ -104,7 +104,7 @@ func (c *UserPositionController) PositionList() {
 			//循环赋值
 			if err != nil {
 				res.Code = ResponseSystemErr
-				res.Messgae = "获取用户身份失败"
+				res.Message = "获取用户身份失败"
 				c.Data["json"] = res
 				c.ServeJSON()
 			}
@@ -127,7 +127,7 @@ func (c *UserPositionController) PositionList() {
 
 			}
 			res.Code = ResponseNormal
-			res.Messgae = "获取用户身份成功"
+			res.Message = "获取用户身份成功"
 			res.Data = resData
 			fmt.Println(res)
 			c.Data["json"] = res
@@ -140,7 +140,7 @@ func (c *UserPositionController) PositionList() {
 
 // @Title 获取一个登录用户身份权限接口
 // @Description 获取一个登录用户身份权限接口
-// @Success 200 {"code":200,"messgae":"获取一个登录用户身份权限成功","data":{"accessToken":"ok","expire_in":0}}
+// @Success 200 {"code":200,"message":"获取一个登录用户身份权限成功","data":{"accessToken":"ok","expire_in":0}}
 // @Param user_position_id     query   string true       "用户身份Id"
 // @Failure 400 {"code":400,"message":"获取一个登录用户身份权限失败"}
 // @router /positiontoken [get]
@@ -154,7 +154,7 @@ func (c *UserPositionController) PositionToken() {
 
 	if err != nil {
 		res.Code = ResponseSystemErr
-		res.Messgae = "获取身份失败"
+		res.Message = "获取身份失败"
 		c.Data["json"] = res
 		c.ServeJSON()
 	} else {
@@ -176,12 +176,12 @@ func (c *UserPositionController) PositionToken() {
 		}, nil)
 		if err2 != nil {
 			res.Code = ResponseSystemErr
-			res.Messgae = "获取身份失败"
+			res.Message = "获取身份失败"
 			c.Data["json"] = res
 			c.ServeJSON()
 		}
 		res.Code = ResponseNormal
-		res.Messgae = "获取身份成功"
+		res.Message = "获取身份成功"
 		res.Data.AccessToken = newAccessTicket
 		res.Data.ExpireIn = replyUserPosition.ExpireIn
 		c.Data["json"] = res

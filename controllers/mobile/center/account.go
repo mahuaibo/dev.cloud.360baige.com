@@ -18,7 +18,7 @@ type AccountController struct {
 
 // @Title 账务统计接口
 // @Description 账务统计接口
-// @Success 200 {"code":200,"messgae":"获取账务统计信息成功","data":{"access_ticket":"xxxx","expire_in":0}}
+// @Success 200 {"code":200,"message":"获取账务统计信息成功","data":{"access_ticket":"xxxx","expire_in":0}}
 // @Param   access_token     query   string true       "访问令牌"
 // @Param   date     query   string true       "账单日期：2017-07"
 // @Failure 400 {"code":400,"message":"获取账务统计信息失败"}
@@ -28,7 +28,7 @@ func (c *AccountController) AccountStatistics() {
 	access_token := c.GetString("access_token")
 	if access_token == "" {
 		res.Code = ResponseSystemErr
-		res.Messgae = "访问令牌无效"
+		res.Message = "访问令牌无效"
 		c.Data["json"] = res
 		c.ServeJSON()
 	}
@@ -44,7 +44,7 @@ func (c *AccountController) AccountStatistics() {
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
 	if err != nil {
 		res.Code = ResponseLogicErr
-		res.Messgae = "访问令牌失效"
+		res.Message = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
 	} else {
@@ -55,7 +55,7 @@ func (c *AccountController) AccountStatistics() {
 		user_position_type := replyAccessToken.Type
 		if com_id == 0 || user_id == 0 || user_position_id == 0 {
 			res.Code = ResponseSystemErr
-			res.Messgae = "获取账务统计信息失败"
+			res.Message = "获取账务统计信息失败"
 			c.Data["json"] = res
 			c.ServeJSON()
 		} else {
@@ -86,7 +86,7 @@ func (c *AccountController) AccountStatistics() {
 			err = client.Call(beego.AppConfig.String("EtcdURL"), "Account", "FindByCond", args2, &reply)
 			if err != nil {
 				res.Code = ResponseSystemErr
-				res.Messgae = "获取账务统计信息失败"
+				res.Message = "获取账务统计信息失败"
 				c.Data["json"] = res
 				c.ServeJSON()
 			} else {
@@ -97,7 +97,7 @@ func (c *AccountController) AccountStatistics() {
 				}, &reply2)
 				if err != nil {
 					res.Code = ResponseSystemErr
-					res.Messgae = "获取账务统计信息失败"
+					res.Message = "获取账务统计信息失败"
 					c.Data["json"] = res
 					c.ServeJSON()
 				} else {
@@ -118,7 +118,7 @@ func (c *AccountController) AccountStatistics() {
 						EndTime:   etime,
 					}, &reply3)
 					res.Code = ResponseNormal
-					res.Messgae = "获取账务统计信息成功"
+					res.Message = "获取账务统计信息成功"
 					res.Data.Balance = reply.Balance
 					res.Data.MonthPay = reply3.Pay
 					res.Data.MonthIncome = reply3.Income

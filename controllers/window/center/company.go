@@ -18,7 +18,7 @@ type CompanyController struct {
 
 // @Title 企业信息接口
 // @Description 企业信息接口
-// @Success 200 {"code":200,"messgae":"获取企业信息成功","data":{"access_ticket":"xxxx","expire_in":0}}
+// @Success 200 {"code":200,"message":"获取企业信息成功","data":{"access_ticket":"xxxx","expire_in":0}}
 // @Param   access_token     query   string true       "访问令牌"
 // @Failure 400 {"code":400,"message":"获取企业信息失败"}
 // @router /detail [get]
@@ -27,7 +27,7 @@ func (c *CompanyController) Detail() {
 	access_token := c.GetString("access_token")
 	if access_token == "" {
 		res.Code = ResponseSystemErr
-		res.Messgae = "访问令牌无效"
+		res.Message = "访问令牌无效"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -44,7 +44,7 @@ func (c *CompanyController) Detail() {
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
 	if err != nil {
 		res.Code = ResponseLogicErr
-		res.Messgae = "访问令牌失效"
+		res.Message = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -52,7 +52,7 @@ func (c *CompanyController) Detail() {
 	com_id := replyAccessToken.CompanyId
 	if com_id == 0 {
 		res.Code = ResponseSystemErr
-		res.Messgae = "获取公司信息失败"
+		res.Message = "获取公司信息失败"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -64,13 +64,13 @@ func (c *CompanyController) Detail() {
 
 	if err != nil {
 		res.Code = ResponseSystemErr
-		res.Messgae = "获取公司信息失败"
+		res.Message = "获取公司信息失败"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
 	}
 	res.Code = ResponseNormal
-	res.Messgae = "获取公司信息成功"
+	res.Message = "获取公司信息成功"
 	res.Data.Id = reply.Id
 	res.Data.Logo = reply.Logo
 	res.Data.Name = reply.Name
@@ -90,7 +90,7 @@ func (c *CompanyController) Detail() {
 
 // @Title 企业信息修改接口
 // @Description 企业信息修改接口
-// @Success 200 {"code":200,"messgae":"企业信息修改成功","data":{"access_ticket":"xxxx","expire_in":0}}
+// @Success 200 {"code":200,"message":"企业信息修改成功","data":{"access_ticket":"xxxx","expire_in":0}}
 // @Param   access_token     query   string true       "访问令牌"
 // @Failure 400 {"code":400,"message":"企业信息修改失败"}
 // @router /modify [post]
@@ -99,7 +99,7 @@ func (c *CompanyController) Modify() {
 	access_token := c.GetString("access_token")
 	if access_token == "" {
 		res.Code = ResponseSystemErr
-		res.Messgae = "访问令牌无效"
+		res.Message = "访问令牌无效"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -116,7 +116,7 @@ func (c *CompanyController) Modify() {
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
 	if err != nil {
 		res.Code = ResponseLogicErr
-		res.Messgae = "访问令牌失效"
+		res.Message = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -124,7 +124,7 @@ func (c *CompanyController) Modify() {
 	com_id := replyAccessToken.CompanyId
 	if com_id == 0 {
 		res.Code = ResponseSystemErr
-		res.Messgae = "获取公司信息失败"
+		res.Message = "获取公司信息失败"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -136,14 +136,14 @@ func (c *CompanyController) Modify() {
 
 	if err != nil {
 		res.Code = ResponseSystemErr
-		res.Messgae = "获取公司信息失败"
+		res.Message = "获取公司信息失败"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
 	}
 	if (reply.Status != 1) {
 		res.Code = ResponseSystemErr
-		res.Messgae = "公司状态不可修改"
+		res.Message = "公司状态不可修改"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -196,14 +196,14 @@ func (c *CompanyController) Modify() {
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Company", "UpdateById", updateArgs, &action.Num{})
 	if err != nil {
 		res.Code = ResponseSystemErr
-		res.Messgae = "企业信息修改失败！"
+		res.Message = "企业信息修改失败！"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
 	}
 
 	res.Code = ResponseNormal
-	res.Messgae = "企业信息修改成功！"
+	res.Message = "企业信息修改成功！"
 	c.Data["json"] = res
 	c.ServeJSON()
 }

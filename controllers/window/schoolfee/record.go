@@ -27,7 +27,7 @@ type RecordController struct {
 
 // @Title 校园收费记录列表接口
 // @Description Project List 校园收费记录列表接口
-// @Success 200 {"code":200,"messgae":"获取缴费项目记录成功","data":{"access_ticket":"xxxx","expire_in":0}}
+// @Success 200 {"code":200,"message":"获取缴费项目记录成功","data":{"access_ticket":"xxxx","expire_in":0}}
 // @Param   access_token     query   string true       "访问令牌"
 // @Param   project_id     query   int true       "项目ID"
 // @Failure 400 {"code":400,"message":"获取缴费项目记录失败"}
@@ -40,7 +40,7 @@ func (c *RecordController) ListOfRecord() {
 	currentPage, _ := c.GetInt64("current")
 	if access_token == "" {
 		res.Code = ResponseLogicErr
-		res.Messgae = "访问令牌无效"
+		res.Message = "访问令牌无效"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -53,7 +53,7 @@ func (c *RecordController) ListOfRecord() {
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
 	if err != nil {
 		res.Code = ResponseLogicErr
-		res.Messgae = "访问令牌失效"
+		res.Message = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -74,7 +74,7 @@ func (c *RecordController) ListOfRecord() {
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Record", "ListByCond", args2, &replyRecord)
 	if err != nil {
 		res.Code = ResponseLogicErr
-		res.Messgae = "获取缴费项目记录失败"
+		res.Message = "获取缴费项目记录失败"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -103,7 +103,7 @@ func (c *RecordController) ListOfRecord() {
 	}
 
 	res.Code = ResponseNormal
-	res.Messgae = "获取缴费项目记录成功"
+	res.Message = "获取缴费项目记录成功"
 	res.Data.List = listOfRecord
 	c.Data["json"] = res
 	c.ServeJSON()
@@ -112,7 +112,7 @@ func (c *RecordController) ListOfRecord() {
 
 // @Title 添加收费名单接口
 // @Description Record Add 添加收费名单接口
-// @Success 200 {"code":200,"messgae":"添加收费名单成功","data":{"access_ticket":"xxxx","expire_in":0}}
+// @Success 200 {"code":200,"message":"添加收费名单成功","data":{"access_ticket":"xxxx","expire_in":0}}
 // @Param   access_token     query   string true       "访问令牌"
 // @Param   name     query   string true       "项目名称"
 // @Param   is_limit     query   string true       "是否限制缴费"
@@ -136,7 +136,7 @@ func (c *RecordController) AddRecord() {
 	desc := c.GetString("desc")
 	if access_token == "" {
 		res.Code = ResponseLogicErr
-		res.Messgae = "访问令牌无效"
+		res.Message = "访问令牌无效"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -153,7 +153,7 @@ func (c *RecordController) AddRecord() {
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
 	if err != nil {
 		res.Code = ResponseLogicErr
-		res.Messgae = "访问令牌失效"
+		res.Message = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -182,14 +182,14 @@ func (c *RecordController) AddRecord() {
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Record", "Add", args2, &replyRecord)
 	if err != nil {
 		res.Code = ResponseLogicErr
-		res.Messgae = "添加收费名单失败"
+		res.Message = "添加收费名单失败"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
 	}
 	fmt.Println("2:", replyRecord)
 	res.Code = ResponseNormal
-	res.Messgae = "添加收费名单成功"
+	res.Message = "添加收费名单成功"
 	res.Data.Id = replyRecord.Id
 	c.Data["json"] = res
 	c.ServeJSON()
@@ -198,7 +198,7 @@ func (c *RecordController) AddRecord() {
 
 // @Title 查看缴费记录接口
 // @Description Project Add 查看缴费记录接口
-// @Success 200 {"code":200,"messgae":"查看缴费记录成功","data":{"access_ticket":"xxxx","expire_in":0}}
+// @Success 200 {"code":200,"message":"查看缴费记录成功","data":{"access_ticket":"xxxx","expire_in":0}}
 // @Param   access_token     query   string true       "访问令牌"
 // @Param   record_id     query   string true       "记录ID"
 // @Failure 400 {"code":400,"message":"查看缴费记录失败"}
@@ -209,7 +209,7 @@ func (c *RecordController) DetailRecord() {
 	record_id, _ := c.GetInt64("record_id", 0)
 	if access_token == "" {
 		res.Code = ResponseLogicErr
-		res.Messgae = "访问令牌无效"
+		res.Message = "访问令牌无效"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -226,7 +226,7 @@ func (c *RecordController) DetailRecord() {
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
 	if err != nil {
 		res.Code = ResponseLogicErr
-		res.Messgae = "访问令牌失效"
+		res.Message = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -242,13 +242,13 @@ func (c *RecordController) DetailRecord() {
 	fmt.Println("2:", args2)
 	if err != nil {
 		res.Code = ResponseLogicErr
-		res.Messgae = "修改缴费项目失败"
+		res.Message = "修改缴费项目失败"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
 	}
 	res.Code = ResponseNormal
-	res.Messgae = "修改缴费项目成功"
+	res.Message = "修改缴费项目成功"
 	res.Data.Data = Record{
 		Id:         args2.Id,
 		CreateTime: time.Unix(args2.CreateTime / 1000, 0).Format("2006-01-02"),
@@ -273,7 +273,7 @@ func (c *RecordController) DetailRecord() {
 
 // @Title 修改缴费记录接口
 // @Description Project Add 修改缴费记录接口
-// @Success 200 {"code":200,"messgae":"修改缴费记录成功","data":{"access_ticket":"xxxx","expire_in":0}}
+// @Success 200 {"code":200,"message":"修改缴费记录成功","data":{"access_ticket":"xxxx","expire_in":0}}
 // @Param   access_token     query   string true       "访问令牌"
 // @Param   record_id     query   string true       "记录ID"
 // @Failure 400 {"code":400,"message":"修改缴费记录失败"}
@@ -293,7 +293,7 @@ func (c *RecordController) ModifyRecord() {
 	desc := c.GetString("desc")
 	if access_token == "" {
 		res.Code = ResponseLogicErr
-		res.Messgae = "访问令牌无效"
+		res.Message = "访问令牌无效"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -310,7 +310,7 @@ func (c *RecordController) ModifyRecord() {
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
 	if err != nil {
 		res.Code = ResponseLogicErr
-		res.Messgae = "访问令牌失效"
+		res.Message = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -325,7 +325,7 @@ func (c *RecordController) ModifyRecord() {
 
 	if err != nil {
 		res.Code = ResponseLogicErr
-		res.Messgae = "修改缴费项目失败"
+		res.Message = "修改缴费项目失败"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -333,7 +333,7 @@ func (c *RecordController) ModifyRecord() {
 
 	if args2.CompanyId != replyAccessToken.CompanyId {
 		res.Code = ResponseLogicErr
-		res.Messgae = "非法操作"
+		res.Message = "非法操作"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -361,13 +361,13 @@ func (c *RecordController) ModifyRecord() {
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Record", "UpdateById", args3, &replyNum)
 	if err != nil {
 		res.Code = ResponseLogicErr
-		res.Messgae = "修改缴费记录失败"
+		res.Message = "修改缴费记录失败"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
 	}
 	res.Code = ResponseNormal
-	res.Messgae = "修改缴费记录成功"
+	res.Message = "修改缴费记录成功"
 	res.Data.Count = replyNum.Value
 	c.Data["json"] = res
 	c.ServeJSON()
@@ -376,7 +376,7 @@ func (c *RecordController) ModifyRecord() {
 
 // @Title 删除校园收费记录接口
 // @Description Delete Record 删除校园收费记录接口
-// @Success 200 {"code":200,"messgae":"删除缴费项目记录成功","data":{"access_ticket":"xxxx","expire_in":0}}
+// @Success 200 {"code":200,"message":"删除缴费项目记录成功","data":{"access_ticket":"xxxx","expire_in":0}}
 // @Param   access_token     query   string true       "访问令牌"
 // @Param   record_ids     query   int true       "项目记录IDs"
 // @Failure 400 {"code":400,"message":"删除缴费项目记录失败"}
@@ -389,7 +389,7 @@ func (c *RecordController) DeleteRecord() {
 
 	if access_token == "" {
 		res.Code = ResponseLogicErr
-		res.Messgae = "访问令牌无效"
+		res.Message = "访问令牌无效"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -402,7 +402,7 @@ func (c *RecordController) DeleteRecord() {
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
 	if err != nil {
 		res.Code = ResponseLogicErr
-		res.Messgae = "访问令牌失效"
+		res.Message = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -413,14 +413,14 @@ func (c *RecordController) DeleteRecord() {
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Record", "DeleteById", args2, &replyRecord)
 	if err != nil {
 		res.Code = ResponseLogicErr
-		res.Messgae = "删除缴费项目记录失败"
+		res.Message = "删除缴费项目记录失败"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
 	}
 	fmt.Println("2:", replyRecord)
 	res.Code = ResponseNormal
-	res.Messgae = "删除缴费项目记录成功"
+	res.Message = "删除缴费项目记录成功"
 	res.Data.Count = replyRecord.Value
 	c.Data["json"] = res
 	c.ServeJSON()
@@ -429,7 +429,7 @@ func (c *RecordController) DeleteRecord() {
 
 // @Title 上传缴费名单接口
 // @Description Delete Record 上传缴费名单接口
-// @Success 200 {"code":200,"messgae":"上传缴费名单成功","data":{"access_ticket":"xxxx","expire_in":0}}
+// @Success 200 {"code":200,"message":"上传缴费名单成功","data":{"access_ticket":"xxxx","expire_in":0}}
 // @Param   access_token     query   string true       "访问令牌"
 // @Failure 400 {"code":400,"message":"上传缴费名单失败"}
 // @router /upload [options,post]
@@ -439,7 +439,7 @@ func (c *RecordController) UploadRecord() {
 	projectId, _ := c.GetInt64("i")
 	if access_token == "" {
 		res.Code = ResponseLogicErr
-		res.Messgae = "访问令牌无效"
+		res.Message = "访问令牌无效"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -452,7 +452,7 @@ func (c *RecordController) UploadRecord() {
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
 	if err != nil {
 		res.Code = ResponseLogicErr
-		res.Messgae = "访问令牌失效"
+		res.Message = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -495,11 +495,9 @@ func (c *RecordController) UploadRecord() {
 		for key, row := range rows {
 			if key > 0 {
 				Price, err := strconv.ParseFloat(row[5], 64)
-				fmt.Println("Price:", Price)
-				fmt.Println("err:", err)
 				if err != nil {
 					res.Code = ResponseLogicErr
-					res.Messgae = "上传缴费名单失败"
+					res.Message = "上传缴费名单失败"
 					c.Data["json"] = res
 					c.ServeJSON()
 					return
@@ -527,7 +525,7 @@ func (c *RecordController) UploadRecord() {
 		fmt.Println("replyRecord", replyRecord)
 		if err != nil {
 			res.Code = ResponseLogicErr
-			res.Messgae = "上传缴费名单失败"
+			res.Message = "上传缴费名单失败"
 			c.Data["json"] = res
 			c.ServeJSON()
 			return
@@ -543,7 +541,7 @@ func (c *RecordController) UploadRecord() {
 
 	// 3.
 	res.Code = ResponseNormal
-	res.Messgae = "上传缴费名单成功"
+	res.Message = "上传缴费名单成功"
 	res.Data.Count = replyRecord.Value
 	c.Data["json"] = res
 	c.ServeJSON()
@@ -552,7 +550,7 @@ func (c *RecordController) UploadRecord() {
 
 // @Title 下载缴费记录接口
 // @Description Delete Record 下载缴费记录接口
-// @Success 200 {"code":200,"messgae":"下载缴费记录成功","data":{"access_ticket":"xxxx","expire_in":0}}
+// @Success 200 {"code":200,"message":"下载缴费记录成功","data":{"access_ticket":"xxxx","expire_in":0}}
 // @Param   access_token     query   string true       "访问令牌"
 // @Param   record_ids     query   int true       "项目记录IDs"
 // @Failure 400 {"code":400,"message":"下载缴费记录失败"}
@@ -565,7 +563,7 @@ func (c *RecordController) DownloadRecord() {
 
 	if access_token == "" {
 		res.Code = ResponseLogicErr
-		res.Messgae = "访问令牌无效"
+		res.Message = "访问令牌无效"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -578,7 +576,7 @@ func (c *RecordController) DownloadRecord() {
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
 	if err != nil {
 		res.Code = ResponseLogicErr
-		res.Messgae = "访问令牌失效"
+		res.Message = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -594,7 +592,7 @@ func (c *RecordController) DownloadRecord() {
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Record", "ListByCond", args2, &replyRecord)
 	if err != nil {
 		res.Code = ResponseLogicErr
-		res.Messgae = "下载缴费记录失败"
+		res.Message = "下载缴费记录失败"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -642,18 +640,18 @@ func (c *RecordController) DownloadRecord() {
 	//最主要的一句
 	http.ServeFile(c.Ctx.ResponseWriter, c.Ctx.Request, objectKey)
 	res.Code = ResponseNormal
-	res.Messgae = "下载缴费记录成功"
+	res.Message = "下载缴费记录成功"
 	c.Data["json"] = res
 	c.ServeJSON()
 	return
 }
 
-// @Title 校园收费记录列表接口
-// @Description Project List 校园收费记录列表接口
-// @Success 200 {"code":200,"messgae":"获取缴费项目记录成功","data":{"access_ticket":"xxxx","expire_in":0}}
+// @Title 班级列表接口
+// @Description Project List 班级列表接口
+// @Success 200 {"code":200,"message":"获取班级列表成功","data":{"access_ticket":"xxxx","expire_in":0}}
 // @Param   access_token     query   string true       "访问令牌"
 // @Param   project_id     query   int true       "项目ID"
-// @Failure 400 {"code":400,"message":"获取缴费项目记录失败"}
+// @Failure 400 {"code":400,"message":"获取班级列表失败"}
 // @router /classList [get]
 func (c *RecordController) ClassList() {
 	res := ClassListOfRecordResponse{}
@@ -661,7 +659,7 @@ func (c *RecordController) ClassList() {
 	project_id := c.GetString("project_id")
 	if access_token == "" {
 		res.Code = ResponseLogicErr
-		res.Messgae = "访问令牌无效"
+		res.Message = "访问令牌无效"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -674,7 +672,7 @@ func (c *RecordController) ClassList() {
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
 	if err != nil {
 		res.Code = ResponseLogicErr
-		res.Messgae = "访问令牌失效"
+		res.Message = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -690,7 +688,7 @@ func (c *RecordController) ClassList() {
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Record", "ListByCond", args2, &replyRecord)
 	if err != nil {
 		res.Code = ResponseLogicErr
-		res.Messgae = "获取班级列表失败"
+		res.Message = "获取班级列表失败"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -704,7 +702,7 @@ func (c *RecordController) ClassList() {
 
 	sort.Strings(listOfRecord)
 	res.Code = ResponseNormal
-	res.Messgae = "获取班级列表成功"
+	res.Message = "获取班级列表成功"
 	res.Data = RemoveDuplicatesAndEmpty(listOfRecord)
 	c.Data["json"] = res
 	c.ServeJSON()

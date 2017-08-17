@@ -12,13 +12,15 @@ import (
 	center_mobile "dev.cloud.360baige.com/controllers/mobile/center"
 	schoolfee_mobile "dev.cloud.360baige.com/controllers/mobile/schoolfee"
 	schoolfee_window "dev.cloud.360baige.com/controllers/window/schoolfee"
+	personnel_window "dev.cloud.360baige.com/controllers/window/personnel"
 	"github.com/astaxie/beego"
 )
 
 func init() {
-	centerWindowRouter()
+	centerWindowRouter()           // window->admin后台管理
+	schoolfeeWindowRouter()        // window->缴费管理
+	personnelWindowRouter()        // window->人事管理
 	//centerMobileRouter()
-	schoolfeeWindowRouter()
 	//schoolfeeMobileRouter()
 }
 
@@ -153,6 +155,32 @@ func centerMobileRouter() {
 			),
 		),
 
+	)
+	beego.AddNamespace(mobileApi)
+}
+
+func personnelWindowRouter() {
+	mobileApi := beego.NewNamespace("/win/personnel/v1",
+		beego.NSNamespace("/person",
+			beego.NSInclude(
+				&personnel_window.PersonController{},
+			),
+		),
+		beego.NSNamespace("/person_relation",
+			beego.NSInclude(
+				&personnel_window.PersonRelationController{},
+			),
+		),
+		beego.NSNamespace("/person_structure",
+			beego.NSInclude(
+				&personnel_window.PersonStructureController{},
+			),
+		),
+		beego.NSNamespace("/structure",
+			beego.NSInclude(
+				&personnel_window.StructureController{},
+			),
+		),
 	)
 	beego.AddNamespace(mobileApi)
 }

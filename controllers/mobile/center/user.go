@@ -19,7 +19,7 @@ type UserController struct {
 
 // @Title 用户登录接口
 // @Description 用户登录接口
-// @Success 200 {"code":200,"messgae":"登录成功","data":{"access_ticket":"xxxx","expire_in":0}}
+// @Success 200 {"code":200,"message":"登录成功","data":{"access_ticket":"xxxx","expire_in":0}}
 // @Param   username     query   string true       "用户名：百鸽账号、邮箱、手机号码 三种登录方式"
 // @Param   password query   string true       "密码"
 // @Failure 400 {"code":400,"message":"登录失败"}
@@ -33,7 +33,7 @@ func (c *UserController) Login() {
 	//1 检测数据完整性
 	if (username == "" || password == "") {
 		res.Code = ResponseSystemErr
-		res.Messgae = "登录失败"
+		res.Message = "登录失败"
 		c.Data["json"] = res
 		c.ServeJSON()
 	}
@@ -68,12 +68,12 @@ func (c *UserController) Login() {
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "User", "FindByCond", args, &reply)
 	if err != nil {
 		res.Code = ResponseSystemErr
-		res.Messgae = "登录失败"
+		res.Message = "登录失败"
 		c.Data["json"] = res
 		c.ServeJSON()
 	} else {
 		res.Code = ResponseNormal
-		res.Messgae = "登录成功"
+		res.Message = "登录成功"
 		timestamp := time.Now().UnixNano() / 1e6
 		newAccessTicket := reply.Username + strconv.FormatInt(timestamp, 10)
 		var updateArgs []action.UpdateValue
@@ -92,7 +92,7 @@ func (c *UserController) Login() {
 		}, nil)
 		if err != nil {
 			res.Code = ResponseSystemErr
-			res.Messgae = "登录失败"
+			res.Message = "登录失败"
 			c.Data["json"] = res
 			c.ServeJSON()
 		} else {
@@ -109,7 +109,7 @@ func (c *UserController) Login() {
 
 // @Title 用户退出接口
 // @Description 用户退出接口
-// @Success 200 {"code":200,"messgae":"用户退出成功","data":{"access_ticket":"xxxx","expire_in":0}}// @Param   password query   string true       "密码"
+// @Success 200 {"code":200,"message":"用户退出成功","data":{"access_ticket":"xxxx","expire_in":0}}// @Param   password query   string true       "密码"
 // @Param   access_token query   string true       "访问令牌"
 // @Failure 400 {"code":400,"message":"用户退出失败"}
 // @router /logout [post]
@@ -119,7 +119,7 @@ func (c *UserController) Logout() {
 
 // @Title 用户修改密码接口
 // @Description 用户修改密码接口
-// @Success 200 {"code":200,"messgae":"用户修改密码成功","data":{"access_ticket":"xxxx","expire_in":0}}
+// @Success 200 {"code":200,"message":"用户修改密码成功","data":{"access_ticket":"xxxx","expire_in":0}}
 // @Param   access_token query   string true       "访问令牌"
 // @Param   password query   string true       "password"
 // @Failure 400 {"code":400,"message":"用户修改密码失败"}
@@ -129,7 +129,7 @@ func (c *UserController) ModifyPassword() {
 	access_token := c.GetString("access_token")
 	if access_token == "" {
 		res.Code = ResponseSystemErr
-		res.Messgae = "访问令牌无效"
+		res.Message = "访问令牌无效"
 		c.Data["json"] = res
 		c.ServeJSON()
 	} else {
@@ -145,14 +145,14 @@ func (c *UserController) ModifyPassword() {
 		err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
 		if err != nil {
 			res.Code = ResponseLogicErr
-			res.Messgae = "访问令牌失效"
+			res.Message = "访问令牌失效"
 			c.Data["json"] = res
 			c.ServeJSON()
 		} else {
 			u_id := replyAccessToken.UserId
 			if u_id == 0 {
 				res.Code = ResponseSystemErr
-				res.Messgae = "获取用户信息失败"
+				res.Message = "获取用户信息失败"
 				c.Data["json"] = res
 				c.ServeJSON()
 			} else {
@@ -163,7 +163,7 @@ func (c *UserController) ModifyPassword() {
 
 				if err != nil {
 					res.Code = ResponseSystemErr
-					res.Messgae = "获取用户信息失败"
+					res.Message = "获取用户信息失败"
 					c.Data["json"] = res
 					c.ServeJSON()
 				} else {
@@ -184,12 +184,12 @@ func (c *UserController) ModifyPassword() {
 					}, nil)
 					if err != nil {
 						res.Code = ResponseSystemErr
-						res.Messgae = "用户信息修改失败！"
+						res.Message = "用户信息修改失败！"
 						c.Data["json"] = res
 						c.ServeJSON()
 					}
 					res.Code = ResponseNormal
-					res.Messgae = "用户信息修改成功！"
+					res.Message = "用户信息修改成功！"
 					c.Data["json"] = res
 					c.ServeJSON()
 				}

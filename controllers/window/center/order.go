@@ -18,7 +18,7 @@ type OrderController struct {
 
 // @Title 订单列表接口
 // @Description 订单列表接口
-// @Success 200 {"code":200,"messgae":"获取订单列表成功","data":{"access_ticket":"xxxx","expire_in":0}}
+// @Success 200 {"code":200,"message":"获取订单列表成功","data":{"access_ticket":"xxxx","expire_in":0}}
 // @Param   access_token     query   string true       "访问令牌"
 // @Param   date     query   string true       "账单日期：2017-07"
 // @Param   current     query   string true       "当前页"
@@ -34,7 +34,7 @@ func (c *OrderController) List() {
 	pageSize, _ := c.GetInt64("page_size")
 	if access_token == "" {
 		res.Code = ResponseSystemErr
-		res.Messgae = "访问令牌无效"
+		res.Message = "访问令牌无效"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -51,7 +51,7 @@ func (c *OrderController) List() {
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
 	if err != nil {
 		res.Code = ResponseLogicErr
-		res.Messgae = "访问令牌失效"
+		res.Message = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -64,7 +64,7 @@ func (c *OrderController) List() {
 	user_position_type := replyAccessToken.Type
 	if com_id == 0 || user_id == 0 || user_position_id == 0 {
 		res.Code = ResponseSystemErr
-		res.Messgae = "获取信息失败"
+		res.Message = "获取信息失败"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -103,7 +103,7 @@ func (c *OrderController) List() {
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Order", "PageByCond", orderArgs, &orderReply)
 	if err != nil {
 		res.Code = ResponseSystemErr
-		res.Messgae = "获取订单信息失败"
+		res.Message = "获取订单信息失败"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -139,7 +139,7 @@ func (c *OrderController) List() {
 	res.Data.PageSize = pageSize
 	res.Data.Status = status
 	res.Code = ResponseNormal
-	res.Messgae = "获取信息成功"
+	res.Message = "获取信息成功"
 	c.Data["json"] = res
 	c.ServeJSON()
 }
@@ -165,7 +165,7 @@ func GetStatus(status int8) string {
 
 // @Title 订单详情接口
 // @Description 订单详情接口
-// @Success 200 {"code":200,"messgae":"获取订单详情成功","data":{"access_ticket":"xxxx","expire_in":0}}
+// @Success 200 {"code":200,"message":"获取订单详情成功","data":{"access_ticket":"xxxx","expire_in":0}}
 // @Param   access_token     query   string true       "访问令牌"
 // @Param   id     query   string true       "id"
 // @Failure 400 {"code":400,"message":"获取取订单信息失败"}
@@ -176,7 +176,7 @@ func (c *OrderController) Detail() {
 	ai_id, _ := c.GetInt64("id")
 	if access_token == "" {
 		res.Code = ResponseSystemErr
-		res.Messgae = "访问令牌无效"
+		res.Message = "访问令牌无效"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -193,14 +193,14 @@ func (c *OrderController) Detail() {
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
 	if err != nil {
 		res.Code = ResponseLogicErr
-		res.Messgae = "访问令牌失效"
+		res.Message = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
 	}
 	if ai_id == 0 {
 		res.Code = ResponseSystemErr
-		res.Messgae = "获取订单信息失败"
+		res.Message = "获取订单信息失败"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -212,14 +212,14 @@ func (c *OrderController) Detail() {
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Order", "FindById", orderArgs, &orderReply)
 	if err != nil {
 		res.Code = ResponseSystemErr
-		res.Messgae = "获取订单信息失败"
+		res.Message = "获取订单信息失败"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
 	}
 
 	res.Code = ResponseNormal
-	res.Messgae = "获取订单详情成功"
+	res.Message = "获取订单详情成功"
 	res.Data.CreateTime = time.Unix(orderReply.CreateTime / 1000, 0).Format("2006-01-02")
 	res.Data.Code = orderReply.Code
 	res.Data.Price = orderReply.Price
@@ -237,7 +237,7 @@ func (c *OrderController) Detail() {
 
 // @Title 账务详情接口
 // @Description 账务详情接口
-// @Success 200 {"code":200,"messgae":"获取账务详情成功","data":{"access_ticket":"xxxx","expire_in":0}}
+// @Success 200 {"code":200,"message":"获取账务详情成功","data":{"access_ticket":"xxxx","expire_in":0}}
 // @Param   access_token     query   string true       "访问令牌"
 // @Param   code     query   string true       "code"
 // @Failure 400 {"code":400,"message":"获取账务统计信息失败"}
@@ -247,7 +247,7 @@ func (c *OrderController) DetailByCode() {
 	access_token := c.GetString("access_token")
 	if access_token == "" {
 		res.Code = ResponseSystemErr
-		res.Messgae = "访问令牌无效"
+		res.Message = "访问令牌无效"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -264,7 +264,7 @@ func (c *OrderController) DetailByCode() {
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
 	if err != nil {
 		res.Code = ResponseLogicErr
-		res.Messgae = "访问令牌失效"
+		res.Message = "访问令牌失效"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -273,7 +273,7 @@ func (c *OrderController) DetailByCode() {
 	code := c.GetString("code")
 	if code == "" {
 		res.Code = ResponseSystemErr
-		res.Messgae = "获取信息失败"
+		res.Message = "获取信息失败"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
@@ -290,14 +290,14 @@ func (c *OrderController) DetailByCode() {
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Order", "FindByCond", orderArgs, &reply)
 	if err != nil {
 		res.Code = ResponseSystemErr
-		res.Messgae = "获取信息失败"
+		res.Message = "获取信息失败"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
 	}
 
 	res.Code = ResponseSystemErr
-	res.Messgae = "获取账户信息成功"
+	res.Message = "获取账户信息成功"
 	res.Data.CreateTime = time.Unix(reply.CreateTime / 1000, 0).Format("2006-01-02")
 	res.Data.Code = reply.Code
 	res.Data.Price = reply.Price
