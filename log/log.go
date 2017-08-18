@@ -11,8 +11,9 @@ var (
 )
 
 func init() {
-	logs.SetLogger("console")
 	l = logs.GetLogger()
+	logs.SetLogger("console")
+	logs.EnableFuncCallDepth(true)
 }
 
 func Println(p ...interface{}) {
