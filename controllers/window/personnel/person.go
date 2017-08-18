@@ -117,7 +117,7 @@ func (c *PersonController) ListOfPerson() {
 			Code:       rec.Code,
 			Name:       rec.Name,
 			Sex:        rec.Sex,
-			Birthday:   rec.Birthday,
+			Birthday:   time.Unix(rec.Birthday / 1000, 0).Format("2006-01-02"),
 			Type:       rec.Type,
 			Phone:      rec.Phone,
 			Contact:    rec.Contact,
@@ -157,6 +157,7 @@ func (c *PersonController) AddPerson() {
 	contact := c.GetString("contact")
 	structureIds := utils.StrArrToInt64Arr(strings.Split(c.GetString("structure_ids"), ","))
 
+	fmt.Println("birthday", birthday)
 	if access_token == "" {
 		res.Code = ResponseLogicErr
 		res.Message = "访问令牌无效"
@@ -291,8 +292,9 @@ func (c *PersonController) ModifyPerson() {
 		return
 	}
 	// 查询人员信息判断有效性
-	args2 := &personnel.Person{}
-	args2.Id = id
+	args2 := &personnel.Person{
+		Id:id,
+	}
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Person", "FindById", args2, args2)
 	if err != nil {
 		res.Code = ResponseLogicErr
@@ -314,7 +316,7 @@ func (c *PersonController) ModifyPerson() {
 	args3 := action.UpdateByIdCond{}
 	args3.Id = []int64{args2.Id}
 	args3.UpdateList = append(args3.UpdateList,
-		action.UpdateValue{Key: "update_time", Val: time.Now().UnixNano() / 10e6},
+		action.UpdateValue{Key: "update_time", Val: time.Now().UnixNano() / 1e6},
 		action.UpdateValue{Key: "code", Val: code},
 		action.UpdateValue{Key: "name", Val: name},
 		action.UpdateValue{Key: "sex", Val: sex},
@@ -334,39 +336,69 @@ func (c *PersonController) ModifyPerson() {
 		return
 	}
 
-	// 删除原有人员组织
-	args4 := action.DeleteByIdCond{Value: structureIds}
-	var replyPersonStructure action.Num
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "PersonStructure", "DeleteById", args4, &replyPersonStructure)
+	// 查询原有人员组织
+	var args4 action.ListByCond
+	args4.CondList = append(args4.CondList,
+		action.CondValue{Type: "And", Key:  "company_id", Val:  replyAccessToken.CompanyId},
+		action.CondValue{Type: "And", Key:  "person_id", Val:  args2.Id},
+		action.CondValue{Type: "And", Key:  "status", Val:  1})
+	args4.Cols = []string{"structure_id"}
+	var replyPersonStructure []personnel.PersonStructure
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "PersonStructure", "ListByCond", args4, &replyPersonStructure)
 	if err != nil {
 		res.Code = ResponseLogicErr
-		res.Message = "修改人员组织失败"
+		res.Message = "人员组织添加失败"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
 	}
-	// 新增人员组织信息
-	operationTime := time.Now().UnixNano() / 1e6
-	var args5 []personnel.PersonStructure = make([]personnel.PersonStructure, len(structureIds) - 1)
-	for key, val := range structureIds {
-		args5[key] = personnel.PersonStructure{
-			CreateTime: operationTime,
-			UpdateTime: operationTime,
-			CompanyId:  args2.CompanyId,
-			PersonId:args2.Id,
-			StructureId :val,
-			Type:1,
-			Status:1,
+	var ids []int64
+	for _, value := range replyPersonStructure {
+		ids = append(ids, value.StructureId)
+	}
+
+	// 修改人员组织信息
+	modifyStructureIds := utils.Minus(ids, structureIds)
+	if len(modifyStructureIds) > 0 {
+		args5 := action.DeleteByCond{}
+		args5.CondList = append(args5.CondList,
+			action.CondValue{Type: "And", Key:  "structure_id__in", Val:  modifyStructureIds},
+			action.CondValue{Type: "And", Key:  "person_id", Val:  id})
+		var replyPerson action.Num
+		err = client.Call(beego.AppConfig.String("EtcdURL"), "PersonStructure", "DeleteByCond", args5, &replyPerson)
+		if err != nil {
+			res.Code = ResponseLogicErr
+			res.Message = "修改人员组织失败"
+			c.Data["json"] = res
+			c.ServeJSON()
+			return
 		}
 	}
-	var replyPersonStructure1 personnel.PersonStructure
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "PersonStructure", "AddMultiple", args5, &replyPersonStructure1)
-	if err != nil {
-		res.Code = ResponseLogicErr
-		res.Message = "修改人员组织失败"
-		c.Data["json"] = res
-		c.ServeJSON()
-		return
+	// 新增人员组织信息
+	addStructureIds := utils.Minus(structureIds, ids)
+	if len(addStructureIds) > 0 {
+		operationTime := time.Now().UnixNano() / 1e6
+		var args6 []personnel.PersonStructure = make([]personnel.PersonStructure, len(addStructureIds))
+		for key, val := range addStructureIds {
+			args6[key] = personnel.PersonStructure{
+				CreateTime: operationTime,
+				UpdateTime: operationTime,
+				CompanyId:  args2.CompanyId,
+				PersonId:args2.Id,
+				StructureId :val,
+				Type:1,
+				Status:1,
+			}
+		}
+		var replyPersonStructure1 personnel.PersonStructure
+		err = client.Call(beego.AppConfig.String("EtcdURL"), "PersonStructure", "AddMultiple", args6, &replyPersonStructure1)
+		if err != nil {
+			res.Code = ResponseLogicErr
+			res.Message = "修改人员组织失败"
+			c.Data["json"] = res
+			c.ServeJSON()
+			return
+		}
 	}
 
 	res.Code = ResponseNormal
@@ -493,50 +525,51 @@ func (c *PersonController) UploadPerson() {
 		}
 		// 读取文件内容
 		rows := xlsx.GetRows("sheet" + strconv.Itoa(xlsx.GetSheetIndex("Sheet1")))
-		var args2 []personnel.Person = make([]personnel.Person, len(rows) - 1)
+		//var args2 []personnel.Person = make([]personnel.Person, len(rows) - 1)
 		for key, row := range rows {
+			fmt.Println("row", row)
 			if key > 0 {
-				birthday, err := time.Parse("2006-01-02", row[3])
+				//birthday, err := time.Parse("2006-01-02", row[3])
 				// 类型 1.教师   2.学生
-				var Type int8
-				if row[4] == "教师" {
-					Type = 1
-				} else {
-					Type = 2
-				}
-				if err != nil {
-					res.Code = ResponseLogicErr
-					res.Message = "上传缴费名单失败"
-					c.Data["json"] = res
-					c.ServeJSON()
-					return
-				}
-				timestamp := time.Now().UnixNano() / 1e6
-				args2[key - 1] = personnel.Person{
-					CreateTime: timestamp,
-					UpdateTime: timestamp,
-					CompanyId:  replyAccessToken.CompanyId,
-					Code:  row[0],
-					Name:       row[1],
-					Sex:  row[2],
-					Birthday:     birthday.Unix(),
-					Type:        Type,
-					Phone:      row[5],
-					Contact: row[6],
-					Status:     1,
-				}
+				//var Type int8
+				//if row[4] == "教师" {
+				//	Type = 1
+				//} else {
+				//	Type = 2
+				//}
+				//if err != nil {
+				//	res.Code = ResponseLogicErr
+				//	res.Message = "上传缴费名单失败"
+				//	c.Data["json"] = res
+				//	c.ServeJSON()
+				//	return
+				//}
+				//timestamp := time.Now().UnixNano() / 1e6
+				//args2[key - 1] = personnel.Person{
+				//	CreateTime: timestamp,
+				//	UpdateTime: timestamp,
+				//	CompanyId:  replyAccessToken.CompanyId,
+				//	Code:  row[0],
+				//	Name:       row[1],
+				//	Sex:  row[2],
+				//	Birthday:     birthday.Unix(),
+				//	Type:        Type,
+				//	Phone:      row[5],
+				//	Contact: row[6],
+				//	Status:     1,
+				//}
 			}
 		}
 
-		err = client.Call(beego.AppConfig.String("EtcdURL"), "Person", "AddMultiple", args2, &replyPerson)
-		fmt.Println("replyPerson", replyPerson)
-		if err != nil {
-			res.Code = ResponseLogicErr
-			res.Message = "上传缴费名单失败"
-			c.Data["json"] = res
-			c.ServeJSON()
-			return
-		}
+		//err = client.Call(beego.AppConfig.String("EtcdURL"), "Person", "AddMultiple", args2, &replyPerson)
+		//fmt.Println("replyPerson", replyPerson)
+		//if err != nil {
+		//	res.Code = ResponseLogicErr
+		//	res.Message = "上传缴费名单失败"
+		//	c.Data["json"] = res
+		//	c.ServeJSON()
+		//	return
+		//}
 
 		err = os.Remove(objectKey) // 删除文件
 		if err != nil {
