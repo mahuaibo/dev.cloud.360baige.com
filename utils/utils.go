@@ -69,8 +69,8 @@ func GetMonthStartUnix(current string) int64 {
 }
 func GetNextMonthStartUnix(current string) int64 {
 	tm2, _ := time.ParseInLocation("2006-01-02", current, time.Local)
-	t := time.Unix(tm2.UnixNano()/1e9, 0)
-	s := time.Date(t.Year(), t.Month()+1, t.Day(), 0, 0, 0, 0, t.Location())
+	t := time.Unix(tm2.UnixNano() / 1e9, 0)
+	s := time.Date(t.Year(), t.Month() + 1, t.Day(), 0, 0, 0, 0, t.Location())
 	es := s.Format("2006-01-02")
 	estm2, _ := time.ParseInLocation("2006-01-02", es, time.Local)
 	etime := estm2.UnixNano() / 1e6
@@ -80,8 +80,8 @@ func GetNextMonthStartUnix(current string) int64 {
 //第二天
 func GetNextDayUnix(current string) int64 {
 	tm2, _ := time.ParseInLocation("2006-01-02", current, time.Local)
-	t := time.Unix(tm2.UnixNano()/1e9, 0)
-	s := time.Date(t.Year(), t.Month(), t.Day()+1, 0, 0, 0, 0, t.Location())
+	t := time.Unix(tm2.UnixNano() / 1e9, 0)
+	s := time.Date(t.Year(), t.Month(), t.Day() + 1, 0, 0, 0, 0, t.Location())
 	es := s.Format("2006-01-02")
 	estm2, _ := time.ParseInLocation("2006-01-02", es, time.Local)
 	etime := estm2.UnixNano() / 1e6
@@ -95,4 +95,23 @@ func StrArrToInt64Arr(strArr []string) []int64 {
 		int64Arr[index], _ = strconv.ParseInt(str, 10, 64)
 	}
 	return int64Arr
+}
+
+// 获取差集
+func Minus(slice1 []int64, slice2 []int64) (diffSlice []int64) {
+	for _, v := range slice1 {
+		if !HasSlice(v, slice2) {
+			diffSlice = append(diffSlice, v)
+		}
+	}
+	return
+}
+
+func HasSlice(val int64, slice []int64) bool {
+	for _, v := range slice {
+		if v == val {
+			return true
+		}
+	}
+	return false
 }
