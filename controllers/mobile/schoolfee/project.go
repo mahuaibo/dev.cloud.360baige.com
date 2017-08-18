@@ -7,7 +7,6 @@ import (
 	"dev.model.360baige.com/models/user"
 	"dev.model.360baige.com/models/schoolfee"
 	"dev.model.360baige.com/action"
-	"fmt"
 )
 
 // Project API
@@ -48,7 +47,6 @@ func (c *ProjectController) ListOfNoLimitProject() {
 		c.ServeJSON()
 		return
 	}
-	fmt.Println("1:", replyAccessToken)
 
 	// 2.
 	var args2 action.FindByCond
@@ -74,7 +72,6 @@ func (c *ProjectController) ListOfNoLimitProject() {
 		c.ServeJSON()
 		return
 	}
-	fmt.Println("2:", replyProject)
 
 	var listOfProject []Project = make([]Project, len(replyProject), len(replyProject))
 	for index, pro := range replyProject {
@@ -132,7 +129,6 @@ func (c *ProjectController) SearchProjectInfo() {
 		c.ServeJSON()
 		return
 	}
-	fmt.Println("1:", replyAccessToken)
 
 	var args2 action.FindByCond
 	args2.CondList = append(args2.CondList,
@@ -156,7 +152,6 @@ func (c *ProjectController) SearchProjectInfo() {
 		c.ServeJSON()
 		return
 	}
-	fmt.Println("2:", replyRecord)
 	var project_id_s []int64 = make([]int64, len(replyRecord), len(replyRecord))
 	for index, record := range replyRecord {
 		project_id_s[index] = record.ProjectId
