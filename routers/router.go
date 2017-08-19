@@ -18,8 +18,8 @@ import (
 
 func init() {
 	centerWindowRouter()           // window->admin后台管理
-	schoolfeeWindowRouter()        // window->缴费管理
-	personnelWindowRouter()        // window->人事管理
+	//schoolfeeWindowRouter()        // window->缴费管理
+	//personnelWindowRouter()        // window->人事管理
 	//centerMobileRouter()
 	//schoolfeeMobileRouter()
 }

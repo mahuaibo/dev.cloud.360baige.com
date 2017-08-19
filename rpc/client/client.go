@@ -13,12 +13,12 @@ import (
  */
 func Call(etcdURL, serviceName, methodName string, args, reply interface{}) error {
 	// RandomSelect RoundRobin WeightedRoundRobin ConsistentHash
-	//NewEtcdV3ClientSelector  NewEtcdClientSelector
-	s := clientselector.NewEtcdV3ClientSelector([]string{etcdURL}, "/rpcx/"+serviceName, time.Minute, rpcx.RandomSelect, 10*time.Second)
+	// NewEtcdV3ClientSelector  NewEtcdClientSelector
+	s := clientselector.NewEtcdV3ClientSelector([]string{etcdURL}, "/rpcx/"+serviceName, time.Minute, rpcx.RandomSelect, time.Minute)
 	client := rpcx.NewClient(s)
-	//client.ClientCodecFunc = codec.NewGobClientCodec
-
+	// client.ClientCodecFunc = codec.NewGobClientCodec
 	// Failfast Failover Failtry Broadcast Forking
+
 	client.FailMode = rpcx.Failover
 	err := client.Call(context.Background(), serviceName+"."+methodName, args, &reply)
 	client.Close()

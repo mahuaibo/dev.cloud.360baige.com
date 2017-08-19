@@ -24,6 +24,7 @@ import (
 type PersonController struct {
 	beego.Controller
 }
+
 // @Title 校园收费记录列表接口
 // @Description Project List 校园收费记录列表接口
 // @Success 200 {"code":200,"message":"获取人员列表成功","data":{"access_ticket":"xxxx","expire_in":0}}
@@ -129,12 +130,12 @@ func (c *PersonController) ListOfPerson() {
 	for index, rec := range replyPerson {
 		listOfPerson[index] = Person{
 			Id:         rec.Id,
-			CreateTime: time.Unix(rec.CreateTime / 1000, 0).Format("2006-01-02"),
+			CreateTime: time.Unix(rec.CreateTime/1000, 0).Format("2006-01-02"),
 			CompanyId:  rec.CompanyId,
 			Code:       rec.Code,
 			Name:       rec.Name,
 			Sex:        rec.Sex,
-			Birthday:   time.Unix(rec.Birthday / 1000, 0).Format("2006-01-02"),
+			Birthday:   time.Unix(rec.CreateTime/1000, 0).Format("2006-01-02"),
 			Type:       rec.Type,
 			Phone:      rec.Phone,
 			Contact:    rec.Contact,
@@ -184,7 +185,7 @@ func (c *PersonController) AddPerson() {
 	}
 	// 1.
 	var args action.FindByCond
-	args.CondList = append(args.CondList, action.CondValue{Type: "And", Key:  "access_token", Val:  access_token})
+	args.CondList = append(args.CondList, action.CondValue{Type: "And", Key: "access_token", Val: access_token})
 	args.Fileds = []string{"id", "user_id", "company_id", "type"}
 	var replyAccessToken user.UserPosition
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
@@ -201,13 +202,13 @@ func (c *PersonController) AddPerson() {
 		CreateTime: operationTime,
 		UpdateTime: operationTime,
 		CompanyId:  replyAccessToken.CompanyId,
-		Code:  code,
+		Code:       code,
 		Name:       name,
-		Sex:  sex,
-		Birthday:     birthday,
-		Type:        Type,
+		Sex:        sex,
+		Birthday:   birthday,
+		Type:       Type,
 		Phone:      phone,
-		Contact: contact,
+		Contact:    contact,
 		Status:     1,
 	}
 	var replyPerson personnel.Person
@@ -226,13 +227,13 @@ func (c *PersonController) AddPerson() {
 		var args3 []personnel.PersonStructure = make([]personnel.PersonStructure, len(structureIds))
 		for key, val := range structureIds {
 			args3[key] = personnel.PersonStructure{
-				CreateTime: operationTime,
-				UpdateTime: operationTime,
-				CompanyId:  replyAccessToken.CompanyId,
-				PersonId:replyPerson.Id,
-				StructureId :val,
-				Type:1,
-				Status:1,
+				CreateTime:  operationTime,
+				UpdateTime:  operationTime,
+				CompanyId:   replyAccessToken.CompanyId,
+				PersonId:    replyPerson.Id,
+				StructureId: val,
+				Type:        1,
+				Status:      1,
 			}
 		}
 		// 添加组织结构
@@ -310,7 +311,7 @@ func (c *PersonController) ModifyPerson() {
 	}
 	// 查询人员信息判断有效性
 	args2 := &personnel.Person{
-		Id:id,
+		Id: id,
 	}
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Person", "FindById", args2, args2)
 	if err != nil {
@@ -356,9 +357,9 @@ func (c *PersonController) ModifyPerson() {
 	// 查询原有人员组织
 	var args4 action.ListByCond
 	args4.CondList = append(args4.CondList,
-		action.CondValue{Type: "And", Key:  "company_id", Val:  replyAccessToken.CompanyId},
-		action.CondValue{Type: "And", Key:  "person_id", Val:  args2.Id},
-		action.CondValue{Type: "And", Key:  "status", Val:  1})
+		action.CondValue{Type: "And", Key: "company_id", Val: replyAccessToken.CompanyId},
+		action.CondValue{Type: "And", Key: "person_id", Val: args2.Id},
+		action.CondValue{Type: "And", Key: "status", Val: 1})
 	args4.Cols = []string{"structure_id"}
 	var replyPersonStructure []personnel.PersonStructure
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "PersonStructure", "ListByCond", args4, &replyPersonStructure)
@@ -379,8 +380,8 @@ func (c *PersonController) ModifyPerson() {
 	if len(modifyStructureIds) > 0 {
 		args5 := action.DeleteByCond{}
 		args5.CondList = append(args5.CondList,
-			action.CondValue{Type: "And", Key:  "structure_id__in", Val:  modifyStructureIds},
-			action.CondValue{Type: "And", Key:  "person_id", Val:  id})
+			action.CondValue{Type: "And", Key: "structure_id__in", Val: modifyStructureIds},
+			action.CondValue{Type: "And", Key: "person_id", Val: id})
 		var replyPerson action.Num
 		err = client.Call(beego.AppConfig.String("EtcdURL"), "PersonStructure", "DeleteByCond", args5, &replyPerson)
 		if err != nil {
@@ -398,13 +399,13 @@ func (c *PersonController) ModifyPerson() {
 		var args6 []personnel.PersonStructure = make([]personnel.PersonStructure, len(addStructureIds))
 		for key, val := range addStructureIds {
 			args6[key] = personnel.PersonStructure{
-				CreateTime: operationTime,
-				UpdateTime: operationTime,
-				CompanyId:  args2.CompanyId,
-				PersonId:args2.Id,
-				StructureId :val,
-				Type:1,
-				Status:1,
+				CreateTime:  operationTime,
+				UpdateTime:  operationTime,
+				CompanyId:   args2.CompanyId,
+				PersonId:    args2.Id,
+				StructureId: val,
+				Type:        1,
+				Status:      1,
 			}
 		}
 		var replyPersonStructure1 personnel.PersonStructure
@@ -520,7 +521,7 @@ func (c *PersonController) UploadPerson() {
 			return
 		}
 		defer formFile.Close()
-		objectKey := "./" + strconv.FormatInt(time.Now().UnixNano() / 1e6, 10) + header.Filename
+		objectKey := "./" + strconv.FormatInt(time.Now().UnixNano()/1e6, 10) + header.Filename
 		// 创建保存文件
 		destFile, err := os.Create(objectKey)
 		if err != nil {
@@ -786,7 +787,7 @@ func (c *PersonController) DownloadPerson() {
 			StructureIds[key] = val.StructureId
 		}
 		var args5 action.ListByCond
-		args5.CondList = append(args5.CondList, action.CondValue{Type: "And", Key: "id__in", Val:StructureIds})
+		args5.CondList = append(args5.CondList, action.CondValue{Type: "And", Key: "id__in", Val: StructureIds})
 		args5.Cols = []string{"name"}
 		var replyStructure []personnel.Structure
 		err = client.Call(beego.AppConfig.String("EtcdURL"), "Structure", "ListByCond", args5, &replyStructure)
@@ -804,14 +805,14 @@ func (c *PersonController) DownloadPerson() {
 		names, _ := json.Marshal(structureNames)
 		row.AddCell().Value = string(names)
 	}
-	objectKey := strconv.FormatInt(time.Now().UnixNano() / 1e6, 10) + "file.xlsx"
+	objectKey := strconv.FormatInt(time.Now().UnixNano()/1e6, 10) + "file.xlsx"
 	err = file.Save(objectKey)
 	if err != nil {
 		panic(err)
 	}
 
 	c.Ctx.Output.Header("Accept-Ranges", "bytes")
-	c.Ctx.Output.Header("Content-Disposition", "attachment; filename=" + fmt.Sprintf("%s", objectKey)) //文件名
+	c.Ctx.Output.Header("Content-Disposition", "attachment; filename="+fmt.Sprintf("%s", objectKey)) //文件名
 	c.Ctx.Output.Header("Cache-Control", "must-revalidate, post-check=0, pre-check=0")
 	c.Ctx.Output.Header("Pragma", "no-cache")
 	c.Ctx.Output.Header("Expires", "0")
@@ -827,7 +828,7 @@ func (c *PersonController) DownloadPerson() {
 func RemoveDuplicatesAndEmpty(a []string) (ret []string) {
 	a_len := len(a)
 	for i := 0; i < a_len; i++ {
-		if (i > 0 && a[i - 1] == a[i]) || len(a[i]) == 0 {
+		if (i > 0 && a[i-1] == a[i]) || len(a[i]) == 0 {
 			continue;
 		}
 		ret = append(ret, a[i])
