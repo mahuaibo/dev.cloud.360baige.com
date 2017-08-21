@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 	"dev.cloud.360baige.com/utils"
-	"fmt"
 )
 
 // Person API
@@ -36,7 +35,7 @@ func (c *StructureController) ListOfStructure() {
 	}
 	// 1.
 	var args action.FindByCond
-	args.CondList = append(args.CondList, action.CondValue{Type: "And", Key:  "access_token", Val:  access_token})
+	args.CondList = append(args.CondList, action.CondValue{Type: "And", Key: "access_token", Val: access_token})
 	args.Fileds = []string{"id", "user_id", "company_id", "type"}
 	var replyAccessToken user.UserPosition
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
@@ -51,9 +50,9 @@ func (c *StructureController) ListOfStructure() {
 	// 2.
 	var args2 action.PageByCond
 	args2.CondList = append(args2.CondList,
-		action.CondValue{Type: "And", Key:  "company_id", Val:  replyAccessToken.CompanyId},
-		action.CondValue{Type: "And", Key:  "parent_id", Val:  0},
-		action.CondValue{Type: "And", Key:  "status__gt", Val:  -1},
+		action.CondValue{Type: "And", Key: "company_id", Val: replyAccessToken.CompanyId},
+		action.CondValue{Type: "And", Key: "parent_id", Val: 0},
+		action.CondValue{Type: "And", Key: "status__gt", Val: -1},
 	)
 	args2.Cols = []string{"id", "company_id", "parent_id", "name", "type"}
 	classList := GetStructureList(args2).List
@@ -89,9 +88,9 @@ func GetStructureList(args action.PageByCond) ListOfStructure {
 
 		var args2 action.PageByCond
 		args2.CondList = append(args2.CondList,
-			action.CondValue{Type: "And", Key:  "company_id", Val:  val.CompanyId},
-			action.CondValue{Type: "And", Key:  "parent_id", Val:  val.Id},
-			action.CondValue{Type: "And", Key:  "status__gt", Val:  -1},
+			action.CondValue{Type: "And", Key: "company_id", Val: val.CompanyId},
+			action.CondValue{Type: "And", Key: "parent_id", Val: val.Id},
+			action.CondValue{Type: "And", Key: "status__gt", Val: -1},
 		)
 		args2.Cols = []string{"id", "company_id", "parent_id", "name", "type"}
 		data.Children = GetStructureList(args2).List
@@ -123,7 +122,7 @@ func (c *StructureController) AddStructure() {
 	}
 	// 1.
 	var args action.FindByCond
-	args.CondList = append(args.CondList, action.CondValue{Type: "And", Key:  "access_token", Val:  access_token})
+	args.CondList = append(args.CondList, action.CondValue{Type: "And", Key: "access_token", Val: access_token})
 	args.Fileds = []string{"id", "user_id", "company_id", "type"}
 	var replyAccessToken user.UserPosition
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
@@ -135,7 +134,6 @@ func (c *StructureController) AddStructure() {
 		return
 	}
 
-	fmt.Println("nameLists", nameLists)
 	//2.
 	var count int64
 	operationTime := time.Now().UnixNano() / 1e6
@@ -162,7 +160,6 @@ func (c *StructureController) AddStructure() {
 			count++
 		}
 	}
-	fmt.Println("count", count)
 	res.Code = ResponseNormal
 	res.Message = "添加组织结构成功"
 	res.Data.Count = count
@@ -195,7 +192,7 @@ func (c *StructureController) ModifyStructure() {
 	}
 	// 1.
 	var args action.FindByCond
-	args.CondList = append(args.CondList, action.CondValue{Type: "And", Key:  "access_token", Val:  access_token})
+	args.CondList = append(args.CondList, action.CondValue{Type: "And", Key: "access_token", Val: access_token})
 	args.Fileds = []string{"id", "user_id", "company_id", "type"}
 	var replyAccessToken user.UserPosition
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
@@ -286,7 +283,6 @@ func (c *StructureController) DeleteStructure() {
 	args2 := action.DeleteByIdCond{Value: ids}
 	var replyStructure action.Num
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Structure", "DeleteById", args2, &replyStructure)
-	fmt.Println("replyStructure", replyStructure)
 	if err != nil {
 		res.Code = ResponseLogicErr
 		res.Message = "删除组织结构失败"
@@ -323,7 +319,7 @@ func (c *StructureController) GetStructureIds() {
 	}
 	// 1.
 	var args action.FindByCond
-	args.CondList = append(args.CondList, action.CondValue{Type: "And", Key:  "access_token", Val:  access_token})
+	args.CondList = append(args.CondList, action.CondValue{Type: "And", Key: "access_token", Val: access_token})
 	args.Fileds = []string{"id", "user_id", "company_id", "type"}
 	var replyAccessToken user.UserPosition
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
@@ -337,9 +333,9 @@ func (c *StructureController) GetStructureIds() {
 	// 2.
 	var args2 action.ListByCond
 	args2.CondList = append(args2.CondList,
-		action.CondValue{Type: "And", Key:  "company_id", Val:  replyAccessToken.CompanyId},
-		action.CondValue{Type: "And", Key:  "person_id", Val:  person_id},
-		action.CondValue{Type: "And", Key:  "status", Val:  1})
+		action.CondValue{Type: "And", Key: "company_id", Val: replyAccessToken.CompanyId},
+		action.CondValue{Type: "And", Key: "person_id", Val: person_id},
+		action.CondValue{Type: "And", Key: "status", Val: 1})
 	args2.Cols = []string{"structure_id"}
 	var replyPersonStructure []personnel.PersonStructure
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "PersonStructure", "ListByCond", args2, &replyPersonStructure)

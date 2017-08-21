@@ -4,9 +4,9 @@ import (
 	"github.com/astaxie/beego"
 	"dev.cloud.360baige.com/rpc/client"
 	. "dev.model.360baige.com/http/window/center"
-	. "dev.model.360baige.com/models/user"
-	. "dev.model.360baige.com/models/account"
-	. "dev.model.360baige.com/models/company"
+	"dev.model.360baige.com/models/user"
+	"dev.model.360baige.com/models/account"
+	"dev.model.360baige.com/models/company"
 	"dev.cloud.360baige.com/utils"
 	"time"
 	"strconv"
@@ -44,12 +44,12 @@ func (c *AccountItemController) List() {
 	//检测 accessToken
 	var args action.FindByCond
 	args.CondList = append(args.CondList, action.CondValue{
-		Type:  "And",
-		Key: "accessToken",
+		Type: "And",
+		Key:  "accessToken",
 		Val:  access_token,
 	})
 	args.Fileds = []string{"id", "user_id", "company_id", "type"}
-	var replyAccessToken UserPosition
+	var replyAccessToken user.UserPosition
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
 	if err != nil {
 		res.Code = ResponseLogicErr
@@ -71,23 +71,23 @@ func (c *AccountItemController) List() {
 		return
 	}
 
-	var accountReply Account
+	var accountReply account.Account
 	var accountArgs action.FindByCond
 	accountArgs.CondList = append(accountArgs.CondList, action.CondValue{
-		Type:  "And",
-		Key: "company_id",
+		Type: "And",
+		Key:  "company_id",
 		Val:  com_id,
 	}, action.CondValue{
-		Type:  "And",
-		Key: "user_id",
+		Type: "And",
+		Key:  "user_id",
 		Val:  user_id,
 	}, action.CondValue{
-		Type:  "And",
-		Key: "user_position_id",
+		Type: "And",
+		Key:  "user_position_id",
 		Val:  user_position_id,
 	}, action.CondValue{
-		Type:  "And",
-		Key: "user_position_type",
+		Type: "And",
+		Key:  "user_position_type",
 		Val:  user_position_type,
 	})
 	accountArgs.Fileds = []string{"id"}
@@ -106,8 +106,8 @@ func (c *AccountItemController) List() {
 		current = time.Now().Format("2006-01")
 	}
 	accountItemArgs.CondList = append(accountItemArgs.CondList, action.CondValue{
-		Type:  "And",
-		Key: "account_id",
+		Type: "And",
+		Key:  "account_id",
 		Val:  accountReply.Id,
 	})
 	//, action.CondValue{
@@ -132,7 +132,7 @@ func (c *AccountItemController) List() {
 		return
 	}
 
-	reply2List := []AccountItem{}
+	reply2List := []account.AccountItem{}
 	err = json.Unmarshal([]byte(accountItemReply.Json), &reply2List)
 	var aType string
 	for _, value := range reply2List {
@@ -144,7 +144,7 @@ func (c *AccountItemController) List() {
 		}
 		res.Data.List = append(res.Data.List, AccountItemListValue{
 			Id:         value.Id,
-			CreateTime: time.Unix(value.CreateTime / 1000, 0).Format("2006-01-02"),
+			CreateTime: time.Unix(value.CreateTime/1000, 0).Format("2006-01-02"),
 			Amount:     value.Amount,
 			AmountType: aType,
 		})
@@ -160,6 +160,7 @@ func (c *AccountItemController) List() {
 	c.Data["json"] = res
 	c.ServeJSON()
 }
+
 // @Title 交易详情列表接口
 // @Description 交易详情列表接口
 // @Success 200 {"code":200,"message":"获取账务列表成功","data":{"access_ticket":"xxxx","expire_in":0}}
@@ -187,12 +188,12 @@ func (c *AccountItemController) TradingList() {
 	//检测 accessToken
 	var args action.FindByCond
 	args.CondList = append(args.CondList, action.CondValue{
-		Type:  "And",
-		Key: "accessToken",
+		Type: "And",
+		Key:  "accessToken",
 		Val:  access_token,
 	})
 	args.Fileds = []string{"id", "user_id", "company_id", "type"}
-	var replyAccessToken UserPosition
+	var replyAccessToken user.UserPosition
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
 	if err != nil {
 		res.Code = ResponseLogicErr
@@ -215,23 +216,23 @@ func (c *AccountItemController) TradingList() {
 		return
 	}
 
-	var reply Account
+	var reply account.Account
 	var AccountArgs action.FindByCond
 	AccountArgs.CondList = append(AccountArgs.CondList, action.CondValue{
-		Type:  "And",
-		Key: "company_id",
+		Type: "And",
+		Key:  "company_id",
 		Val:  com_id,
 	}, action.CondValue{
-		Type:  "And",
-		Key: "user_id",
+		Type: "And",
+		Key:  "user_id",
 		Val:  user_id,
 	}, action.CondValue{
-		Type:  "And",
-		Key: "user_position_id",
+		Type: "And",
+		Key:  "user_position_id",
 		Val:  user_position_id,
 	}, action.CondValue{
-		Type:  "And",
-		Key: "user_position_type",
+		Type: "And",
+		Key:  "user_position_type",
 		Val:  user_position_type,
 	})
 	AccountArgs.Fileds = []string{"id"}
@@ -247,19 +248,19 @@ func (c *AccountItemController) TradingList() {
 	var accountItemArgs action.PageByCond
 	var AccountItemReply action.PageByCond
 	accountItemArgs.CondList = append(accountItemArgs.CondList, action.CondValue{
-		Type:  "And",
-		Key: "account_id",
+		Type: "And",
+		Key:  "account_id",
 		Val:  reply.Id,
 	})
 	if sdate != "" && edate != "" {
 		tm2, _ := time.ParseInLocation("2006-01-02", sdate, time.Local)
 		accountItemArgs.CondList = append(accountItemArgs.CondList, action.CondValue{
-			Type:  "And",
-			Key: "create_time__gte",
+			Type: "And",
+			Key:  "create_time__gte",
 			Val:  tm2.UnixNano() / 1e6,
 		}, action.CondValue{
-			Type:  "And",
-			Key: "create_time__lt",
+			Type: "And",
+			Key:  "create_time__lt",
 			Val:  utils.GetNextDayUnix(edate),
 		})
 	}
@@ -276,7 +277,7 @@ func (c *AccountItemController) TradingList() {
 		return
 	}
 
-	accountItemList := []AccountItem{}
+	accountItemList := []account.AccountItem{}
 	err = json.Unmarshal([]byte(AccountItemReply.Json), &accountItemList)
 	//List 循环赋值
 	var aType string
@@ -287,7 +288,7 @@ func (c *AccountItemController) TradingList() {
 		} else {
 			aType = "支出"
 		}
-		re := time.Unix(value.CreateTime / 1000, 0).Format("2006-01-02")
+		re := time.Unix(value.CreateTime/1000, 0).Format("2006-01-02")
 		res.Data.List = append(res.Data.List, AccountItemListValue{
 			Id:         value.Id,
 			CreateTime: re,
@@ -328,12 +329,12 @@ func (c *AccountItemController) Detail() {
 	//检测 accessToken
 	var args action.FindByCond
 	args.CondList = append(args.CondList, action.CondValue{
-		Type:  "And",
-		Key: "accessToken",
+		Type: "And",
+		Key:  "accessToken",
 		Val:  access_token,
 	})
 	args.Fileds = []string{"id", "user_id", "company_id", "type"}
-	var replyAccessToken UserPosition
+	var replyAccessToken user.UserPosition
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
 	if err != nil {
 		res.Code = ResponseLogicErr
@@ -350,9 +351,9 @@ func (c *AccountItemController) Detail() {
 		return
 	}
 
-	var accountItemArgs AccountItem
+	var accountItemArgs account.AccountItem
 	accountItemArgs.Id = ai_id
-	var accountItemReply AccountItem
+	var accountItemReply account.AccountItem
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "AccountItem", "FindById", accountItemArgs, &accountItemReply)
 	if err != nil {
 		res.Code = ResponseSystemErr
@@ -363,7 +364,7 @@ func (c *AccountItemController) Detail() {
 	}
 
 	var aType string
-	re := time.Unix(accountItemReply.CreateTime / 1000, 0).Format("2006-01-02")
+	re := time.Unix(accountItemReply.CreateTime/1000, 0).Format("2006-01-02")
 	if accountItemReply.Amount < 0 {
 		aType = "收入"
 		accountItemReply.Amount, _ = strconv.ParseFloat(strings.Replace(strconv.FormatFloat(accountItemReply.Amount, 'f', 5, 64), "-", "", 1), 64)
@@ -382,9 +383,9 @@ func (c *AccountItemController) Detail() {
 	res.Data.Balance = accountItemReply.Balance
 	res.Data.Remark = accountItemReply.Remark
 	if accountItemReply.TransactionId > 0 {
-		var transactionArgs Transaction
+		var transactionArgs account.Transaction
 		transactionArgs.Id = accountItemReply.TransactionId
-		var transactionReply Transaction
+		var transactionReply account.Transaction
 		err = client.Call(beego.AppConfig.String("EtcdURL"), "Transaction", "FindById", transactionArgs, &transactionReply)
 		if err != nil {
 			c.Data["json"] = res
@@ -397,18 +398,18 @@ func (c *AccountItemController) Detail() {
 			c.ServeJSON()
 			return
 		}
-		var accountArgs Account
+		var accountArgs account.Account
 		accountArgs.Id = transactionReply.ToAccountId
-		var accountReply Account
+		var accountReply account.Account
 		err = client.Call(beego.AppConfig.String("EtcdURL"), "Account", "FindById", accountArgs, &accountReply)
 		if err == nil && accountReply.CompanyId > 0 {
 			c.Data["json"] = res
 			c.ServeJSON()
 			return
 		}
-		var companyArgs Company
+		var companyArgs company.Company
 		companyArgs.Id = accountReply.CompanyId
-		var companyReply Company
+		var companyReply company.Company
 		err = client.Call(beego.AppConfig.String("EtcdURL"), "Company", "FindById", companyArgs, &companyReply)
 		if err == nil {
 			res.Data.ToAccount = companyReply.Name
@@ -417,5 +418,3 @@ func (c *AccountItemController) Detail() {
 	c.Data["json"] = res
 	c.ServeJSON()
 }
-
-

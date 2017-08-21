@@ -3,10 +3,9 @@ package center
 import (
 	"github.com/astaxie/beego"
 	"dev.cloud.360baige.com/rpc/client"
-	. "dev.model.360baige.com/models/company"
-	//. "dev.model.360baige.com/models/response"
+	"dev.model.360baige.com/models/company"
 	. "dev.model.360baige.com/http/window/center"
-	. "dev.model.360baige.com/models/user"
+	"dev.model.360baige.com/models/user"
 	"time"
 	"dev.model.360baige.com/action"
 )
@@ -40,7 +39,7 @@ func (c *CompanyController) Detail() {
 		Val:  access_token,
 	})
 	args.Fileds = []string{"id", "user_id", "company_id", "type"}
-	var replyAccessToken UserPosition
+	var replyAccessToken user.UserPosition
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
 	if err != nil {
 		res.Code = ResponseLogicErr
@@ -57,8 +56,8 @@ func (c *CompanyController) Detail() {
 		c.ServeJSON()
 		return
 	}
-	var reply Company
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "Company", "FindById", &Company{
+	var reply company.Company
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "Company", "FindById", &company.Company{
 		Id: com_id,
 	}, &reply)
 
@@ -112,7 +111,7 @@ func (c *CompanyController) Modify() {
 		Val:  access_token,
 	})
 	args.Fileds = []string{"id", "user_id", "company_id", "type"}
-	var replyAccessToken UserPosition
+	var replyAccessToken user.UserPosition
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
 	if err != nil {
 		res.Code = ResponseLogicErr
@@ -129,8 +128,8 @@ func (c *CompanyController) Modify() {
 		c.ServeJSON()
 		return
 	}
-	var reply Company
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "Company", "FindById", &Company{
+	var reply company.Company
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "Company", "FindById", &company.Company{
 		Id: com_id,
 	}, &reply)
 

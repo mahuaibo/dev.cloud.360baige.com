@@ -158,7 +158,6 @@ func (c *PersonController) AddPerson() {
 	contact := c.GetString("contact")
 	structureIds := utils.StrArrToInt64Arr(strings.Split(c.GetString("structure_ids"), ","))
 
-	fmt.Println("birthday", birthday)
 	if access_token == "" {
 		res.Code = ResponseLogicErr
 		res.Message = "访问令牌无效"
@@ -195,9 +194,7 @@ func (c *PersonController) AddPerson() {
 		Status:     1,
 	}
 	var replyPerson personnel.Person
-	fmt.Println("args2", args2)
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Person", "Add", args2, &replyPerson)
-	fmt.Println("replyPerson", replyPerson)
 	if err != nil {
 		res.Code = ResponseLogicErr
 		res.Message = "添加人员失败"
@@ -205,7 +202,6 @@ func (c *PersonController) AddPerson() {
 		c.ServeJSON()
 		return
 	}
-	fmt.Println("structureIds", structureIds)
 	if len(structureIds) > 0 {
 		var args3 []personnel.PersonStructure = make([]personnel.PersonStructure, len(structureIds))
 		for key, val := range structureIds {
@@ -221,9 +217,7 @@ func (c *PersonController) AddPerson() {
 		}
 		// 添加组织结构
 		var replyPersonStructure personnel.PersonStructure
-		fmt.Println("args3", args3)
 		err = client.Call(beego.AppConfig.String("EtcdURL"), "PersonStructure", "AddMultiple", args3, &replyPersonStructure)
-		fmt.Println("replyPersonStructure", replyPersonStructure)
 		if err != nil {
 			res.Code = ResponseLogicErr
 			res.Message = "组织结构添加失败"
@@ -421,8 +415,6 @@ func (c *PersonController) DeletePerson() {
 	res := DeletePersonResponse{}
 	access_token := c.GetString("access_token")
 	personIds := utils.StrArrToInt64Arr(strings.Split(c.GetString("person_ids"), ","))
-	fmt.Println("personIds", personIds)
-	fmt.Println("111111", c.GetString("person_ids"))
 	if access_token == "" {
 		res.Code = ResponseLogicErr
 		res.Message = "访问令牌无效"
@@ -446,7 +438,6 @@ func (c *PersonController) DeletePerson() {
 	// 2.
 	args2 := action.DeleteByIdCond{Value: personIds}
 	var replyPerson action.Num
-	fmt.Println("args2", args2)
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Person", "DeleteById", args2, &replyPerson)
 	if err != nil {
 		res.Code = ResponseLogicErr
@@ -455,7 +446,6 @@ func (c *PersonController) DeletePerson() {
 		c.ServeJSON()
 		return
 	}
-	fmt.Println("2:", replyPerson)
 	res.Code = ResponseNormal
 	res.Message = "删除人员成功"
 	res.Data.Count = replyPerson.Value
@@ -500,7 +490,6 @@ func (c *PersonController) UploadPerson() {
 		// 获取file文件
 		formFile, header, err := c.Ctx.Request.FormFile("uploadFile")
 		if err != nil {
-			fmt.Println("Get form file failed: %s\n", err)
 			return
 		}
 		defer formFile.Close()
@@ -508,14 +497,12 @@ func (c *PersonController) UploadPerson() {
 		// 创建保存文件
 		destFile, err := os.Create(objectKey)
 		if err != nil {
-			fmt.Println("Create failed: %s\n", err)
 			return
 		}
 		defer destFile.Close()
 		// 读取表单文件，写入保存文件
 		_, err = io.Copy(destFile, formFile)
 		if err != nil {
-			fmt.Println("Write file failed: %s\n", err)
 			return
 		}
 		// 解析文件
@@ -528,7 +515,6 @@ func (c *PersonController) UploadPerson() {
 		rows := xlsx.GetRows("sheet" + strconv.Itoa(xlsx.GetSheetIndex("Sheet1")))
 		//var args2 []personnel.Person = make([]personnel.Person, len(rows) - 1)
 		for key, row := range rows {
-			fmt.Println("row", row)
 			if key > 0 {
 				//birthday, err := time.Parse("2006-01-02", row[3])
 				// 类型 1.教师   2.学生
@@ -563,7 +549,6 @@ func (c *PersonController) UploadPerson() {
 		}
 
 		//err = client.Call(beego.AppConfig.String("EtcdURL"), "Person", "AddMultiple", args2, &replyPerson)
-		//fmt.Println("replyPerson", replyPerson)
 		//if err != nil {
 		//	res.Code = ResponseLogicErr
 		//	res.Message = "上传缴费名单失败"
@@ -574,9 +559,7 @@ func (c *PersonController) UploadPerson() {
 
 		err = os.Remove(objectKey) // 删除文件
 		if err != nil {
-			fmt.Println("file remove Error!", err)
 		} else {
-			fmt.Print("file remove OK!")
 		}
 	}
 
@@ -688,7 +671,6 @@ func (c *PersonController) DownloadPerson() {
 		args4.Cols = []string{"structure_id"}
 		var replyPersonStructure []personnel.PersonStructure
 		err = client.Call(beego.AppConfig.String("EtcdURL"), "PersonStructure", "ListByCond", args4, &replyPersonStructure)
-		fmt.Println("replyPersonStructure", replyPersonStructure)
 		if err != nil {
 			res.Code = ResponseLogicErr
 			res.Message = "下载人员信息失败"

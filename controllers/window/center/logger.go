@@ -3,9 +3,8 @@ package center
 import (
 	"github.com/astaxie/beego"
 	"dev.cloud.360baige.com/rpc/client"
-	//"dev.cloud.360baige.com/utils"
-	. "dev.model.360baige.com/models/logger"
-	. "dev.model.360baige.com/models/user"
+	"dev.model.360baige.com/models/logger"
+	"dev.model.360baige.com/models/user"
 	. "dev.model.360baige.com/http/window/center"
 	"time"
 	"dev.model.360baige.com/action"
@@ -41,12 +40,12 @@ func (c *LoggerController) Add() {
 	//检测 accessToken
 	var args action.FindByCond
 	args.CondList = append(args.CondList, action.CondValue{
-		Type:  "And",
-		Key: "accessToken",
+		Type: "And",
+		Key:  "accessToken",
 		Val:  access_token,
 	})
 	args.Fileds = []string{"id", "user_id", "company_id", "type"}
-	var replyAccessToken UserPosition
+	var replyAccessToken user.UserPosition
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
 	if err != nil {
 		res.Code = ResponseLogicErr
@@ -68,8 +67,8 @@ func (c *LoggerController) Add() {
 		return
 	}
 
-	var reply Logger
-	loggerArgs := Logger{
+	var reply logger.Logger
+	loggerArgs := logger.Logger{
 		CreateTime:       time.Now().Unix(),
 		Content:          c.GetString("content"),
 		Remark:           c.GetString("remark"),
@@ -115,12 +114,12 @@ func (c *LoggerController) List() {
 	//检测 accessToken
 	var args action.FindByCond
 	args.CondList = append(args.CondList, action.CondValue{
-		Type:  "And",
-		Key: "accessToken",
+		Type: "And",
+		Key:  "accessToken",
 		Val:  access_token,
 	})
 	args.Fileds = []string{"id", "user_id", "company_id", "type"}
-	var replyAccessToken UserPosition
+	var replyAccessToken user.UserPosition
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
 	if err != nil {
 		res.Code = ResponseLogicErr
@@ -176,7 +175,7 @@ func (c *LoggerController) List() {
 	}
 
 	var resData []LoggerValue
-	replyList := []Logger{}
+	replyList := []logger.Logger{}
 	err = json.Unmarshal([]byte(reply.Json), &replyList)
 	for _, value := range replyList {
 		var retype string
@@ -190,7 +189,7 @@ func (c *LoggerController) List() {
 			retype = "查"
 		}
 		resData = append(resData, LoggerValue{
-			CreateTime: time.Unix(value.CreateTime / 1000, 0).Format("2006-01-02"),
+			CreateTime: time.Unix(value.CreateTime/1000, 0).Format("2006-01-02"),
 			Content:    value.Content,
 			Remark:     value.Remark,
 			Type:       retype,

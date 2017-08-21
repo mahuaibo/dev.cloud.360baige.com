@@ -4,15 +4,14 @@ import (
 	"github.com/astaxie/beego"
 	"dev.cloud.360baige.com/rpc/client"
 	. "dev.model.360baige.com/http/window/center"
-	. "dev.model.360baige.com/models/user"
-	. "dev.model.360baige.com/models/account"
+	"dev.model.360baige.com/models/user"
+	"dev.model.360baige.com/models/account"
 	"dev.model.360baige.com/action"
 	"dev.cloud.360baige.com/utils"
 	"time"
-	"fmt"
 )
 
-// USER API
+// Account API
 type AccountController struct {
 	beego.Controller
 }
@@ -23,7 +22,7 @@ type AccountController struct {
 // @Param   access_token     query   string true       "访问令牌"
 // @Param   date     query   string true       "账单日期：2017-07"
 // @Failure 400 {"code":400,"message":"获取账务统计信息失败"}
-// @router /accountstatistics [get]
+// @router /accountStatistics [get]
 func (c *AccountController) AccountStatistics() {
 
 	res := AccountStatisticsResponse{}
@@ -39,12 +38,12 @@ func (c *AccountController) AccountStatistics() {
 	//检测 accessToken
 	var args action.FindByCond
 	args.CondList = append(args.CondList, action.CondValue{
-		Type:  "And",
-		Key: "accessToken",
+		Type: "And",
+		Key:  "accessToken",
 		Val:  access_token,
 	})
 	args.Fileds = []string{"id", "user_id", "company_id", "type"}
-	var replyAccessToken UserPosition
+	var replyAccessToken user.UserPosition
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
 	if err != nil {
 		res.Code = ResponseLogicErr
@@ -65,29 +64,29 @@ func (c *AccountController) AccountStatistics() {
 		c.ServeJSON()
 		return
 	}
-	var reply Account
+
+	var reply account.Account
 	//检测 accessToken
 	var accountArgs action.FindByCond
 	accountArgs.CondList = append(accountArgs.CondList, action.CondValue{
-		Type:  "And",
-		Key: "company_id",
+		Type: "And",
+		Key:  "company_id",
 		Val:  com_id,
 	}, action.CondValue{
-		Type:  "And",
-		Key: "user_id",
+		Type: "And",
+		Key:  "user_id",
 		Val:  user_id,
 	}, action.CondValue{
-		Type:  "And",
-		Key: "user_position_id",
+		Type: "And",
+		Key:  "user_position_id",
 		Val:  user_position_id,
 	}, action.CondValue{
-		Type:  "And",
-		Key: "user_position_type",
+		Type: "And",
+		Key:  "user_position_type",
 		Val:  user_position_type,
 	})
 	accountArgs.Fileds = []string{"id", "balance"}
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Account", "FindByCond", accountArgs, &reply)
-	fmt.Println("reply>>>>", reply)
 	if err != nil {
 		res.Code = ResponseSystemErr
 		res.Message = "获取账务统计信息失败"

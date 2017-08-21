@@ -8,7 +8,6 @@ import (
 	"dev.model.360baige.com/models/schoolfee"
 	"dev.model.360baige.com/action"
 	"dev.cloud.360baige.com/utils"
-	"fmt"
 	"strings"
 	"time"
 	"os"
@@ -18,6 +17,7 @@ import (
 	"github.com/tealeg/xlsx"
 	"net/http"
 	"sort"
+	"fmt"
 )
 
 // Record API
@@ -67,7 +67,7 @@ func (c *RecordController) ListOfRecord() {
 	)
 	args2.OrderBy = []string{"id"}
 	args2.Cols = []string{"id", "create_time", "company_id", "project_id", "name", "class_name", "id_card", "num",
-		"phone", "price", "is_fee", "fee_time", "desc", "status" }
+						  "phone", "price", "is_fee", "fee_time", "desc", "status" }
 	args2.PageSize = pageSize
 	args2.Current = currentPage
 	var replyRecord []schoolfee.Record
@@ -82,11 +82,10 @@ func (c *RecordController) ListOfRecord() {
 
 	// 3.
 	listOfRecord := make([]Record, len(replyRecord), len(replyRecord))
-	fmt.Println(replyRecord)
 	for index, rec := range replyRecord {
 		listOfRecord[index] = Record{
 			Id:         rec.Id,
-			CreateTime: time.Unix(rec.CreateTime / 1000, 0).Format("2006-01-02"),
+			CreateTime: time.Unix(rec.CreateTime/1000, 0).Format("2006-01-02"),
 			CompanyId:  rec.CompanyId,
 			ProjectId:  rec.ProjectId,
 			Name:       rec.Name,
@@ -158,7 +157,6 @@ func (c *RecordController) AddRecord() {
 		c.ServeJSON()
 		return
 	}
-	fmt.Println("1:", replyAccessToken)
 
 	// 2.
 	operationTime := time.Now().UnixNano() / 1e6
@@ -187,7 +185,6 @@ func (c *RecordController) AddRecord() {
 		c.ServeJSON()
 		return
 	}
-	fmt.Println("2:", replyRecord)
 	res.Code = ResponseNormal
 	res.Message = "添加收费名单成功"
 	res.Data.Id = replyRecord.Id
@@ -231,7 +228,6 @@ func (c *RecordController) DetailRecord() {
 		c.ServeJSON()
 		return
 	}
-	fmt.Println("1:", replyAccessToken)
 
 	// 2.
 	args2 := &schoolfee.Record{
@@ -239,7 +235,6 @@ func (c *RecordController) DetailRecord() {
 	}
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Record", "FindById", args2, args2)
 
-	fmt.Println("2:", args2)
 	if err != nil {
 		res.Code = ResponseLogicErr
 		res.Message = "修改缴费项目失败"
@@ -251,7 +246,7 @@ func (c *RecordController) DetailRecord() {
 	res.Message = "修改缴费项目成功"
 	res.Data.Data = Record{
 		Id:         args2.Id,
-		CreateTime: time.Unix(args2.CreateTime / 1000, 0).Format("2006-01-02"),
+		CreateTime: time.Unix(args2.CreateTime/1000, 0).Format("2006-01-02"),
 		UpdateTime: args2.UpdateTime,
 		CompanyId:  args2.CompanyId,
 		ProjectId:  args2.ProjectId,
@@ -315,7 +310,6 @@ func (c *RecordController) ModifyRecord() {
 		c.ServeJSON()
 		return
 	}
-	fmt.Println("1:", replyAccessToken)
 
 	// 2.
 	args2 := &schoolfee.Record{
@@ -418,7 +412,6 @@ func (c *RecordController) DeleteRecord() {
 		c.ServeJSON()
 		return
 	}
-	fmt.Println("2:", replyRecord)
 	res.Code = ResponseNormal
 	res.Message = "删除缴费项目记录成功"
 	res.Data.Count = replyRecord.Value
@@ -463,35 +456,31 @@ func (c *RecordController) UploadRecord() {
 	if requestType == "POST" {
 		formFile, header, err := c.Ctx.Request.FormFile("uploadFile")
 		if err != nil {
-			fmt.Println("Get form file failed: %s\n", err)
 			return
 		}
 		defer formFile.Close()
-		objectKey := "./" + strconv.FormatInt(time.Now().UnixNano() / 1e6, 10) + header.Filename
+		objectKey := "./" + strconv.FormatInt(time.Now().UnixNano()/1e6, 10) + header.Filename
 		// 创建保存文件
 		destFile, err := os.Create(objectKey)
 		if err != nil {
-			fmt.Println("Create failed: %s\n", err)
 			return
 		}
 		defer destFile.Close()
 		// 读取表单文件，写入保存文件
 		_, err = io.Copy(destFile, formFile)
 		if err != nil {
-			fmt.Println("Write file failed: %s\n", err)
 			return
 		}
 
 		xlsx, err := excelize.OpenFile(objectKey)
 		if err != nil {
-			fmt.Println(err)
 			os.Exit(1)
 		}
 		// Get sheet index.
 		index := xlsx.GetSheetIndex("Sheet1")
 		rows := xlsx.GetRows("sheet" + strconv.Itoa(index))
 		timestamp := time.Now().UnixNano() / 1e6
-		var args2 []schoolfee.Record = make([]schoolfee.Record, len(rows) - 1)
+		var args2 []schoolfee.Record = make([]schoolfee.Record, len(rows)-1)
 		for key, row := range rows {
 			if key > 0 {
 				Price, err := strconv.ParseFloat(row[5], 64)
@@ -502,7 +491,7 @@ func (c *RecordController) UploadRecord() {
 					c.ServeJSON()
 					return
 				}
-				args2[key - 1] = schoolfee.Record{
+				args2[key-1] = schoolfee.Record{
 					CreateTime: timestamp,
 					UpdateTime: timestamp,
 					CompanyId:  replyAccessToken.CompanyId,
@@ -522,7 +511,6 @@ func (c *RecordController) UploadRecord() {
 		}
 
 		err = client.Call(beego.AppConfig.String("EtcdURL"), "Record", "AddMultiple", args2, &replyRecord)
-		fmt.Println("replyRecord", replyRecord)
 		if err != nil {
 			res.Code = ResponseLogicErr
 			res.Message = "上传缴费名单失败"
@@ -533,9 +521,7 @@ func (c *RecordController) UploadRecord() {
 
 		err = os.Remove(objectKey) // 删除文件
 		if err != nil {
-			fmt.Println("file remove Error!", err)
 		} else {
-			fmt.Print("file remove OK!")
 		}
 	}
 
@@ -626,14 +612,14 @@ func (c *RecordController) DownloadRecord() {
 		row.AddCell().Value = strconv.FormatInt(rec.FeeTime, 10)
 		row.AddCell().Value = rec.Desc
 	}
-	objectKey := strconv.FormatInt(time.Now().UnixNano() / 1e6, 10) + "file.xlsx"
+	objectKey := strconv.FormatInt(time.Now().UnixNano()/1e6, 10) + "file.xlsx"
 	err = file.Save(objectKey)
 	if err != nil {
 		panic(err)
 	}
 
 	c.Ctx.Output.Header("Accept-Ranges", "bytes")
-	c.Ctx.Output.Header("Content-Disposition", "attachment; filename=" + fmt.Sprintf("%s", objectKey)) //文件名
+	c.Ctx.Output.Header("Content-Disposition", "attachment; filename="+fmt.Sprintf("%s", objectKey)) //文件名
 	c.Ctx.Output.Header("Cache-Control", "must-revalidate, post-check=0, pre-check=0")
 	c.Ctx.Output.Header("Pragma", "no-cache")
 	c.Ctx.Output.Header("Expires", "0")
@@ -695,7 +681,6 @@ func (c *RecordController) ClassList() {
 	}
 	// 3.
 	var listOfRecord []string
-	fmt.Println(replyRecord)
 	for _, rec := range replyRecord {
 		listOfRecord = append(listOfRecord, rec.ClassName)
 	}
@@ -712,7 +697,7 @@ func (c *RecordController) ClassList() {
 func RemoveDuplicatesAndEmpty(a []string) (ret []map[string]string) {
 	a_len := len(a)
 	for i := 0; i < a_len; i++ {
-		if (i > 0 && a[i - 1] == a[i]) || len(a[i]) == 0 {
+		if (i > 0 && a[i-1] == a[i]) || len(a[i]) == 0 {
 			continue;
 		}
 		data := make(map[string]string)

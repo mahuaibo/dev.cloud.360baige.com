@@ -7,7 +7,6 @@ import (
 	"dev.model.360baige.com/models/user"
 	"dev.model.360baige.com/models/schoolfee"
 	"dev.model.360baige.com/action"
-	"fmt"
 	"time"
 )
 
@@ -51,7 +50,6 @@ func (c *ProjectController) ListOfProject() {
 		c.ServeJSON()
 		return
 	}
-	fmt.Println("1:", replyAccessToken)
 
 	// 2.
 	var args2 action.PageByCond
@@ -73,14 +71,13 @@ func (c *ProjectController) ListOfProject() {
 		c.ServeJSON()
 		return
 	}
-	fmt.Println("2:", replyProject)
 
 	// 3.
 	var listOfProject []Project = make([]Project, len(replyProject), len(replyProject))
 	for index, pro := range replyProject {
 		listOfProject[index] = Project{
 			Id:         pro.Id,
-			CreateTime: time.Unix(pro.CreateTime / 1000, 0).Format("2006-01-02"),
+			CreateTime: time.Unix(pro.CreateTime/1000, 0).Format("2006-01-02"),
 			CompanyId:  pro.CompanyId,
 			Name:       pro.Name,
 			IsLimit:    pro.IsLimit,
@@ -141,7 +138,6 @@ func (c *ProjectController) AddProject() {
 		c.ServeJSON()
 		return
 	}
-	fmt.Println("1:", replyAccessToken)
 
 	// 2.
 	operationTime := time.Now().UnixNano() / 1e6
@@ -164,7 +160,6 @@ func (c *ProjectController) AddProject() {
 		c.ServeJSON()
 		return
 	}
-	fmt.Println("2:", replyProject)
 	res.Code = ResponseNormal
 	res.Message = "添加缴费项目成功"
 	res.Data.Id = replyProject.Id
@@ -218,7 +213,6 @@ func (c *ProjectController) ModifyProject() {
 		c.ServeJSON()
 		return
 	}
-	fmt.Println("1:", replyAccessToken)
 
 	// 2.
 	args2 := &schoolfee.Project{
@@ -226,7 +220,6 @@ func (c *ProjectController) ModifyProject() {
 	}
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Project", "FindById", args2, args2)
 
-	fmt.Println("2:", args2)
 	if args2.CompanyId != replyAccessToken.CompanyId {
 		res.Code = ResponseLogicErr
 		res.Message = "非法操作"

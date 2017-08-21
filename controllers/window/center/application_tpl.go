@@ -4,13 +4,12 @@ import (
 	"github.com/astaxie/beego"
 	"dev.cloud.360baige.com/rpc/client"
 	. "dev.model.360baige.com/http/window/center"
-	. "dev.model.360baige.com/models/user"
-	. "dev.model.360baige.com/models/application"
-	. "dev.model.360baige.com/models/company"
+	"dev.model.360baige.com/models/user"
+	"dev.model.360baige.com/models/application"
+	"dev.model.360baige.com/models/company"
 	"time"
 	"dev.model.360baige.com/action"
 	"encoding/json"
-	"fmt"
 )
 
 // APPLICATIONTPL API
@@ -50,7 +49,7 @@ func (c *ApplicationTplController) List() {
 		Val:  access_token,
 	})
 	args.Fileds = []string{"id", "user_id", "company_id", "type"}
-	var replyAccessToken UserPosition
+	var replyAccessToken user.UserPosition
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
 	if err != nil {
 		res.Code = ResponseLogicErr
@@ -132,7 +131,7 @@ func (c *ApplicationTplController) List() {
 	appArgs.Cols = []string{"id", "application_tpl_id" }
 	appArgs.OrderBy = []string{"id"}
 	appArgs.PageSize = -1
-	var replyApplication []Application
+	var replyApplication []application.Application
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Application", "ListByCond", appArgs, &replyApplication)
 
 	idmap := make(map[int64]int64)
@@ -141,7 +140,7 @@ func (c *ApplicationTplController) List() {
 	}
 
 	var resData []ApplicationTplValue
-	replyList := []ApplicationTpl{}
+	replyList := []application.ApplicationTpl{}
 	err = json.Unmarshal([]byte(reply.Json), &replyList)
 	//循环赋值
 	for _, value := range replyList {
@@ -208,7 +207,7 @@ func (c *ApplicationTplController) Detail() {
 		Val:  access_token,
 	})
 	args.Fileds = []string{"id", "user_id", "company_id", "type"}
-	var replyAccessToken UserPosition
+	var replyAccessToken user.UserPosition
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
 	if err != nil {
 		res.Code = ResponseLogicErr
@@ -218,8 +217,8 @@ func (c *ApplicationTplController) Detail() {
 		return
 	}
 
-	var applicationArgs Application
-	var applicationReply Application
+	var applicationArgs application.Application
+	var applicationReply application.Application
 	if Type == 1 {
 		applicationArgs.Id = id
 		err = client.Call(beego.AppConfig.String("EtcdURL"), "Application", "FindById", applicationArgs, &applicationReply)
@@ -231,12 +230,10 @@ func (c *ApplicationTplController) Detail() {
 			return
 		}
 	}
-	var appTplArgs ApplicationTpl // 获取应用信息tpl
-	fmt.Println("appTplArgs", appTplArgs)
+	var appTplArgs application.ApplicationTpl // 获取应用信息tpl
 	appTplArgs.Id = applicationReply.ApplicationTplId
-	var replyApplicationTpl ApplicationTpl
+	var replyApplicationTpl application.ApplicationTpl
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "ApplicationTpl", "FindById", appTplArgs, &replyApplicationTpl)
-	fmt.Println("err", err)
 	if err != nil {
 		res.Code = ResponseSystemErr
 		res.Message = "获取应用信息失败"
@@ -244,18 +241,17 @@ func (c *ApplicationTplController) Detail() {
 		c.ServeJSON()
 		return
 	}
-	fmt.Println("replyApplicationTpl", replyApplicationTpl)
-	var userArgs User // 开发者
+	var userArgs user.User // 开发者
 	userArgs.Id = replyApplicationTpl.UserId
-	var replyUser User
+	var replyUser user.User
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "User", "FindById", userArgs, &replyUser)
 	if err == nil {
 		res.Data.UserName = replyUser.Username
 	}
 
-	var companyArgs Company // 开发公司
+	var companyArgs company.Company // 开发公司
 	companyArgs.Id = replyApplicationTpl.CompanyId
-	var replyCompany Company
+	var replyCompany company.Company
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Company", "FindById", companyArgs, &replyCompany)
 	if err == nil {
 		res.Data.CompanyName = replyCompany.Name
@@ -263,7 +259,7 @@ func (c *ApplicationTplController) Detail() {
 
 	res.Code = ResponseNormal
 	res.Message = "获取应用成功"
-	res.Data.CreateTime = time.Unix(replyApplicationTpl.CreateTime / 1000, 0).Format("2006-01-02")
+	res.Data.CreateTime = time.Unix(replyApplicationTpl.CreateTime/1000, 0).Format("2006-01-02")
 	res.Data.Name = replyApplicationTpl.Name
 	res.Data.Image = replyApplicationTpl.Image
 	res.Data.Desc = replyApplicationTpl.Desc
@@ -301,7 +297,7 @@ func (c *ApplicationTplController) Subscription() {
 		Val:  access_token,
 	})
 	args.Fileds = []string{"id", "user_id", "company_id", "type"}
-	var replyAccessToken UserPosition
+	var replyAccessToken user.UserPosition
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
 	if err != nil {
 		res.Code = ResponseLogicErr
@@ -348,7 +344,7 @@ func (c *ApplicationTplController) Subscription() {
 		Val:  ap_id,
 	})
 	appArgs.Fileds = []string{"id", "application_tpl_id" }
-	var replyApplication Application
+	var replyApplication application.Application
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Application", "FindByCond", appArgs, &replyApplication)
 	if err == nil {
 		res.Code = ResponseSystemErr
@@ -358,11 +354,10 @@ func (c *ApplicationTplController) Subscription() {
 		return
 	}
 
-	var appTplArgs ApplicationTpl
+	var appTplArgs application.ApplicationTpl
 	appTplArgs.Id = ap_id
-	var reply ApplicationTpl
+	var reply application.ApplicationTpl
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "ApplicationTpl", "FindById", appTplArgs, &reply)
-	fmt.Println("reply>>>", reply)
 	if err != nil {
 		res.Code = ResponseSystemErr
 		res.Message = "获取应用信息失败"
@@ -378,7 +373,7 @@ func (c *ApplicationTplController) Subscription() {
 		return
 	}
 
-	var addReply Application
+	var addReply application.Application
 	addReply.CreateTime = time.Now().UnixNano() / 1e6
 	addReply.UpdateTime = time.Now().UnixNano() / 1e6
 	addReply.CompanyId = com_id
@@ -430,9 +425,9 @@ func (c *ApplicationTplController) ModifyStatus() {
 	}
 
 	//检测 accessToken
-	var replyAccessToken UserPosition
+	var replyAccessToken user.UserPosition
 	var err error
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByAccessToken", &UserPosition{
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByAccessToken", &user.UserPosition{
 		AccessToken: access_token,
 	}, &replyAccessToken)
 	if err != nil {
@@ -444,8 +439,8 @@ func (c *ApplicationTplController) ModifyStatus() {
 	}
 
 	ap_id, _ := c.GetInt64("id")
-	var reply ApplicationTpl
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "ApplicationTpl", "FindById", &ApplicationTpl{
+	var reply application.ApplicationTpl
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "ApplicationTpl", "FindById", &application.ApplicationTpl{
 		Id: ap_id,
 	}, &reply)
 	if err != nil {

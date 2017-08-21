@@ -4,9 +4,8 @@ import (
 	"github.com/astaxie/beego"
 	"dev.cloud.360baige.com/rpc/client"
 	. "dev.model.360baige.com/http/window/center"
-	. "dev.model.360baige.com/models/user"
-	//. "dev.model.360baige.com/models/response"
-	. "dev.model.360baige.com/models/order"
+	"dev.model.360baige.com/models/user"
+	"dev.model.360baige.com/models/order"
 	"time"
 	"dev.model.360baige.com/action"
 	"encoding/json"
@@ -42,12 +41,12 @@ func (c *OrderController) List() {
 	//检测 accessToken
 	var args action.FindByCond
 	args.CondList = append(args.CondList, action.CondValue{
-		Type:  "And",
-		Key: "accessToken",
+		Type: "And",
+		Key:  "accessToken",
 		Val:  access_token,
 	})
 	args.Fileds = []string{"id", "user_id", "company_id", "type"}
-	var replyAccessToken UserPosition
+	var replyAccessToken user.UserPosition
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
 	if err != nil {
 		res.Code = ResponseLogicErr
@@ -91,8 +90,8 @@ func (c *OrderController) List() {
 	})
 	if status != -1 {
 		orderArgs.CondList = append(orderArgs.CondList, action.CondValue{
-			Type:  "And",
-			Key: "status",
+			Type: "And",
+			Key:  "status",
 			Val:  status,
 		})
 	}
@@ -109,7 +108,7 @@ func (c *OrderController) List() {
 		return
 	}
 
-	replyList := []Order{}
+	replyList := []order.Order{}
 	err = json.Unmarshal([]byte(orderReply.Json), &replyList)
 	//List 循环赋值
 	for _, value := range replyList {
@@ -122,7 +121,7 @@ func (c *OrderController) List() {
 		rStatus = GetStatus(value.Status)
 		res.Data.List = append(res.Data.List, OrderValue{
 			Id:         value.Id,
-			CreateTime: time.Unix(value.CreateTime / 1000, 0).Format("2006-01-02"),
+			CreateTime: time.Unix(value.CreateTime/1000, 0).Format("2006-01-02"),
 			Code:       value.Code,
 			Price:      value.Price,
 			Type:       value.Type,
@@ -184,12 +183,12 @@ func (c *OrderController) Detail() {
 	//检测 accessToken
 	var args action.FindByCond
 	args.CondList = append(args.CondList, action.CondValue{
-		Type:  "And",
-		Key: "accessToken",
+		Type: "And",
+		Key:  "accessToken",
 		Val:  access_token,
 	})
 	args.Fileds = []string{"id", "user_id", "company_id", "type"}
-	var replyAccessToken UserPosition
+	var replyAccessToken user.UserPosition
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
 	if err != nil {
 		res.Code = ResponseLogicErr
@@ -206,9 +205,9 @@ func (c *OrderController) Detail() {
 		return
 	}
 
-	var orderArgs Order
+	var orderArgs order.Order
 	orderArgs.Id = ai_id
-	var orderReply Order
+	var orderReply order.Order
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Order", "FindById", orderArgs, &orderReply)
 	if err != nil {
 		res.Code = ResponseSystemErr
@@ -220,7 +219,7 @@ func (c *OrderController) Detail() {
 
 	res.Code = ResponseNormal
 	res.Message = "获取订单详情成功"
-	res.Data.CreateTime = time.Unix(orderReply.CreateTime / 1000, 0).Format("2006-01-02")
+	res.Data.CreateTime = time.Unix(orderReply.CreateTime/1000, 0).Format("2006-01-02")
 	res.Data.Code = orderReply.Code
 	res.Data.Price = orderReply.Price
 	res.Data.Type = orderReply.Type
@@ -255,12 +254,12 @@ func (c *OrderController) DetailByCode() {
 	//检测 accessToken
 	var args action.FindByCond
 	args.CondList = append(args.CondList, action.CondValue{
-		Type:  "And",
-		Key: "accessToken",
+		Type: "And",
+		Key:  "accessToken",
 		Val:  access_token,
 	})
 	args.Fileds = []string{"id", "user_id", "company_id", "type"}
-	var replyAccessToken UserPosition
+	var replyAccessToken user.UserPosition
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
 	if err != nil {
 		res.Code = ResponseLogicErr
@@ -279,11 +278,11 @@ func (c *OrderController) DetailByCode() {
 		return
 	}
 
-	var reply Order
+	var reply order.Order
 	var orderArgs action.FindByCond
 	orderArgs.CondList = append(orderArgs.CondList, action.CondValue{
-		Type:  "And",
-		Key: "code",
+		Type: "And",
+		Key:  "code",
 		Val:  code,
 	})
 	orderArgs.Fileds = []string{"id", "create_time", "code", "price", "type", "pay_type", "brief", "status"}
@@ -298,7 +297,7 @@ func (c *OrderController) DetailByCode() {
 
 	res.Code = ResponseSystemErr
 	res.Message = "获取账户信息成功"
-	res.Data.CreateTime = time.Unix(reply.CreateTime / 1000, 0).Format("2006-01-02")
+	res.Data.CreateTime = time.Unix(reply.CreateTime/1000, 0).Format("2006-01-02")
 	res.Data.Code = reply.Code
 	res.Data.Price = reply.Price
 	res.Data.Type = reply.Type
