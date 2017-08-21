@@ -54,7 +54,7 @@ func (c *StructureController) ListOfStructure() {
 		action.CondValue{Type: "And", Key: "parent_id", Val: 0},
 		action.CondValue{Type: "And", Key: "status__gt", Val: -1},
 	)
-	args2.Cols = []string{"id", "company_id", "parent_id", "name", "type"}
+	args2.Cols = []string{"id", "company_id", "parent_id", "name"}
 	classList := GetStructureList(args2).List
 	if len(classList) <= 0 {
 		res.Code = ResponseLogicErr
@@ -63,6 +63,7 @@ func (c *StructureController) ListOfStructure() {
 		c.ServeJSON()
 		return
 	}
+	classList = append(classList, StructureData{Id: 0, Label: "无组织人员"})
 
 	res.Code = ResponseNormal
 	res.Message = "获取组织结构成功"
@@ -84,7 +85,6 @@ func GetStructureList(args action.PageByCond) ListOfStructure {
 		var data StructureData
 		data.Id = val.Id
 		data.Label = val.Name
-		data.Type = val.Type
 
 		var args2 action.PageByCond
 		args2.CondList = append(args2.CondList,
@@ -92,7 +92,7 @@ func GetStructureList(args action.PageByCond) ListOfStructure {
 			action.CondValue{Type: "And", Key: "parent_id", Val: val.Id},
 			action.CondValue{Type: "And", Key: "status__gt", Val: -1},
 		)
-		args2.Cols = []string{"id", "company_id", "parent_id", "name", "type"}
+		args2.Cols = []string{"id", "company_id", "parent_id", "name"}
 		data.Children = GetStructureList(args2).List
 		list.List = append(list.List, data)
 	}
@@ -133,22 +133,36 @@ func (c *StructureController) AddStructure() {
 		c.ServeJSON()
 		return
 	}
-
 	//2.
 	var count int64
-	operationTime := time.Now().UnixNano() / 1e6
-	var replyStructure personnel.Structure
 	for _, value := range nameLists {
 		parentId, _ := c.GetInt64("parent_id")
 		for _, val := range strings.Split(value, ">") {
-			var args2 personnel.Structure
-			args2.CreateTime = operationTime
-			args2.UpdateTime = operationTime
-			args2.CompanyId = replyAccessToken.CompanyId
-			args2.Name = val
-			args2.ParentId = parentId
-			args2.Status = 1
-			err = client.Call(beego.AppConfig.String("EtcdURL"), "Structure", "Add", args2, &replyStructure)
+			// 判断当前节点该结构是否存在
+			var args2 action.FindByCond
+			args2.CondList = append(args2.CondList,
+				action.CondValue{Type: "And", Key: "company_id", Val: replyAccessToken.CompanyId},
+				action.CondValue{Type: "And", Key: "name", Val: val},
+				action.CondValue{Type: "And", Key: "parent_id", Val: parentId},
+				action.CondValue{Type: "And", Key: "status", Val: 1})
+			args2.Fileds = []string{"id"}
+			var replyStructure personnel.Structure
+			err := client.Call(beego.AppConfig.String("EtcdURL"), "Structure", "FindByCond", args2, &replyStructure)
+			if err == nil && replyStructure.Id > 0 {
+				parentId = replyStructure.Id
+				continue
+			}
+			// 添加组织结构
+			operationTime := time.Now().UnixNano() / 1e6
+			var args3 personnel.Structure
+			args3.CreateTime = operationTime
+			args3.UpdateTime = operationTime
+			args3.CompanyId = replyAccessToken.CompanyId
+			args3.Name = val
+			args3.ParentId = parentId
+			args3.Status = 1
+			var addReplyStructure personnel.Structure
+			err = client.Call(beego.AppConfig.String("EtcdURL"), "Structure", "Add", args3, &addReplyStructure)
 			if err != nil {
 				res.Code = ResponseLogicErr
 				res.Message = "添加组织结构失败"
@@ -156,7 +170,7 @@ func (c *StructureController) AddStructure() {
 				c.ServeJSON()
 				return
 			}
-			parentId = replyStructure.Id
+			parentId = addReplyStructure.Id
 			count++
 		}
 	}
