@@ -22,7 +22,7 @@ type AccountController struct {
 // @Param   accessToken     query   string true       "访问令牌"
 // @Param   date     query   string true       "账单日期：2017-07"
 // @Failure 400 {"code":400,"message":"获取账务统计信息失败"}
-// @router /accountStatistics [get]
+// @router /accountStatistics [post]
 func (c *AccountController) AccountStatistics() {
 	type data AccountStatisticsResponse
 	accessToken := c.GetString("accessToken")

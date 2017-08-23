@@ -25,15 +25,15 @@ type AccountItemController struct {
 // @Param   access_token     query   string true       "访问令牌"
 // @Param   date     query   string true       "账单日期：2017-07"
 // @Param   current     query   string true       "当前页"
-// @Param   page_size     query   string true       "每页数量"
+// @Param   pageSize     query   string true       "每页数量"
 // @Failure 400 {"code":400,"message":"获取账务统计信息失败"}
-// @router /list [get]
+// @router /list [post]
 func (c *AccountItemController) List() {
 	type data AccountItemListResponse
-	access_token := c.GetString("access_token")
+	accessToken := c.GetString("accessToken")
 	currentPage, _ := c.GetInt64("current")
-	pageSize, _ := c.GetInt64("page_size")
-	if access_token == "" {
+	pageSize, _ := c.GetInt64("pageSize")
+	if accessToken == "" {
 		c.Data["json"] = data{Code: ResponseSystemErr, Message: "访问令牌无效"}
 		c.ServeJSON()
 		return
@@ -42,7 +42,7 @@ func (c *AccountItemController) List() {
 	var replyUserPosition user.UserPosition
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", action.FindByCond{
 		CondList: []action.CondValue{
-			action.CondValue{Type: "And", Key: "accessToken", Val: access_token },
+			action.CondValue{Type: "And", Key: "access_token", Val: accessToken },
 		},
 		Fileds: []string{"id", "user_id", "company_id", "type"},
 	}, &replyUserPosition)
@@ -127,16 +127,16 @@ func (c *AccountItemController) List() {
 // @Param   start_date     query   string true       "开始日期：2017-01-01"
 // @Param   end_date     query   string true       "结束日期：2017-01-01"
 // @Param   current     query   string true       "当前页"
-// @Param   page_size     query   string true       "每页数量"
+// @Param   pageSize     query   string true       "每页数量"
 // @Failure 400 {"code":400,"message":"获取账务统计信息失败"}
 // @router /tradinglist [get]
 func (c *AccountItemController) TradingList() {
 	type data AccountItemListResponse
-	access_token := c.GetString("access_token")
-	sdate := c.GetString("start_date")
-	edate := c.GetString("end_date")
+	access_token := c.GetString("accessToken")
+	sdate := c.GetString("startDate")
+	edate := c.GetString("endDate")
 	currentPage, _ := c.GetInt64("current")
-	pageSize, _ := c.GetInt64("page_size")
+	pageSize, _ := c.GetInt64("pageSize")
 	if access_token == "" {
 		c.Data["json"] = data{Code: ResponseSystemErr, Message: "访问令牌无效"}
 		c.ServeJSON()

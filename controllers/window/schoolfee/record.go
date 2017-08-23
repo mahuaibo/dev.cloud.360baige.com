@@ -28,59 +28,52 @@ type RecordController struct {
 // @Title 校园收费记录列表接口
 // @Description Project List 校园收费记录列表接口
 // @Success 200 {"code":200,"message":"获取缴费项目记录成功","data":{"access_ticket":"xxxx","expire_in":0}}
-// @Param   access_token     query   string true       "访问令牌"
-// @Param   project_id     query   int true       "项目ID"
+// @Param   accessToken     query   string true       "访问令牌"
+// @Param   projectId     query   int true       "项目ID"
 // @Failure 400 {"code":400,"message":"获取缴费项目记录失败"}
 // @router /list [get]
 func (c *RecordController) ListOfRecord() {
-	res := ListOfRecordResponse{}
-	access_token := c.GetString("access_token")
-	project_id := c.GetString("project_id")
-	pageSize, _ := c.GetInt64("page_size")
+	type data ListOfRecordResponse
+	accessToken := c.GetString("accessToken")
+	projectId := c.GetString("projectId")
+	pageSize, _ := c.GetInt64("pageSize")
 	currentPage, _ := c.GetInt64("current")
-	if access_token == "" {
-		res.Code = ResponseLogicErr
-		res.Message = "访问令牌无效"
-		c.Data["json"] = res
+	if accessToken == "" {
+		c.Data["json"] = data{Code: ResponseLogicErr, Message: "访问令牌无效"}
 		c.ServeJSON()
 		return
 	}
-	// 1.
+
 	var args action.FindByCond
-	args.CondList = append(args.CondList, action.CondValue{Type: "And", Key: "access_token", Val: access_token})
+	args.CondList = append(args.CondList, action.CondValue{Type: "And", Key: "accessToken", Val: accessToken})
 	args.Fileds = []string{"id", "user_id", "company_id", "type"}
-	var replyAccessToken user.UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
+	var replyUserPosition user.UserPosition
+	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyUserPosition)
 	if err != nil {
-		res.Code = ResponseLogicErr
-		res.Message = "访问令牌失效"
-		c.Data["json"] = res
+		c.Data["json"] = data{Code: ResponseLogicErr, Message: "访问令牌无效"}
 		c.ServeJSON()
 		return
 	}
-	// 2.
+
 	var args2 action.PageByCond
 	args2.CondList = append(args2.CondList,
-		action.CondValue{Type: "And", Key: "company_id", Val: replyAccessToken.CompanyId},
-		action.CondValue{Type: "And", Key: "project_id", Val: project_id},
+		action.CondValue{Type: "And", Key: "company_id", Val: replyUserPosition.CompanyId},
+		action.CondValue{Type: "And", Key: "projectId", Val: projectId},
 		action.CondValue{Type: "And", Key: "status__gt", Val: -1},
 	)
 	args2.OrderBy = []string{"id"}
-	args2.Cols = []string{"id", "create_time", "company_id", "project_id", "name", "class_name", "id_card", "num",
+	args2.Cols = []string{"id", "create_time", "company_id", "projectId", "name", "class_name", "id_card", "num",
 						  "phone", "price", "is_fee", "fee_time", "desc", "status" }
 	args2.PageSize = pageSize
 	args2.Current = currentPage
 	var replyRecord []schoolfee.Record
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Record", "ListByCond", args2, &replyRecord)
 	if err != nil {
-		res.Code = ResponseLogicErr
-		res.Message = "获取缴费项目记录失败"
-		c.Data["json"] = res
+		c.Data["json"] = data{Code: ResponseLogicErr, Message: "获取缴费项目记录失败"}
 		c.ServeJSON()
 		return
 	}
 
-	// 3.
 	listOfRecord := make([]Record, len(replyRecord), len(replyRecord))
 	for index, rec := range replyRecord {
 		listOfRecord[index] = Record{
@@ -101,10 +94,9 @@ func (c *RecordController) ListOfRecord() {
 		}
 	}
 
-	res.Code = ResponseNormal
-	res.Message = "获取缴费项目记录成功"
-	res.Data.List = listOfRecord
-	c.Data["json"] = res
+	c.Data["json"] = data{Code: ResponseNormal, Message: "获取缴费项目记录成功", Data: ListOfRecord{
+		List: listOfRecord,
+	}}
 	c.ServeJSON()
 	return
 }
@@ -112,9 +104,9 @@ func (c *RecordController) ListOfRecord() {
 // @Title 添加收费名单接口
 // @Description Record Add 添加收费名单接口
 // @Success 200 {"code":200,"message":"添加收费名单成功","data":{"access_ticket":"xxxx","expire_in":0}}
-// @Param   access_token     query   string true       "访问令牌"
+// @Param   accessToken     query   string true       "访问令牌"
 // @Param   name     query   string true       "项目名称"
-// @Param   is_limit     query   string true       "是否限制缴费"
+// @Param   isLimit     query   string true       "是否限制缴费"
 // @Param   desc     query   string true       "描述"
 // @Param   link     query   string true       "描述链接"
 // @Param   status     query   string true       "状态 -1注销 0正常"
@@ -122,8 +114,8 @@ func (c *RecordController) ListOfRecord() {
 // @router /add [post]
 func (c *RecordController) AddRecord() {
 	res := AddRecordResponse{}
-	access_token := c.GetString("access_token")
-	project_id, _ := c.GetInt64("project_id", 0)
+	accessToken := c.GetString("accessToken")
+	projectId, _ := c.GetInt64("projectId", 0)
 	name := c.GetString("name")
 	class_name := c.GetString("class_name")
 	id_card := c.GetString("id_card")
@@ -133,23 +125,23 @@ func (c *RecordController) AddRecord() {
 	is_fee, _ := c.GetInt8("is_fee")
 	fee_time, _ := c.GetInt64("fee_time")
 	desc := c.GetString("desc")
-	if access_token == "" {
+	if accessToken == "" {
 		res.Code = ResponseLogicErr
 		res.Message = "访问令牌无效"
 		c.Data["json"] = res
 		c.ServeJSON()
 		return
 	}
-	// 1.
+
 	var args action.FindByCond
 	args.CondList = append(args.CondList, action.CondValue{
 		Type: "And",
-		Key:  "access_token",
-		Val:  access_token,
+		Key:  "accessToken",
+		Val:  accessToken,
 	})
 	args.Fileds = []string{"id", "user_id", "company_id", "type"}
-	var replyAccessToken user.UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
+	var replyUserPosition user.UserPosition
+	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyUserPosition)
 	if err != nil {
 		res.Code = ResponseLogicErr
 		res.Message = "访问令牌失效"
@@ -158,13 +150,12 @@ func (c *RecordController) AddRecord() {
 		return
 	}
 
-	// 2.
 	operationTime := time.Now().UnixNano() / 1e6
 	args2 := &schoolfee.Record{
 		CreateTime: operationTime,
 		UpdateTime: operationTime,
-		CompanyId:  replyAccessToken.CompanyId,
-		ProjectId:  project_id,
+		CompanyId:  replyUserPosition.CompanyId,
+		ProjectId:  projectId,
 		Name:       name,
 		ClassName:  class_name,
 		IdCard:     id_card,
@@ -196,15 +187,15 @@ func (c *RecordController) AddRecord() {
 // @Title 查看缴费记录接口
 // @Description Project Add 查看缴费记录接口
 // @Success 200 {"code":200,"message":"查看缴费记录成功","data":{"access_ticket":"xxxx","expire_in":0}}
-// @Param   access_token     query   string true       "访问令牌"
+// @Param   accessToken     query   string true       "访问令牌"
 // @Param   record_id     query   string true       "记录ID"
 // @Failure 400 {"code":400,"message":"查看缴费记录失败"}
 // @router /detail [get]
 func (c *RecordController) DetailRecord() {
 	res := DetailRecordResponse{}
-	access_token := c.GetString("access_token")
+	accessToken := c.GetString("accessToken")
 	record_id, _ := c.GetInt64("record_id", 0)
-	if access_token == "" {
+	if accessToken == "" {
 		res.Code = ResponseLogicErr
 		res.Message = "访问令牌无效"
 		c.Data["json"] = res
@@ -215,12 +206,12 @@ func (c *RecordController) DetailRecord() {
 	var args action.FindByCond
 	args.CondList = append(args.CondList, action.CondValue{
 		Type: "And",
-		Key:  "access_token",
-		Val:  access_token,
+		Key:  "accessToken",
+		Val:  accessToken,
 	})
 	args.Fileds = []string{"id", "user_id", "company_id", "type"}
-	var replyAccessToken user.UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
+	var replyUserPosition user.UserPosition
+	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyUserPosition)
 	if err != nil {
 		res.Code = ResponseLogicErr
 		res.Message = "访问令牌失效"
@@ -269,13 +260,13 @@ func (c *RecordController) DetailRecord() {
 // @Title 修改缴费记录接口
 // @Description Project Add 修改缴费记录接口
 // @Success 200 {"code":200,"message":"修改缴费记录成功","data":{"access_ticket":"xxxx","expire_in":0}}
-// @Param   access_token     query   string true       "访问令牌"
+// @Param   accessToken     query   string true       "访问令牌"
 // @Param   record_id     query   string true       "记录ID"
 // @Failure 400 {"code":400,"message":"修改缴费记录失败"}
 // @router /modify [post]
 func (c *RecordController) ModifyRecord() {
 	res := ModifyRecordResponse{}
-	access_token := c.GetString("access_token")
+	accessToken := c.GetString("accessToken")
 	record_id, _ := c.GetInt64("record_id", 0)
 	name := c.GetString("name")
 	class_name := c.GetString("class_name")
@@ -286,7 +277,7 @@ func (c *RecordController) ModifyRecord() {
 	is_fee, _ := c.GetInt8("is_fee")
 	fee_time, _ := c.GetInt64("fee_time")
 	desc := c.GetString("desc")
-	if access_token == "" {
+	if accessToken == "" {
 		res.Code = ResponseLogicErr
 		res.Message = "访问令牌无效"
 		c.Data["json"] = res
@@ -297,12 +288,12 @@ func (c *RecordController) ModifyRecord() {
 	var args action.FindByCond
 	args.CondList = append(args.CondList, action.CondValue{
 		Type: "And",
-		Key:  "access_token",
-		Val:  access_token,
+		Key:  "accessToken",
+		Val:  accessToken,
 	})
 	args.Fileds = []string{"id", "user_id", "company_id", "type"}
-	var replyAccessToken user.UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
+	var replyUserPosition user.UserPosition
+	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyUserPosition)
 	if err != nil {
 		res.Code = ResponseLogicErr
 		res.Message = "访问令牌失效"
@@ -325,7 +316,7 @@ func (c *RecordController) ModifyRecord() {
 		return
 	}
 
-	if args2.CompanyId != replyAccessToken.CompanyId {
+	if args2.CompanyId != replyUserPosition.CompanyId {
 		res.Code = ResponseLogicErr
 		res.Message = "非法操作"
 		c.Data["json"] = res
@@ -371,17 +362,17 @@ func (c *RecordController) ModifyRecord() {
 // @Title 删除校园收费记录接口
 // @Description Delete Record 删除校园收费记录接口
 // @Success 200 {"code":200,"message":"删除缴费项目记录成功","data":{"access_ticket":"xxxx","expire_in":0}}
-// @Param   access_token     query   string true       "访问令牌"
-// @Param   record_ids     query   int true       "项目记录IDs"
+// @Param   accessToken     query   string true       "访问令牌"
+// @Param   recordIds     query   int true       "项目记录IDs"
 // @Failure 400 {"code":400,"message":"删除缴费项目记录失败"}
 // @router /delete [post]
 func (c *RecordController) DeleteRecord() {
 	res := DeleteRecordResponse{}
-	access_token := c.GetString("access_token")
-	record_ids := c.GetString("record_ids")
-	record_id_s := utils.StrArrToInt64Arr(strings.Split(record_ids, ","))
+	accessToken := c.GetString("accessToken")
+	recordIds := c.GetString("recordIds")
+	record_id_s := utils.StrArrToInt64Arr(strings.Split(recordIds, ","))
 
-	if access_token == "" {
+	if accessToken == "" {
 		res.Code = ResponseLogicErr
 		res.Message = "访问令牌无效"
 		c.Data["json"] = res
@@ -390,10 +381,10 @@ func (c *RecordController) DeleteRecord() {
 	}
 	// 1.
 	var args action.FindByCond
-	args.CondList = append(args.CondList, action.CondValue{Type: "And", Key: "access_token", Val: access_token, })
+	args.CondList = append(args.CondList, action.CondValue{Type: "And", Key: "accessToken", Val: accessToken, })
 	args.Fileds = []string{"id", "user_id", "company_id", "type"}
-	var replyAccessToken user.UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
+	var replyUserPosition user.UserPosition
+	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyUserPosition)
 	if err != nil {
 		res.Code = ResponseLogicErr
 		res.Message = "访问令牌失效"
@@ -423,30 +414,27 @@ func (c *RecordController) DeleteRecord() {
 // @Title 上传缴费名单接口
 // @Description Delete Record 上传缴费名单接口
 // @Success 200 {"code":200,"message":"上传缴费名单成功","data":{"access_ticket":"xxxx","expire_in":0}}
-// @Param   access_token     query   string true       "访问令牌"
+// @Param   accessToken     query   string true       "访问令牌"
+// @Param   projectId     query   string true       "项目Id"
 // @Failure 400 {"code":400,"message":"上传缴费名单失败"}
 // @router /upload [options,post]
 func (c *RecordController) UploadRecord() {
-	res := UploadRecordResponse{}
-	access_token := c.GetString("a")
-	projectId, _ := c.GetInt64("i")
-	if access_token == "" {
-		res.Code = ResponseLogicErr
-		res.Message = "访问令牌无效"
-		c.Data["json"] = res
+	type data UploadRecordResponse
+	accessToken := c.GetString("accessToken")
+	projectId, _ := c.GetInt64("projectId")
+	if accessToken == "" {
+		c.Data["json"] = data{Code: ResponseLogicErr, Message: "访问令牌无效"}
 		c.ServeJSON()
 		return
 	}
-	// 1.
+
 	var args action.FindByCond
-	args.CondList = append(args.CondList, action.CondValue{Type: "And", Key: "access_token", Val: access_token })
+	args.CondList = append(args.CondList, action.CondValue{Type: "And", Key: "accessToken", Val: accessToken })
 	args.Fileds = []string{"id", "user_id", "company_id", "type"}
-	var replyAccessToken user.UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
+	var replyUserPosition user.UserPosition
+	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyUserPosition)
 	if err != nil {
-		res.Code = ResponseLogicErr
-		res.Message = "访问令牌失效"
-		c.Data["json"] = res
+		c.Data["json"] = data{Code: ResponseLogicErr, Message: "访问令牌失效"}
 		c.ServeJSON()
 		return
 	}
@@ -485,16 +473,14 @@ func (c *RecordController) UploadRecord() {
 			if key > 0 {
 				Price, err := strconv.ParseFloat(row[5], 64)
 				if err != nil {
-					res.Code = ResponseLogicErr
-					res.Message = "上传缴费名单失败"
-					c.Data["json"] = res
+					c.Data["json"] = data{Code: ResponseLogicErr, Message: "上传缴费名单失败"}
 					c.ServeJSON()
 					return
 				}
 				args2[key-1] = schoolfee.Record{
 					CreateTime: timestamp,
 					UpdateTime: timestamp,
-					CompanyId:  replyAccessToken.CompanyId,
+					CompanyId:  replyUserPosition.CompanyId,
 					ProjectId:  projectId,
 					Name:       row[0],
 					ClassName:  row[1],
@@ -512,9 +498,7 @@ func (c *RecordController) UploadRecord() {
 
 		err = client.Call(beego.AppConfig.String("EtcdURL"), "Record", "AddMultiple", args2, &replyRecord)
 		if err != nil {
-			res.Code = ResponseLogicErr
-			res.Message = "上传缴费名单失败"
-			c.Data["json"] = res
+			c.Data["json"] = data{Code: ResponseLogicErr, Message: "上传缴费名单失败"}
 			c.ServeJSON()
 			return
 		}
@@ -525,11 +509,9 @@ func (c *RecordController) UploadRecord() {
 		}
 	}
 
-	// 3.
-	res.Code = ResponseNormal
-	res.Message = "上传缴费名单成功"
-	res.Data.Count = replyRecord.Value
-	c.Data["json"] = res
+	c.Data["json"] = data{Code: ResponseNormal, Message: "上传缴费名单成功", Data: UploadRecord{
+		Count: replyRecord.Value,
+	}}
 	c.ServeJSON()
 	return
 }
@@ -537,53 +519,48 @@ func (c *RecordController) UploadRecord() {
 // @Title 下载缴费记录接口
 // @Description Delete Record 下载缴费记录接口
 // @Success 200 {"code":200,"message":"下载缴费记录成功","data":{"access_ticket":"xxxx","expire_in":0}}
-// @Param   access_token     query   string true       "访问令牌"
-// @Param   record_ids     query   int true       "项目记录IDs"
+// @Param   accessToken     query   string true       "访问令牌"
 // @Failure 400 {"code":400,"message":"下载缴费记录失败"}
 // @router /download [get,post]
 func (c *RecordController) DownloadRecord() {
-	res := DownloadRecordResponse{}
-	access_token := c.GetString("access_token")
-	class_name_s := c.GetString("class_names")
-	is_fee_s := c.GetString("is_fees")
+	type data DownloadRecordResponse
+	accessToken := c.GetString("accessToken")
+	classNames := c.GetString("classNames")
+	isFees := c.GetString("isFees")
+	if accessToken == "" {
+		c.Data["json"] = data{Code: ResponseLogicErr, Message: "访问令牌无效"}
+		c.ServeJSON()
+		return
+	}
 
-	if access_token == "" {
-		res.Code = ResponseLogicErr
-		res.Message = "访问令牌无效"
-		c.Data["json"] = res
-		c.ServeJSON()
-		return
-	}
-	// 1.
-	var args action.FindByCond
-	args.CondList = append(args.CondList, action.CondValue{Type: "And", Key: "access_token", Val: access_token })
-	args.Fileds = []string{"id", "user_id", "company_id", "type"}
-	var replyAccessToken user.UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
+	var replyUserPosition user.UserPosition
+	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", action.FindByCond{
+		CondList:
+		[]action.CondValue{
+			action.CondValue{Type: "And", Key: "accessToken", Val: accessToken },
+		},
+		Fileds: []string{"id", "user_id", "company_id", "type"},
+	}, &replyUserPosition)
 	if err != nil {
-		res.Code = ResponseLogicErr
-		res.Message = "访问令牌失效"
-		c.Data["json"] = res
+		c.Data["json"] = data{Code: ResponseLogicErr, Message: "访问令牌失效"}
 		c.ServeJSON()
 		return
 	}
-	// 2.
-	args2 := action.ListByCond{CondList: []action.CondValue{
-		action.CondValue{Type: "And", Key: "company_id", Val: replyAccessToken.CompanyId},
-		action.CondValue{Type: "And", Key: "class_name__in", Val: strings.Split(class_name_s, ",")},
-		action.CondValue{Type: "And", Key: "is_fee__in", Val: strings.Split(is_fee_s, ",")},
-	}}
 
 	var replyRecord []schoolfee.Record
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "Record", "ListByCond", args2, &replyRecord)
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "Record", "ListByCond", action.ListByCond{
+		CondList: []action.CondValue{
+			action.CondValue{Type: "And", Key: "company_id", Val: replyUserPosition.CompanyId},
+			action.CondValue{Type: "And", Key: "class_name__in", Val: strings.Split(classNames, ",")},
+			action.CondValue{Type: "And", Key: "is_fee__in", Val: strings.Split(isFees, ",")},
+		},
+	}, &replyRecord)
 	if err != nil {
-		res.Code = ResponseLogicErr
-		res.Message = "下载缴费记录失败"
-		c.Data["json"] = res
+		c.Data["json"] = data{Code: ResponseLogicErr, Message: "下载缴费记录失败"}
 		c.ServeJSON()
 		return
 	}
-	// 3.
+
 	file := xlsx.NewFile()
 	sheet, _ := file.AddSheet("Sheet1")
 	row := sheet.AddRow()
@@ -625,9 +602,7 @@ func (c *RecordController) DownloadRecord() {
 	c.Ctx.Output.Header("Expires", "0")
 	//最主要的一句
 	http.ServeFile(c.Ctx.ResponseWriter, c.Ctx.Request, objectKey)
-	res.Code = ResponseNormal
-	res.Message = "下载缴费记录成功"
-	c.Data["json"] = res
+	c.Data["json"] = data{Code: ResponseNormal, Message: "下载缴费记录成功"}
 	c.ServeJSON()
 	return
 }
@@ -635,61 +610,53 @@ func (c *RecordController) DownloadRecord() {
 // @Title 班级列表接口
 // @Description Project List 班级列表接口
 // @Success 200 {"code":200,"message":"获取班级列表成功","data":{"access_ticket":"xxxx","expire_in":0}}
-// @Param   access_token     query   string true       "访问令牌"
-// @Param   project_id     query   int true       "项目ID"
+// @Param   accessToken     query   string true       "访问令牌"
+// @Param   projectId     query   int true       "项目ID"
 // @Failure 400 {"code":400,"message":"获取班级列表失败"}
 // @router /classList [get]
 func (c *RecordController) ClassList() {
-	res := ClassListOfRecordResponse{}
-	access_token := c.GetString("access_token")
-	project_id := c.GetString("project_id")
-	if access_token == "" {
-		res.Code = ResponseLogicErr
-		res.Message = "访问令牌无效"
-		c.Data["json"] = res
+	type data ClassListOfRecordResponse
+	accessToken := c.GetString("accessToken")
+	projectId := c.GetString("projectId")
+	if accessToken == "" {
+		c.Data["json"] = data{Code: ResponseLogicErr, Message: "访问令牌无效"}
 		c.ServeJSON()
 		return
 	}
-	// 1.
+
 	var args action.FindByCond
-	args.CondList = append(args.CondList, action.CondValue{Type: "And", Key: "access_token", Val: access_token})
+	args.CondList = append(args.CondList, action.CondValue{Type: "And", Key: "accessToken", Val: accessToken})
 	args.Fileds = []string{"id", "user_id", "company_id", "type"}
-	var replyAccessToken user.UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
+	var replyUserPosition user.UserPosition
+	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyUserPosition)
 	if err != nil {
-		res.Code = ResponseLogicErr
-		res.Message = "访问令牌失效"
-		c.Data["json"] = res
+		c.Data["json"] = data{Code: ResponseLogicErr, Message: "访问令牌失效"}
 		c.ServeJSON()
 		return
 	}
-	// 2.
-	var args2 action.PageByCond
-	args2.CondList = append(args2.CondList,
-		action.CondValue{Type: "And", Key: "company_id", Val: replyAccessToken.CompanyId},
-		action.CondValue{Type: "And", Key: "project_id", Val: project_id},
-	)
-	args2.Cols = []string{"class_name" }
+
 	var replyRecord []schoolfee.Record
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "Record", "ListByCond", args2, &replyRecord)
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "Record", "ListByCond", action.PageByCond{
+		CondList: []action.CondValue{
+			action.CondValue{Type: "And", Key: "company_id", Val: replyUserPosition.CompanyId},
+			action.CondValue{Type: "And", Key: "project_id", Val: projectId},
+		},
+		Cols: []string{"class_name" },
+	}, &replyRecord)
+
 	if err != nil {
-		res.Code = ResponseLogicErr
-		res.Message = "获取班级列表失败"
-		c.Data["json"] = res
+		c.Data["json"] = data{Code: ResponseLogicErr, Message: "获取班级列表失败"}
 		c.ServeJSON()
 		return
 	}
-	// 3.
+
 	var listOfRecord []string
 	for _, rec := range replyRecord {
 		listOfRecord = append(listOfRecord, rec.ClassName)
 	}
 
 	sort.Strings(listOfRecord)
-	res.Code = ResponseNormal
-	res.Message = "获取班级列表成功"
-	res.Data = RemoveDuplicatesAndEmpty(listOfRecord)
-	c.Data["json"] = res
+	c.Data["json"] = data{Code: ResponseNormal, Message: "获取班级列表成功", Data: RemoveDuplicatesAndEmpty(listOfRecord)}
 	c.ServeJSON()
 	return
 }

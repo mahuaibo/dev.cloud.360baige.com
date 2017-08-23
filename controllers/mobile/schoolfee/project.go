@@ -16,66 +16,49 @@ type ProjectController struct {
 
 // @Title 获取缴费项目列表接口
 // @Description No Limit Project List 获取缴费项目列表接口
-// @Success 200 {"code":200,"message":"获取缴费项目列表成功","data":{"access_ticket":"xxxx","expire_in":0}}
-// @Param   access_token     query   string true       "访问令牌"
+// @Success 200 {"code":200,"message":"获取缴费项目列表成功"}
+// @Param   accessToken     query   string true       "访问令牌"
 // @Failure 400 {"code":400,"message":"获取缴费项目列表失败"}
-// @router /nolimitlist [get]
+// @router /noLimitList [*]
 func (c *ProjectController) ListOfNoLimitProject() {
-	res := ListOfNoLimitProjectResponse{}
-	access_token := c.GetString("access_token")
-	if access_token == "" {
-		res.Code = ResponseLogicErr
-		res.Message = "访问令牌无效"
-		c.Data["json"] = res
-		c.ServeJSON()
-		return
-	}
-	// 1.
-	var args action.FindByCond
-	args.CondList = append(args.CondList, action.CondValue{
-		Type: "And",
-		Key:  "access_token",
-		Val:  access_token,
-	})
-	args.Fileds = []string{"id", "user_id", "company_id", "type"}
-	var replyAccessToken user.UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
-	if err != nil {
-		res.Code = ResponseLogicErr
-		res.Message = "访问令牌失效"
-		c.Data["json"] = res
+	type data ListOfNoLimitProjectResponse
+	accessToken := c.GetString("accessToken")
+	if accessToken == "" {
+		c.Data["json"] = data{Code: ResponseLogicErr, Message: "访问令牌无效"}
 		c.ServeJSON()
 		return
 	}
 
-	// 2.
-	var args2 action.FindByCond
-	args2.CondList = append(args2.CondList, action.CondValue{
-		Type: "And",
-		Key:  "company_id",
-		Val:  replyAccessToken.CompanyId,
-	}, action.CondValue{
-		Type: "And",
-		Key:  "is_limit",
-		Val:  1,
-	}, action.CondValue{
-		Type: "And",
-		Key:  "status",
-		Val:  0,
-	})
+	var replyUserPosition user.UserPosition
+	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", action.FindByCond{
+		CondList: []action.CondValue{
+			action.CondValue{Type: "And", Key: "accessToken", Val: accessToken },
+		},
+		Fileds: []string{"id", "user_id", "company_id", "type"},
+	}, &replyUserPosition)
+	if err != nil {
+		c.Data["json"] = data{Code: ResponseLogicErr, Message: "访问令牌失效"}
+		c.ServeJSON()
+		return
+	}
+
 	var replyProject []schoolfee.Project
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "Project", "ListByCond", args2, &replyProject)
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "Project", "ListByCond", action.FindByCond{
+		CondList: []action.CondValue{
+			action.CondValue{Type: "And", Key: "company_id", Val: replyUserPosition.CompanyId },
+			action.CondValue{Type: "And", Key: "is_limit", Val: 1 },
+			action.CondValue{Type: "And", Key: "status", Val: 0 },
+		},
+	}, &replyProject)
 	if err != nil {
-		res.Code = ResponseLogicErr
-		res.Message = "获取非限制缴费项目列表失败"
-		c.Data["json"] = res
+		c.Data["json"] = data{Code: ResponseLogicErr, Message: "获取非限制缴费项目列表失败"}
 		c.ServeJSON()
 		return
 	}
 
-	var listOfProject []Project = make([]Project, len(replyProject), len(replyProject))
+	var projectList []Project = make([]Project, len(replyProject), len(replyProject))
 	for index, pro := range replyProject {
-		listOfProject[index] = Project{
+		projectList[index] = Project{
 			Id:         pro.Id,
 			CreateTime: pro.CreateTime,
 			UpdateTime: pro.UpdateTime,
@@ -87,93 +70,83 @@ func (c *ProjectController) ListOfNoLimitProject() {
 			Status:     pro.Status,
 		}
 	}
-	res.Code = ResponseNormal
-	res.Message = "获取非限制缴费项目列表成功"
-	res.Data.List = listOfProject
-	c.Data["json"] = res
+	c.Data["json"] = data{Code: ResponseNormal, Message: "获取非限制缴费项目列表成功", Data: ListOfNoLimitProject{
+		List: projectList,
+	}}
 	c.ServeJSON()
 }
 
 // @Title 查询缴费信息接口
 // @Description No Limit Project List 查询缴费信息接口
-// @Success 200 {"code":200,"message":"查询缴费信息成功","data":{"access_ticket":"xxxx","expire_in":0}}
-// @Param   access_token     query   string true       "访问令牌"
+// @Success 200 {"code":200,"message":"查询缴费信息成功"}
+// @Param   accessToken     query   string true       "访问令牌"
+// @Param   searchType     query   string true       "查询值类型 0：编码1：身份证号码 默认 0 "
+// @Param   searchKey     query   string true       "查询值"
 // @Failure 400 {"code":400,"message":"查询缴费信息失败"}
-// @router /search [get]
+// @router /search [*]
 func (c *ProjectController) SearchProjectInfo() {
-	res := SearchProjectInfoResponse{}
-	access_token := c.GetString("access_token")
-	search_type := c.GetString("search_type") // 1：身份证号码 其他：编码
-	search_key := c.GetString("search_key")
-	if access_token == "" {
-		res.Code = ResponseLogicErr
-		res.Message = "访问令牌无效"
-		c.Data["json"] = res
+	type data SearchProjectInfoResponse
+	accessToken := c.GetString("accessToken")
+	searchType := c.GetString("searchType", "0") // 1：身份证号码 其他：编码
+	searchKey := c.GetString("searchKey")
+	if accessToken == "" {
+		c.Data["json"] = data{Code: ResponseLogicErr, Message: "访问令牌无效"}
 		c.ServeJSON()
 		return
 	}
-	// 1.
-	var args action.FindByCond
-	args.CondList = append(args.CondList, action.CondValue{
-		Type: "And",
-		Key:  "access_token",
-		Val:  access_token,
-	})
-	args.Fileds = []string{"id", "user_id", "company_id", "type"}
-	var replyAccessToken user.UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
+
+	var replyUserPosition user.UserPosition
+	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", action.FindByCond{
+		CondList: []action.CondValue{
+			action.CondValue{Type: "And", Key: "accessToken", Val: accessToken },
+		},
+		Fileds: []string{"id", "user_id", "company_id", "type"},
+	}, &replyUserPosition)
 	if err != nil {
-		res.Code = ResponseLogicErr
-		res.Message = "访问令牌失效"
-		c.Data["json"] = res
+		c.Data["json"] = data{Code: ResponseLogicErr, Message: "访问令牌失效"}
 		c.ServeJSON()
 		return
 	}
-
-	var args2 action.FindByCond
-	args2.CondList = append(args2.CondList,
-		action.CondValue{Type: "And", Key: "company_id", Val: replyAccessToken.CompanyId},
-		action.CondValue{Type: "And", Key: "is_fee", Val: 0},
-		action.CondValue{Type: "And", Key: "status", Val: 0},
-	)
-	if search_type == "1" {
-		args2.CondList = append(args2.CondList, action.CondValue{Type: "And", Key: "id_card", Val: search_key})
-	} else {
-		args2.CondList = append(args2.CondList, action.CondValue{Type: "And", Key: "num", Val: search_key})
+	searchTypeKey := "num"
+	if searchType == "1" {
+		searchTypeKey = "id_card"
 	}
-
-	// 2.
 	var replyRecord []schoolfee.Record
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "Record", "ListByCond", args2, &replyRecord)
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "Record", "ListByCond", action.FindByCond{
+		CondList: []action.CondValue{
+			action.CondValue{Type: "And", Key: "company_id", Val: replyUserPosition.CompanyId},
+			action.CondValue{Type: "And", Key: "is_fee", Val: 0},
+			action.CondValue{Type: "And", Key: "status", Val: 0},
+			action.CondValue{Type: "And", Key: searchTypeKey, Val: searchKey},
+		},
+	}, &replyRecord)
 	if err != nil {
-		res.Code = ResponseLogicErr
-		res.Message = "获取缴费项目列表失败"
-		c.Data["json"] = res
+		c.Data["json"] = data{Code: ResponseLogicErr, Message: "获取缴费项目列表失败"}
 		c.ServeJSON()
 		return
 	}
-	var project_id_s []int64 = make([]int64, len(replyRecord), len(replyRecord))
-	for index, record := range replyRecord {
-		project_id_s[index] = record.ProjectId
+	var project_ids []int64
+	for _, record := range replyRecord {
+		project_ids = append(project_ids, record.ProjectId)
 	}
 
-	var args3 action.FindByCond
-	args3.CondList = append(args3.CondList,
-		action.CondValue{Type: "And", Key: "company_id", Val: replyAccessToken.CompanyId},
-		action.CondValue{Type: "And", Key: "id__in", Val: project_id_s},
-		//action.CondValue{Type: "And", Key: "status", Val: 0},
-	)
 	var replyProject []schoolfee.Project
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "Project", "ListByCond", args3, &replyProject)
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "Project", "ListByCond", action.FindByCond{
+		CondList: []action.CondValue{
+			action.CondValue{Type: "And", Key: "company_id", Val: replyUserPosition.CompanyId},
+			action.CondValue{Type: "And", Key: "id__in", Val: project_ids},
+			//action.CondValue{Type: "And", Key: "status", Val: 0},
+		},
+	}, &replyProject)
 
-	var map_project map[int64]schoolfee.Project = make(map[int64]schoolfee.Project)
+	var projectList map[int64]schoolfee.Project = make(map[int64]schoolfee.Project)
 	for _, pro := range replyProject {
-		map_project[pro.Id] = pro
+		projectList[pro.Id] = pro
 	}
 
-	var list []RecordProject = make([]RecordProject, len(replyRecord), len(replyRecord))
+	var recordProjectList []RecordProject = make([]RecordProject, len(replyRecord), len(replyRecord))
 	for index, record := range replyRecord {
-		list[index] = RecordProject{
+		recordProjectList[index] = RecordProject{
 			Id:         record.Id,
 			CreateTime: record.CreateTime,
 			UpdateTime: record.UpdateTime,
@@ -190,22 +163,21 @@ func (c *ProjectController) SearchProjectInfo() {
 			FeeTime:    record.FeeTime,
 			Desc:       record.Desc,
 			Project: Project{
-				Id:         map_project[record.ProjectId].Id,
-				CreateTime: map_project[record.ProjectId].CreateTime,
-				UpdateTime: map_project[record.ProjectId].UpdateTime,
-				CompanyId:  map_project[record.ProjectId].CompanyId,
-				Name:       map_project[record.ProjectId].Name,
-				IsLimit:    map_project[record.ProjectId].IsLimit,
-				Desc:       map_project[record.ProjectId].Desc,
-				Link:       map_project[record.ProjectId].Link,
-				Status:     map_project[record.ProjectId].Status,
+				Id:         projectList[record.ProjectId].Id,
+				CreateTime: projectList[record.ProjectId].CreateTime,
+				UpdateTime: projectList[record.ProjectId].UpdateTime,
+				CompanyId:  projectList[record.ProjectId].CompanyId,
+				Name:       projectList[record.ProjectId].Name,
+				IsLimit:    projectList[record.ProjectId].IsLimit,
+				Desc:       projectList[record.ProjectId].Desc,
+				Link:       projectList[record.ProjectId].Link,
+				Status:     projectList[record.ProjectId].Status,
 			},
 		}
 	}
 
-	res.Code = ResponseNormal
-	res.Message = "获取缴费项目列表成功"
-	res.Data.List = list
-	c.Data["json"] = res
+	c.Data["json"] = data{Code: ResponseNormal, Message: "", Data: ListOfRecordProject{
+		List: recordProjectList,
+	}}
 	c.ServeJSON()
 }
