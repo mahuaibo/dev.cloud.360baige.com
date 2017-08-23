@@ -27,157 +27,123 @@ type LoggerController struct {
 // @Failure 403 :uid is empty
 // @router /add [post]
 func (c *LoggerController) Add() {
-	res := LoggerAddResponse{}
-	access_token := c.GetString("access_token")
+	type data LoggerAddResponse
+	accessToken := c.GetString("accessToken")
+	content := c.GetString("content")
+	remark := c.GetString("remark")
 	Type, _ := c.GetInt8("type")
-	if access_token == "" {
-		res.Code = ResponseSystemErr
-		res.Message = "访问令牌无效"
-		c.Data["json"] = res
+	cTime := time.Now().Unix() / 1e6
+	if accessToken == "" {
+		c.Data["json"] = data{Code: ResponseSystemErr, Message: "访问令牌无效"}
 		c.ServeJSON()
 		return
 	}
-	//检测 accessToken
-	var args action.FindByCond
-	args.CondList = append(args.CondList, action.CondValue{
-		Type: "And",
-		Key:  "accessToken",
-		Val:  access_token,
-	})
-	args.Fileds = []string{"id", "user_id", "company_id", "type"}
-	var replyAccessToken user.UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
+	var replyUserPosition user.UserPosition
+	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", action.FindByCond{
+		CondList: []action.CondValue{
+			action.CondValue{Type: "And", Key: "accessToken", Val: accessToken },
+		},
+		Fileds: []string{"id", "user_id", "company_id", "type"},
+	}, &replyUserPosition)
+
 	if err != nil {
-		res.Code = ResponseLogicErr
-		res.Message = "访问令牌失效"
-		c.Data["json"] = res
+		c.Data["json"] = data{Code: ResponseSystemErr, Message: "访问令牌失效"}
 		c.ServeJSON()
 		return
 	}
 
-	com_id := replyAccessToken.CompanyId
-	user_id := replyAccessToken.UserId
-	user_position_id := replyAccessToken.Id
-	user_position_type := replyAccessToken.Type
-	if com_id == 0 || user_id == 0 || user_position_id == 0 {
-		res.Code = ResponseSystemErr
-		res.Message = "获取应用信息失败"
-		c.Data["json"] = res
+	if replyUserPosition.UserId == 0 {
+		c.Data["json"] = data{Code: ResponseLogicErr, Message: "获取应用信息失败"}
 		c.ServeJSON()
 		return
 	}
 
-	var reply logger.Logger
-	loggerArgs := logger.Logger{
-		CreateTime:       time.Now().Unix(),
-		Content:          c.GetString("content"),
-		Remark:           c.GetString("remark"),
+	var replyLogger logger.Logger
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "Logger", "Add", logger.Logger{
+		CreateTime:       cTime,
+		Content:          content,
+		Remark:           remark,
 		Type:             Type,
-		UserId:           user_id,
-		CompanyId:        com_id,
-		UserPositionId:   user_position_id,
-		UserPositionType: user_position_type,
+		UserId:           replyUserPosition.UserId,
+		CompanyId:        replyUserPosition.CompanyId,
+		UserPositionId:   replyUserPosition.Id,
+		UserPositionType: replyUserPosition.Type,
+	}, &replyLogger)
+	if err != nil {
+		c.Data["json"] = data{Code: ResponseSystemErr, Message: "新增失败"}
+		c.ServeJSON()
+		return
 	}
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "Logger", "Add", loggerArgs, &reply)
-	if err == nil {
-		res.Code = ResponseNormal
-		res.Message = "新增成功"
-		res.Data.Id = reply.Id
-	} else {
-		res.Code = ResponseSystemErr
-		res.Message = "新增失败"
-	}
-	c.Data["json"] = res
+
+	c.Data["json"] = data{Code: ResponseNormal, Message: "新增成功", Data: LoggerAdd{
+		Id: replyLogger.Id,
+	}}
 	c.ServeJSON()
+	return
 }
 
 // @Title 列表接口
 // @Description 列表接口
 // @Success 200 {"code":200,"message":"获取列表成功","data":{"access_ticket":"xxxx","expire_in":0}}
-// @Param   access_token     query   string true       "访问令牌"
+// @Param   accessToken     query   string true       "访问令牌"
 // @Param   current     query   string true       "当前页"
-// @Param   page_size     query   string true       "每页数量"
+// @Param   pageSize     query   string true       "每页数量"
 // @Failure 400 {"code":400,"message":"获取信息失败"}
 // @router /list [get]
 func (c *LoggerController) List() {
-	res := LoggerListResponse{}
-	access_token := c.GetString("access_token")
+	type data LoggerListResponse
+	accessToken := c.GetString("accessToken")
 	currentPage, _ := c.GetInt64("current")
-	pageSize, _ := c.GetInt64("page_size")
-	if access_token == "" {
-		res.Code = ResponseSystemErr
-		res.Message = "访问令牌无效"
-		c.Data["json"] = res
-		c.ServeJSON()
-		return
-	}
-	//检测 accessToken
-	var args action.FindByCond
-	args.CondList = append(args.CondList, action.CondValue{
-		Type: "And",
-		Key:  "accessToken",
-		Val:  access_token,
-	})
-	args.Fileds = []string{"id", "user_id", "company_id", "type"}
-	var replyAccessToken user.UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
-	if err != nil {
-		res.Code = ResponseLogicErr
-		res.Message = "访问令牌失效"
-		c.Data["json"] = res
+	pageSize, _ := c.GetInt64("pageSize")
+	if accessToken == "" {
+		c.Data["json"] = data{Code: ResponseLogicErr, Message: "访问令牌无效"}
 		c.ServeJSON()
 		return
 	}
 
-	//company_id、user_id、user_position_id、user_position_type
-	com_id := replyAccessToken.CompanyId
-	user_id := replyAccessToken.UserId
-	user_position_id := replyAccessToken.Id
-	user_position_type := replyAccessToken.Type
-	if com_id == 0 || user_id == 0 || user_position_id == 0 {
-		res.Code = ResponseSystemErr
-		res.Message = "获取信息失败"
-		c.Data["json"] = res
+	var replyUserPosition user.UserPosition
+	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", action.FindByCond{
+		CondList: []action.CondValue{
+			action.CondValue{Type: "And", Key: "accessToken", Val: accessToken},
+		},
+		Fileds: []string{"id", "user_id", "company_id", "type"},
+	}, &replyUserPosition)
+
+	if err != nil {
+		c.Data["json"] = data{Code: ResponseSystemErr, Message: "访问令牌失效"}
+		c.ServeJSON()
+		return
+	}
+	if replyUserPosition.UserId == 0 {
+		c.Data["json"] = data{Code: ResponseLogicErr, Message: "获取信息失败"}
 		c.ServeJSON()
 		return
 	}
 
-	var loggerArgs action.PageByCond
-	var reply action.PageByCond
-	loggerArgs.CondList = append(loggerArgs.CondList, action.CondValue{
-		Type: "And",
-		Key:  "company_id",
-		Val:  com_id,
-	}, action.CondValue{
-		Type: "And",
-		Key:  "user_id",
-		Val:  user_id,
-	}, action.CondValue{
-		Type: "And",
-		Key:  "user_position_id",
-		Val:  user_position_id,
-	}, action.CondValue{
-		Type: "And",
-		Key:  "user_position_type",
-		Val:  user_position_type,
-	})
-	loggerArgs.OrderBy = []string{"id"}
-	loggerArgs.Cols = []string{"id", "create_time", "content", "remark", "type", }
-	loggerArgs.PageSize = pageSize
-	loggerArgs.Current = currentPage
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "Logger", "PageByCond", loggerArgs, &reply)
+	var replyPageByCond action.PageByCond
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "Logger", "PageByCond", action.PageByCond{
+		CondList: []action.CondValue{
+			action.CondValue{Type: "And", Key: "company_id", Val: replyUserPosition.CompanyId},
+			action.CondValue{Type: "And", Key: "user_id", Val: replyUserPosition.UserId},
+			action.CondValue{Type: "And", Key: "user_position_id", Val: replyUserPosition.Id},
+			action.CondValue{Type: "And", Key: "user_position_type", Val: replyUserPosition.Type},
+		},
+		OrderBy:  []string{"id"},
+		Cols:     []string{"id", "create_time", "content", "remark", "type"},
+		PageSize: pageSize,
+		Current:  currentPage,
+	}, &replyPageByCond)
+
 	if err != nil {
-		res.Code = ResponseSystemErr
-		res.Message = "获取信息失败"
-		c.Data["json"] = res
+		c.Data["json"] = data{Code: ResponseSystemErr, Message: "获取信息失败"}
 		c.ServeJSON()
 		return
 	}
 
 	var resData []LoggerValue
-	replyList := []logger.Logger{}
-	err = json.Unmarshal([]byte(reply.Json), &replyList)
-	for _, value := range replyList {
+	loggerList := []logger.Logger{}
+	err = json.Unmarshal([]byte(replyPageByCond.Json), &loggerList)
+	for _, value := range loggerList {
 		var retype string
 		if value.Type == 1 {
 			retype = "增"
@@ -196,14 +162,14 @@ func (c *LoggerController) List() {
 		})
 	}
 
-	res.Code = ResponseNormal
-	res.Message = "获取成功"
-	res.Data.Total = reply.Total
-	res.Data.Current = currentPage
-	res.Data.CurrentSize = reply.CurrentSize
-	res.Data.OrderBy = reply.OrderBy
-	res.Data.PageSize = pageSize
-	res.Data.List = resData
-	c.Data["json"] = res
+	c.Data["json"] = data{Code: ResponseNormal, Message: "获取成功", Data: LoggerList{
+		Total:       replyPageByCond.Total,
+		Current:     currentPage,
+		CurrentSize: replyPageByCond.CurrentSize,
+		OrderBy:     replyPageByCond.OrderBy,
+		PageSize:    pageSize,
+		List:        resData,
+	}}
 	c.ServeJSON()
+	return
 }

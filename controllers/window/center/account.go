@@ -19,115 +19,83 @@ type AccountController struct {
 // @Title 账户统计接口
 // @Description 账户统计接口
 // @Success 200 {"code":200,"message":"获取账务统计信息成功","data":{"access_ticket":"xxxx","expire_in":0}}
-// @Param   access_token     query   string true       "访问令牌"
+// @Param   accessToken     query   string true       "访问令牌"
 // @Param   date     query   string true       "账单日期：2017-07"
 // @Failure 400 {"code":400,"message":"获取账务统计信息失败"}
 // @router /accountStatistics [get]
 func (c *AccountController) AccountStatistics() {
-
-	res := AccountStatisticsResponse{}
-	access_token := c.GetString("access_token")
-	current := c.GetString("date")
-	if access_token == "" {
-		res.Code = ResponseSystemErr
-		res.Message = "访问令牌无效"
-		c.Data["json"] = res
-		c.ServeJSON()
-		return
-	}
-	//检测 accessToken
-	var args action.FindByCond
-	args.CondList = append(args.CondList, action.CondValue{
-		Type: "And",
-		Key:  "accessToken",
-		Val:  access_token,
-	})
-	args.Fileds = []string{"id", "user_id", "company_id", "type"}
-	var replyAccessToken user.UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
-	if err != nil {
-		res.Code = ResponseLogicErr
-		res.Message = "访问令牌失效"
-		c.Data["json"] = res
-		c.ServeJSON()
-		return
-	}
-	//company_id、user_id、user_position_id、user_position_type
-	com_id := replyAccessToken.CompanyId
-	user_id := replyAccessToken.UserId
-	user_position_id := replyAccessToken.Id
-	user_position_type := replyAccessToken.Type
-	if com_id == 0 || user_id == 0 || user_position_id == 0 {
-		res.Code = ResponseSystemErr
-		res.Message = "获取账务统计信息失败"
-		c.Data["json"] = res
+	type data AccountStatisticsResponse
+	accessToken := c.GetString("accessToken")
+	current := c.GetString("date", time.Now().Format("2006-01"))
+	if accessToken == "" {
+		c.Data["json"] = data{Code: ResponseSystemErr, Message: "访问令牌无效"}
 		c.ServeJSON()
 		return
 	}
 
-	var reply account.Account
-	//检测 accessToken
-	var accountArgs action.FindByCond
-	accountArgs.CondList = append(accountArgs.CondList, action.CondValue{
-		Type: "And",
-		Key:  "company_id",
-		Val:  com_id,
-	}, action.CondValue{
-		Type: "And",
-		Key:  "user_id",
-		Val:  user_id,
-	}, action.CondValue{
-		Type: "And",
-		Key:  "user_position_id",
-		Val:  user_position_id,
-	}, action.CondValue{
-		Type: "And",
-		Key:  "user_position_type",
-		Val:  user_position_type,
-	})
-	accountArgs.Fileds = []string{"id", "balance"}
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "Account", "FindByCond", accountArgs, &reply)
+	var replyUserPosition user.UserPosition
+	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", action.FindByCond{
+		CondList: []action.CondValue{
+			action.CondValue{Type: "And", Key: "access_token", Val: accessToken },
+		},
+		Fileds: []string{"id", "user_id", "company_id", "type"},
+	}, &replyUserPosition)
+
 	if err != nil {
-		res.Code = ResponseSystemErr
-		res.Message = "获取账务统计信息失败"
-		c.Data["json"] = res
+		c.Data["json"] = data{Code: ResponseSystemErr, Message: "验证访问令牌失效"}
 		c.ServeJSON()
 		return
 	}
-	account_id := reply.Id
-	var AccountItemStatisticsArgs AccountItemStatisticsCond
-	AccountItemStatisticsArgs.AccountId = account_id
+
+	if replyUserPosition.Id == 0 {
+		c.Data["json"] = data{Code: ResponseLogicErr, Message: "访问令牌失效"}
+		c.ServeJSON()
+		return
+	}
+
+	var replyAccount account.Account
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "Account", "FindByCond", action.FindByCond{
+		CondList: []action.CondValue{
+			action.CondValue{Type: "And", Key: "company_id", Val: replyUserPosition.CompanyId },
+			action.CondValue{Type: "And", Key: "user_id", Val: replyUserPosition.UserId },
+			action.CondValue{Type: "And", Key: "user_position_id", Val: replyUserPosition.Id },
+			action.CondValue{Type: "And", Key: "user_position_type", Val: replyUserPosition.Type },
+		},
+		Fileds: []string{"id", "balance"},
+	}, &replyAccount)
+
+	if err != nil {
+		c.Data["json"] = data{Code: ResponseSystemErr, Message: "获取账务统计信息失败"}
+		c.ServeJSON()
+		return
+	}
+
 	var reply2 AccountItemStatisticsCond
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "AccountItem", "AccountItemStatistics", AccountItemStatisticsArgs, &reply2)
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "AccountItem", "AccountItemStatistics", AccountItemStatisticsCond{
+		AccountId: replyAccount.Id,
+	}, &reply2)
+
 	if err != nil {
-		res.Code = ResponseSystemErr
-		res.Message = "获取账务统计信息失败"
-		c.Data["json"] = res
+		c.Data["json"] = data{Code: ResponseSystemErr, Message: "获取账务统计信息失败"}
 		c.ServeJSON()
 		return
 	}
-	res.Data.TotalDischarge = reply2.Pay
-	res.Data.TotalEntry = reply2.Income
 
-	if (current == "") {
-		current = time.Now().Format("2006-01")
-	}
-	//获取指定时间的月初、下个月初时间戳
-	stime := utils.GetMonthStartUnix(current + "-01")
-	etime := utils.GetNextMonthStartUnix(current + "-01")
-	var AccountItemArgs AccountItemStatisticsCond
-	AccountItemArgs.AccountId = account_id
-	AccountItemArgs.StartTime = stime
-	AccountItemArgs.EndTime = etime
 	var AccountItemReply AccountItemStatisticsCond
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "AccountItem", "AccountItemStatistics", AccountItemArgs, &AccountItemReply)
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "AccountItem", "AccountItemStatistics", AccountItemStatisticsCond{
+		AccountId: reply2.AccountId,
+		StartTime: utils.GetMonthStartUnix(current + "-01"),
+		EndTime:   utils.GetNextMonthStartUnix(current + "-01"),
+	}, &AccountItemReply)
 
-	res.Code = ResponseNormal
-	res.Message = "获取账务统计信息成功"
-	res.Data.Balance = reply.Balance
-	res.Data.MonthPay = AccountItemReply.Pay
-	res.Data.MonthIncome = AccountItemReply.Income
-	c.Data["json"] = res
+	c.Data["json"] = data{Code: ResponseNormal, Message: "获取账务统计信息成功", Data: AccountStatistics{
+		Balance:        replyAccount.Balance,
+		MonthPay:       AccountItemReply.Pay,
+		MonthIncome:    AccountItemReply.Income,
+		TotalDischarge: reply2.Pay,
+		TotalEntry:     reply2.Income,
+	}}
 	c.ServeJSON()
+	return
 
 }

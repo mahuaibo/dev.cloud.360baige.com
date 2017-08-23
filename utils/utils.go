@@ -5,6 +5,9 @@ import (
 	"regexp"
 	"time"
 	"strconv"
+	"crypto/hmac"
+	"crypto/sha1"
+	"fmt"
 )
 
 func DetermineStringType(str string) (string, bool) {
@@ -69,8 +72,8 @@ func GetMonthStartUnix(current string) int64 {
 }
 func GetNextMonthStartUnix(current string) int64 {
 	tm2, _ := time.ParseInLocation("2006-01-02", current, time.Local)
-	t := time.Unix(tm2.UnixNano() / 1e9, 0)
-	s := time.Date(t.Year(), t.Month() + 1, t.Day(), 0, 0, 0, 0, t.Location())
+	t := time.Unix(tm2.UnixNano()/1e9, 0)
+	s := time.Date(t.Year(), t.Month()+1, t.Day(), 0, 0, 0, 0, t.Location())
 	es := s.Format("2006-01-02")
 	estm2, _ := time.ParseInLocation("2006-01-02", es, time.Local)
 	etime := estm2.UnixNano() / 1e6
@@ -80,8 +83,8 @@ func GetNextMonthStartUnix(current string) int64 {
 //第二天
 func GetNextDayUnix(current string) int64 {
 	tm2, _ := time.ParseInLocation("2006-01-02", current, time.Local)
-	t := time.Unix(tm2.UnixNano() / 1e9, 0)
-	s := time.Date(t.Year(), t.Month(), t.Day() + 1, 0, 0, 0, 0, t.Location())
+	t := time.Unix(tm2.UnixNano()/1e9, 0)
+	s := time.Date(t.Year(), t.Month(), t.Day()+1, 0, 0, 0, 0, t.Location())
 	es := s.Format("2006-01-02")
 	estm2, _ := time.ParseInLocation("2006-01-02", es, time.Local)
 	etime := estm2.UnixNano() / 1e6
@@ -114,4 +117,11 @@ func HasSlice(val int64, slice []int64) bool {
 		}
 	}
 	return false
+}
+
+func CreateAccessValue(value string) string {
+	createTime := strconv.FormatInt(time.Now().UnixNano(), 10)
+	mac := hmac.New(sha1.New, []byte(createTime))
+	mac.Write([]byte(value))
+	return fmt.Sprintf("%x", mac.Sum(nil))
 }

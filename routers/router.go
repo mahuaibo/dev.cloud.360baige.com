@@ -8,181 +8,181 @@
 package routers
 
 import (
-	center_window "dev.cloud.360baige.com/controllers/window/center"
-	//center_mobile "dev.cloud.360baige.com/controllers/mobile/center"
-	schoolfee_mobile "dev.cloud.360baige.com/controllers/mobile/schoolfee"
-	schoolfee_window "dev.cloud.360baige.com/controllers/window/schoolfee"
-	personnel_window "dev.cloud.360baige.com/controllers/window/personnel"
 	"github.com/astaxie/beego"
+	centerWindow "dev.cloud.360baige.com/controllers/window/center"
+	//centerMobile "dev.cloud.360baige.com/controllers/mobile/center"
+	schoolFeeMobile "dev.cloud.360baige.com/controllers/mobile/schoolfee"
+	schoolFeeWindow "dev.cloud.360baige.com/controllers/window/schoolfee"
+	personnelWindow "dev.cloud.360baige.com/controllers/window/personnel"
 )
 
 func init() {
 	centerWindowRouter() // window->admin后台管理
 	centerMobileRouter()
 
-	schoolfeeWindowRouter() // window->缴费管理
-	schoolfeeMobileRouter()
+	schoolFeeWindowRouter() // window->缴费管理
+	schoolFeeMobileRouter()
 
 	personnelWindowRouter() // window->人事管理
 }
 
-func schoolfeeWindowRouter() {
-	schoolfeewinApi := beego.NewNamespace("/win/schoolfee/v1",
+func schoolFeeWindowRouter() {
+	schoolFeeWindowRouter := beego.NewNamespace("/cloud/window/schoolFee/v1",
 		beego.NSNamespace("/project",
 			beego.NSInclude(
-				&schoolfee_window.ProjectController{},
+				&schoolFeeWindow.ProjectController{},
 			),
 		),
 		beego.NSNamespace("/record",
 			beego.NSInclude(
-				&schoolfee_window.RecordController{},
+				&schoolFeeWindow.RecordController{},
 			),
 		),
 	)
-	beego.AddNamespace(schoolfeewinApi)
+	beego.AddNamespace(schoolFeeWindowRouter)
 }
 
-func schoolfeeMobileRouter() {
-	schoolfeeappApi := beego.NewNamespace("/app/schoolfee/v1",
+func schoolFeeMobileRouter() {
+	schoolFeeMobileRouter := beego.NewNamespace("/cloud/mobile/schoolFee/v1",
 		beego.NSNamespace("/project",
 			beego.NSInclude(
-				&schoolfee_mobile.ProjectController{},
+				&schoolFeeMobile.ProjectController{},
 			),
 		),
 		beego.NSNamespace("/record",
 			beego.NSInclude(
-				&schoolfee_mobile.RecordController{},
+				&schoolFeeMobile.RecordController{},
 			),
 		),
 	)
-	beego.AddNamespace(schoolfeeappApi)
+	beego.AddNamespace(schoolFeeMobileRouter)
 }
 
 func centerWindowRouter() {
-	windowApi := beego.NewNamespace("/cloud/window/v1",
+	centerWindowRouter := beego.NewNamespace("/cloud/window/v1",
 		beego.NSNamespace("/user",
 			beego.NSInclude(
-				&center_window.UserController{},
+				&centerWindow.UserController{},
 			),
 		),
 		beego.NSNamespace("/userPosition",
 			beego.NSInclude(
-				&center_window.UserPositionController{},
+				&centerWindow.UserPositionController{},
 			),
 		),
 		beego.NSNamespace("/company",
 			beego.NSInclude(
-				&center_window.CompanyController{},
+				&centerWindow.CompanyController{},
 			),
 		),
 		beego.NSNamespace("/account",
 			beego.NSInclude(
-				&center_window.AccountController{},
+				&centerWindow.AccountController{},
 			),
 		),
-		beego.NSNamespace("/account_item",
+		beego.NSNamespace("/accountItem",
 			beego.NSInclude(
-				&center_window.AccountItemController{},
+				&centerWindow.AccountItemController{},
 			),
 		),
 		beego.NSNamespace("/order",
 			beego.NSInclude(
-				&center_window.OrderController{},
+				&centerWindow.OrderController{},
 			),
 		),
 		beego.NSNamespace("/application",
 			beego.NSInclude(
-				&center_window.ApplicationController{},
+				&centerWindow.ApplicationController{},
 			),
 		),
-		beego.NSNamespace("/application_tpl",
+		beego.NSNamespace("/applicationTpl",
 			beego.NSInclude(
-				&center_window.ApplicationTplController{},
+				&centerWindow.ApplicationTplController{},
 			),
 		),
 		beego.NSNamespace("/logger",
 			beego.NSInclude(
-				&center_window.LoggerController{},
+				&centerWindow.LoggerController{},
 			),
 		),
 	)
-	beego.AddNamespace(windowApi)
+	beego.AddNamespace(centerWindowRouter)
 }
 
 func centerMobileRouter() {
-	mobileApi := beego.NewNamespace("/cloud/mobile/v1",
+	centerMobileRouter := beego.NewNamespace("/cloud/mobile/v1",
 		//beego.NSNamespace("/user",
 		//	beego.NSInclude(
-		//		&center_mobile.UserController{},
+		//		&centerMobile.UserController{},
 		//	),
 		//),
-		//beego.NSNamespace("/userposition",
+		//beego.NSNamespace("/userPosition",
 		//	beego.NSInclude(
-		//		&center_mobile.UserPositionController{},
+		//		&centerMobile.UserPositionController{},
 		//	),
 		//),
 		//beego.NSNamespace("/account",
 		//	beego.NSInclude(
-		//		&center_mobile.AccountController{},
+		//		&centerMobile.AccountController{},
 		//	),
 		//),
-		//beego.NSNamespace("/account_item",
+		//beego.NSNamespace("/accountItem",
 		//	beego.NSInclude(
-		//		&center_mobile.AccountItemController{},
+		//		&centerMobile.AccountItemController{},
 		//	),
 		//),
 		//beego.NSNamespace("/order",
 		//	beego.NSInclude(
-		//		&center_mobile.OrderController{},
+		//		&centerMobile.OrderController{},
 		//	),
 		//),
 		//beego.NSNamespace("/application",
 		//	beego.NSInclude(
-		//		&center_mobile.ApplicationController{},
+		//		&centerMobile.ApplicationController{},
 		//	),
 		//),
-		//beego.NSNamespace("/application_tpl",
+		//beego.NSNamespace("/applicationTpl",
 		//	beego.NSInclude(
-		//		&center_mobile.ApplicationTplController{},
+		//		&centerMobile.ApplicationTplController{},
 		//	),
 		//),
-		//beego.NSNamespace("/message_temp",
+		//beego.NSNamespace("/messageTemp",
 		//	beego.NSInclude(
-		//		&center_mobile.MessageTempController{},
+		//		&centerMobile.MessageTempController{},
 		//	),
 		//),
 		//beego.NSNamespace("/logger",
 		//	beego.NSInclude(
-		//		&center_mobile.LoggerController{},
+		//		&centerMobile.LoggerController{},
 		//	),
 		//),
 
 	)
-	beego.AddNamespace(mobileApi)
+	beego.AddNamespace(centerMobileRouter)
 }
 
 func personnelWindowRouter() {
-	mobileApi := beego.NewNamespace("/win/personnel/v1",
+	personnelWindowRouter := beego.NewNamespace("/cloud/window/personnel/v1",
 		beego.NSNamespace("/person",
 			beego.NSInclude(
-				&personnel_window.PersonController{},
+				&personnelWindow.PersonController{},
 			),
 		),
-		beego.NSNamespace("/person_relation",
+		beego.NSNamespace("/personRelation",
 			beego.NSInclude(
-				&personnel_window.PersonRelationController{},
+				&personnelWindow.PersonRelationController{},
 			),
 		),
-		beego.NSNamespace("/person_structure",
+		beego.NSNamespace("/personStructure",
 			beego.NSInclude(
-				&personnel_window.PersonStructureController{},
+				&personnelWindow.PersonStructureController{},
 			),
 		),
 		beego.NSNamespace("/structure",
 			beego.NSInclude(
-				&personnel_window.StructureController{},
+				&personnelWindow.StructureController{},
 			),
 		),
 	)
-	beego.AddNamespace(mobileApi)
+	beego.AddNamespace(personnelWindowRouter)
 }
