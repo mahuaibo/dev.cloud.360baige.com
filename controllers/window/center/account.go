@@ -21,7 +21,7 @@ type AccountController struct {
 // @Param   accessToken     query   string true       "访问令牌"
 // @Failure 400 {"code":400,"message":"获取账务统计信息失败"}
 // @router /statistics [post]
-func (c *AccountController) AccountStatistics() {
+func (c *AccountController) Statistics() {
 	type data AccountStatisticsResponse
 	accessToken := c.GetString("accessToken")
 	if accessToken == "" {
@@ -98,5 +98,4 @@ func (c *AccountController) AccountStatistics() {
 	}}
 	c.ServeJSON()
 	return
-
 }

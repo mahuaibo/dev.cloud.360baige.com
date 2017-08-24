@@ -21,9 +21,9 @@ type AccountItemController struct {
 
 // @Title 账户列表接口
 // @Description 账户列表接口
-// @Success 200 {"code":200,"message":"获取账务列表成功","data":{"access_ticket":"xxxx","expire_in":0}}
-// @Param   access_token     query   string true       "访问令牌"
-// @Param   date     query   string true       "账单日期：2017-07"
+// @Success 200 {"code":200,"message":"获取账务列表成功"}
+// @Param   accessToken     query   string true       "访问令牌"
+// @Param   cycleType     query   string true       "周期类型 1:近1月 2:近3月 3:近6月 4:近1年"
 // @Param   current     query   string true       "当前页"
 // @Param   pageSize     query   string true       "每页数量"
 // @Failure 400 {"code":400,"message":"获取账务统计信息失败"}
@@ -31,6 +31,7 @@ type AccountItemController struct {
 func (c *AccountItemController) List() {
 	type data AccountItemListResponse
 	accessToken := c.GetString("accessToken")
+	cycleType := c.GetString("cycleType", "1")
 	currentPage, _ := c.GetInt64("current")
 	pageSize, _ := c.GetInt64("pageSize")
 	if accessToken == "" {
@@ -38,6 +39,22 @@ func (c *AccountItemController) List() {
 		c.ServeJSON()
 		return
 	}
+
+	t := time.Now()
+	year, month, _ := t.Date()
+	thisMonthFirstDay := time.Date(year, month, 1, 0, 0, 0, 0, t.Location())
+	if cycleType == "1" {
+
+	} else if cycleType == "2" {
+		thisMonthFirstDay = thisMonthFirstDay.AddDate(0, -2, 0)
+
+	} else if cycleType == "3" {
+		thisMonthFirstDay = thisMonthFirstDay.AddDate(0, -5, 0)
+
+	} else if cycleType == "4" {
+		thisMonthFirstDay = thisMonthFirstDay.AddDate(0, -11, 0)
+	}
+	create_time := thisMonthFirstDay.Nanosecond() / 1e6
 
 	var replyUserPosition user.UserPosition
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", action.FindByCond{
@@ -79,6 +96,8 @@ func (c *AccountItemController) List() {
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "AccountItem", "PageByCond", action.PageByCond{
 		CondList: []action.CondValue{
 			action.CondValue{Type: "And", Key: "account_id", Val: replyAccount.Id },
+			action.CondValue{Type: "And", Key: "create_time__gt", Val: create_time },
+			action.CondValue{Type: "And", Key: "status__gt", Val: -1 },
 		},
 		Cols:     []string{"id", "create_time", "amount" },
 		OrderBy:  []string{"id"},
@@ -89,6 +108,32 @@ func (c *AccountItemController) List() {
 		c.Data["json"] = data{Code: ResponseSystemErr, Message: "获取失败"}
 		c.ServeJSON()
 		return
+	}
+
+
+	var replyAccountItemList []account.AccountItem
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "AccountItem", "ListByCond", action.ListByCond{
+		CondList: []action.CondValue{
+			action.CondValue{Type: "And", Key: "account_id", Val: replyAccount.Id },
+			action.CondValue{Type: "And", Key: "create_time__gt", Val: create_time },
+			action.CondValue{Type: "And", Key: "status__gt", Val: -1 },
+		},
+		Cols: []string{"amount", "balance"},
+	}, &replyAccountItemList)
+
+	if err != nil {
+		c.Data["json"] = data{Code: ResponseSystemErr, Message: "获取账务统计信息失败2"}
+		c.ServeJSON()
+		return
+	}
+
+	var inAccount, outAccount float64 = 0, 0
+	for _, accountItem := range replyAccountItemList {
+		if accountItem.Amount > 0 {
+			inAccount += accountItem.Amount
+		} else {
+			outAccount += accountItem.Amount
+		}
 	}
 
 	var ailv []AccountItemListValue
@@ -116,13 +161,15 @@ func (c *AccountItemController) List() {
 		OrderBy:     replyPageByCond.OrderBy,
 		PageSize:    pageSize,
 		List:        ailv,
+		InAccount:inAccount,
+		OutAccount:outAccount,
 	}}
 	c.ServeJSON()
 }
 
 // @Title 交易详情列表接口
 // @Description 交易详情列表接口
-// @Success 200 {"code":200,"message":"获取账务列表成功","data":{"access_ticket":"xxxx","expire_in":0}}
+// @Success 200 {"code":200,"message":"获取账务列表成功"}
 // @Param   access_token     query   string true       "访问令牌"
 // @Param   start_date     query   string true       "开始日期：2017-01-01"
 // @Param   end_date     query   string true       "结束日期：2017-01-01"
@@ -142,7 +189,7 @@ func (c *AccountItemController) TradingList() {
 		c.ServeJSON()
 		return
 	}
-	//检测 accessToken
+
 	var args action.FindByCond
 	args.CondList = append(args.CondList, action.CondValue{
 		Type: "And",
@@ -258,7 +305,7 @@ func (c *AccountItemController) TradingList() {
 
 // @Title 账务详情接口
 // @Description 账务详情接口
-// @Success 200 {"code":200,"message":"获取账务详情成功","data":{"access_ticket":"xxxx","expire_in":0}}
+// @Success 200 {"code":200,"message":"获取账务详情成功"}
 // @Param   access_token     query   string true       "访问令牌"
 // @Param   id     query   string true       "id"
 // @Failure 400 {"code":400,"message":"获取账务详情失败"}
