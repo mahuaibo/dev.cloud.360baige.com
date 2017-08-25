@@ -8,6 +8,7 @@ import (
 	"dev.model.360baige.com/models/account"
 	"dev.model.360baige.com/action"
 	"dev.cloud.360baige.com/log"
+	"dev.cloud.360baige.com/utils"
 )
 
 // Account API
@@ -17,13 +18,14 @@ type AccountController struct {
 
 // @Title 账户统计接口
 // @Description 账户统计接口
-// @Success 200 {"code":200,"message":"获取账务统计信息成功","data":{"access_ticket":"xxxx","expire_in":0}}
+// @Success 200 {"code":200,"message":"获取账务统计信息成功"}
 // @Param   accessToken     query   string true       "访问令牌"
 // @Failure 400 {"code":400,"message":"获取账务统计信息失败"}
 // @router /statistics [post]
 func (c *AccountController) Statistics() {
 	type data AccountStatisticsResponse
 	accessToken := c.GetString("accessToken")
+	currentTimestamp := utils.CurrentTimestamp()
 	if accessToken == "" {
 		c.Data["json"] = data{Code: ResponseSystemErr, Message: "访问令牌无效"}
 		c.ServeJSON()
@@ -31,9 +33,10 @@ func (c *AccountController) Statistics() {
 	}
 
 	var replyUserPosition user.UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", action.FindByCond{
+	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{
 		CondList: []action.CondValue{
 			action.CondValue{Type: "And", Key: "access_token", Val: accessToken },
+			action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTimestamp },
 		},
 		Fileds: []string{"id", "user_id", "company_id", "type"},
 	}, &replyUserPosition)
@@ -69,7 +72,7 @@ func (c *AccountController) Statistics() {
 	log.Println("replyAccount", replyAccount)
 
 	var replyAccountItemList []account.AccountItem
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "AccountItem", "ListByCond", action.ListByCond{
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "AccountItem", "ListByCond", &action.ListByCond{
 		CondList: []action.CondValue{
 			action.CondValue{Type: "And", Key: "account_id", Val: replyAccount.Id },
 			action.CondValue{Type: "And", Key: "status__gt", Val: -1 },
@@ -82,7 +85,8 @@ func (c *AccountController) Statistics() {
 		c.ServeJSON()
 		return
 	}
-	var inAccount, outAccount float64 = 0, 0
+
+	var inAccount, outAccount float64
 	for _, accountItem := range replyAccountItemList {
 		if accountItem.Amount > 0 {
 			inAccount += accountItem.Amount

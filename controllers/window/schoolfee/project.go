@@ -3,11 +3,13 @@ package schoolfee
 import (
 	"github.com/astaxie/beego"
 	"dev.cloud.360baige.com/rpc/client"
+	"dev.cloud.360baige.com/utils"
 	. "dev.model.360baige.com/http/window/schoolfee"
 	"dev.model.360baige.com/models/user"
 	"dev.model.360baige.com/models/schoolfee"
 	"dev.model.360baige.com/action"
 	"time"
+	"encoding/json"
 )
 
 // Project API
@@ -24,48 +26,49 @@ type ProjectController struct {
 func (c *ProjectController) ListOfProject() {
 	type data ListOfProjectResponse
 	accessToken := c.GetString("accessToken")
-	pageSize, _ := c.GetInt64("pageSize")
+	currentTimestamp := utils.CurrentTimestamp()
+	pageSize, _ := c.GetInt64("pageSize", 50)
 	currentPage, _ := c.GetInt64("current")
 	if accessToken == "" {
-		c.Data["json"] = data{Code: ResponseLogicErr, Message: "访问令牌无效"}
+		c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌无效"}
 		c.ServeJSON()
 		return
 	}
 
 	var replyUserPosition user.UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{
-		CondList: []action.CondValue{
-			action.CondValue{Type: "And", Key: "accessToken", Val: accessToken },
-		},
-		Fileds: []string{"id", "user_id", "company_id", "type"},
-	}, &replyUserPosition)
+	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{CondList: []action.CondValue{action.CondValue{Type: "And", Key: "access_token", Val: accessToken }, action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTimestamp }, }, Fileds: []string{"id", "user_id", "company_id", "type"}, }, &replyUserPosition)
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseLogicErr, Message: "访问令牌失效"}
+		c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌失效"}
+		c.ServeJSON()
+		return
+	}
+
+	var replyPageByCond action.PageByCond
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "Project", "PageByCond", action.PageByCond{
+		CondList: []action.CondValue{
+			action.CondValue{Type: "And", Key: "company_id", Val: replyUserPosition.CompanyId },
+			action.CondValue{Type: "And", Key: "status__gt", Val: -1},
+		},
+		Cols:     []string{"id", "create_time", "company_id", "name", "is_limit", "desc", "link", "status" },
+		OrderBy:  []string{"id"},
+		PageSize: pageSize,
+		Current:  currentPage,
+	}, &replyPageByCond)
+
+	if err != nil {
+		c.Data["json"] = data{Code: ErrorLogic, Message: "获取缴费项目失败"}
 		c.ServeJSON()
 		return
 	}
 
 	var replyProject []schoolfee.Project
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "Project", "ListByCond", &action.PageByCond{
-		CondList: []action.CondValue{
-			action.CondValue{Type: "And", Key: "company_id", Val: replyUserPosition.CompanyId },
-		},
-		OrderBy:  []string{"id"},
-		Cols:     []string{"id", "create_time", "company_id", "name", "isLimit", "desc", "link", "status" },
-		PageSize: pageSize,
-		Current:  currentPage,
-	}, &replyProject)
-	if err != nil {
-		c.Data["json"] = data{Code: ResponseLogicErr, Message: "获取缴费项目失败"}
-		c.ServeJSON()
-		return
-	}
+	err = json.Unmarshal([]byte(replyPageByCond.Json), &replyProject)
 
 	var projectList []Project = make([]Project, len(replyProject), len(replyProject))
 	for index, pro := range replyProject {
 		projectList[index] = Project{
 			Id:         pro.Id,
-			CreateTime: time.Unix(pro.CreateTime/1000, 0).Format("2006-01-02"),
+			CreateTime: utils.Datetime(pro.CreateTime, "2006-01-02 03:04"),
 			CompanyId:  pro.CompanyId,
 			Name:       pro.Name,
 			IsLimit:    pro.IsLimit,
@@ -74,8 +77,12 @@ func (c *ProjectController) ListOfProject() {
 			Status:     pro.Status,
 		}
 	}
-	c.Data["json"] = data{Code: ResponseNormal, Message: "获取缴费项目成功", Data: ListOfProject{
-		List: projectList,
+
+	c.Data["json"] = data{Code: Normal, Message: "获取缴费项目成功", Data: ListOfProject{
+		List:     projectList,
+		Total:    replyPageByCond.Total,
+		PageSize: pageSize,
+		Current:  currentPage,
 	}}
 	c.ServeJSON()
 	return
@@ -94,6 +101,7 @@ func (c *ProjectController) ListOfProject() {
 // @router /add [post]
 func (c *ProjectController) AddProject() {
 	type data AddProjectResponse
+	currentTimestamp := utils.CurrentTimestamp()
 	accessToken := c.GetString("accessToken")
 	name := c.GetString("name")
 	isLimit, _ := c.GetInt8("isLimit", 0)
@@ -101,28 +109,22 @@ func (c *ProjectController) AddProject() {
 	link := c.GetString("link")
 	status, _ := c.GetInt8("status", 0)
 	if accessToken == "" {
-		c.Data["json"] = data{Code: ResponseLogicErr, Message: "访问令牌无效"}
+		c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌无效"}
 		c.ServeJSON()
 		return
 	}
 
 	var replyUserPosition user.UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", action.FindByCond{
-		CondList:
-		[]action.CondValue{
-			action.CondValue{Type: "And", Key: "accessToken", Val: accessToken },
-		},
-		Fileds: []string{"id", "user_id", "company_id", "type"},
-	}, &replyUserPosition)
+	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{CondList: []action.CondValue{action.CondValue{Type: "And", Key: "access_token", Val: accessToken }, action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTimestamp }, }, Fileds: []string{"id", "user_id", "company_id", "type"}, }, &replyUserPosition)
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseLogicErr, Message: "访问令牌无效"}
+		c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌无效"}
 		c.ServeJSON()
 		return
 	}
 
 	operationTime := time.Now().UnixNano() / 1e6
 	var replyProject schoolfee.Project
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "Project", "Add", schoolfee.Project{
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "Project", "Add", &schoolfee.Project{
 		CreateTime: operationTime,
 		UpdateTime: operationTime,
 		CompanyId:  replyUserPosition.CompanyId,
@@ -133,11 +135,11 @@ func (c *ProjectController) AddProject() {
 		Status:     status,
 	}, &replyProject)
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseLogicErr, Message: "添加缴费项目失败"}
+		c.Data["json"] = data{Code: ErrorLogic, Message: "添加缴费项目失败"}
 		c.ServeJSON()
 		return
 	}
-	c.Data["json"] = data{Code: ResponseNormal, Message: "添加缴费项目成功", Data: AddProject{
+	c.Data["json"] = data{Code: Normal, Message: "添加缴费项目成功", Data: AddProject{
 		Id: replyProject.Id,
 	}}
 	c.ServeJSON()
@@ -158,6 +160,7 @@ func (c *ProjectController) AddProject() {
 // @router /modify [post]
 func (c *ProjectController) ModifyProject() {
 	type data ModifyProjectResponse
+	currentTimestamp := utils.CurrentTimestamp()
 	accessToken := c.GetString("accessToken")
 	id, _ := c.GetInt64("id", 0)
 	name := c.GetString("name")
@@ -167,44 +170,39 @@ func (c *ProjectController) ModifyProject() {
 	status, _ := c.GetInt8("status", 0)
 
 	if accessToken == "" {
-		c.Data["json"] = data{Code: ResponseLogicErr, Message: "访问令牌无效1"}
+		c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌无效1"}
 		c.ServeJSON()
 		return
 	}
 
 	var replyUserPosition user.UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", action.FindByCond{
-		CondList: []action.CondValue{
-			action.CondValue{Type: "And", Key: "accessToken", Val: accessToken },
-		},
-		Fileds: []string{"id", "user_id", "company_id", "type"},
-	}, &replyUserPosition)
+	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{CondList: []action.CondValue{action.CondValue{Type: "And", Key: "access_token", Val: accessToken }, action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTimestamp }, }, Fileds: []string{"id", "user_id", "company_id", "type"}, }, &replyUserPosition)
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseLogicErr, Message: "访问令牌无效2"}
+		c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌无效2"}
 		c.ServeJSON()
 		return
 	}
 
 	var replyProject schoolfee.Project
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "Project", "FindById", schoolfee.Project{
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "Project", "FindById", &schoolfee.Project{
 		Id:        id,
 		CompanyId: replyUserPosition.CompanyId,
 	}, &replyProject)
 
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseLogicErr, Message: "访问令牌无效3"}
+		c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌无效3"}
 		c.ServeJSON()
 		return
 	}
 	if replyProject.Id == 0 {
-		c.Data["json"] = data{Code: ResponseLogicErr, Message: "访问令牌无效4"}
+		c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌无效4"}
 		c.ServeJSON()
 		return
 	}
 
 	operationTime := time.Now().UnixNano() / 1e6
 	var replyNum action.Num
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "Project", "UpdateById", action.UpdateByIdCond{
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "Project", "UpdateById", &action.UpdateByIdCond{
 		Id: []int64{replyProject.Id},
 		UpdateList: []action.UpdateValue{
 			action.UpdateValue{Key: "UpdateTime", Val: operationTime},
@@ -216,11 +214,11 @@ func (c *ProjectController) ModifyProject() {
 		},
 	}, &replyNum)
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseLogicErr, Message: "修改缴费项目失败"}
+		c.Data["json"] = data{Code: ErrorLogic, Message: "修改缴费项目失败"}
 		c.ServeJSON()
 		return
 	}
-	c.Data["json"] = data{Code: ResponseNormal, Message: "修改缴费项目成功", Data: ModifyProject{
+	c.Data["json"] = data{Code: Normal, Message: "修改缴费项目成功", Data: ModifyProject{
 		Count: replyNum.Value,
 	}}
 	c.ServeJSON()
