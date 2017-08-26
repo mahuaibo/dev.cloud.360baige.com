@@ -17,20 +17,23 @@ type ProjectController struct {
 	beego.Controller
 }
 
-// @Title 校园收费列表接口
-// @Description Project List 校园收费列表接口
-// @Success 200 {"code":200,"message":"获取缴费项目成功"}
+// @Title 校园收费列表
+// @Description Project List 校园收费列表
+// @Success 200 {"code":200,"message":"获取校园收费列表成功"}
+// @Failure 400 {"code":400,"message":"获取校园收费列表失败"}
 // @Param   accessToken     query   string true       "访问令牌"
-// @Failure 400 {"code":400,"message":"获取缴费项目失败"}
+// @Param   pageSize     query   string true       "页码数量 默认50"
+// @Param   current     query   string true       "页码 默认1"
+// @Param   accessToken     query   string true       "访问令牌"
 // @router /list [post]
 func (c *ProjectController) ListOfProject() {
 	type data ListOfProjectResponse
 	accessToken := c.GetString("accessToken")
 	currentTimestamp := utils.CurrentTimestamp()
 	pageSize, _ := c.GetInt64("pageSize", 50)
-	currentPage, _ := c.GetInt64("current")
+	currentPage, _ := c.GetInt64("current", 1)
 	if accessToken == "" {
-		c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌无效"}
+		c.Data["json"] = data{Code: ErrorLogic, Message: Message(40000)}
 		c.ServeJSON()
 		return
 	}
@@ -38,7 +41,12 @@ func (c *ProjectController) ListOfProject() {
 	var replyUserPosition user.UserPosition
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{CondList: []action.CondValue{action.CondValue{Type: "And", Key: "access_token", Val: accessToken }, action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTimestamp }, }, Fileds: []string{"id", "user_id", "company_id", "type"}, }, &replyUserPosition)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌失效"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
+		c.ServeJSON()
+		return
+	}
+	if replyUserPosition.UserId == 0 {
+		c.Data["json"] = data{Code: ErrorPower, Message: Message(30000)}
 		c.ServeJSON()
 		return
 	}
@@ -54,18 +62,22 @@ func (c *ProjectController) ListOfProject() {
 		PageSize: pageSize,
 		Current:  currentPage,
 	}, &replyPageByCond)
-
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorLogic, Message: "获取缴费项目失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50001, "Project")}
 		c.ServeJSON()
 		return
 	}
 
-	var replyProject []schoolfee.Project
-	err = json.Unmarshal([]byte(replyPageByCond.Json), &replyProject)
+	var jsonProjectList []schoolfee.Project
+	err = json.Unmarshal([]byte(replyPageByCond.Json), &jsonProjectList)
+	if err != nil {
+		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50002, "Project")}
+		c.ServeJSON()
+		return
+	}
 
-	var projectList []Project = make([]Project, len(replyProject), len(replyProject))
-	for index, pro := range replyProject {
+	var projectList []Project = make([]Project, len(jsonProjectList), len(jsonProjectList))
+	for index, pro := range jsonProjectList {
 		projectList[index] = Project{
 			Id:         pro.Id,
 			CreateTime: utils.Datetime(pro.CreateTime, "2006-01-02 03:04"),
@@ -78,7 +90,7 @@ func (c *ProjectController) ListOfProject() {
 		}
 	}
 
-	c.Data["json"] = data{Code: Normal, Message: "获取缴费项目成功", Data: ListOfProject{
+	c.Data["json"] = data{Code: Normal, Message: Message(20000), Data: ListOfProject{
 		List:     projectList,
 		Total:    replyPageByCond.Total,
 		PageSize: pageSize,
@@ -109,7 +121,7 @@ func (c *ProjectController) AddProject() {
 	link := c.GetString("link")
 	status, _ := c.GetInt8("status", 0)
 	if accessToken == "" {
-		c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌无效"}
+		c.Data["json"] = data{Code: ErrorLogic, Message: Message(40000, "")}
 		c.ServeJSON()
 		return
 	}

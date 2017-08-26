@@ -4,6 +4,7 @@ import (
 	"math/rand"
 	"time"
 	"strconv"
+	//"reflect"
 )
 
 func RandomName(prefix string, suffix string) string {
@@ -22,4 +23,12 @@ func RandomString(length int) string {
 
 func Amount(price float64) string {
 	return strconv.FormatFloat(price, 'f', 2, 64)
+}
+
+func Unable(params map[string]interface{}) string {
+	str := ""
+	for key, value := range params {
+		//reflect.
+	}
+	return str
 }
