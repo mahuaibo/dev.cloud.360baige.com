@@ -62,12 +62,12 @@ func checkType(param string, paramType string) bool {
 		if reflect.ValueOf(param).Type().String() == paramType {
 			return true
 		}
-	case "int64":
+	case "int":
 		value, err := strconv.ParseInt(param, 10, 64)
 		if err == nil && param != "" && reflect.ValueOf(value).Type().String() == paramType {
 			return true
 		}
-	case "float64":
+	case "float":
 		value, err := strconv.ParseFloat(param, 64)
 		if err == nil && param != "" && reflect.ValueOf(value).Type().String() == paramType {
 			return true

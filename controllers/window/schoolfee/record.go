@@ -41,13 +41,13 @@ func (c *RecordController) ListOfRecord() {
 	projectId := c.GetString("projectId")
 	pageSize, _ := c.GetInt64("pageSize", 50)
 	currentPage, _ := c.GetInt64("current", 1)
-	err := utils.Unable(map[string]string{"accessToken": "string:true", "projectId": "int64:true"}, c.Ctx.Input)
+	err := utils.Unable(map[string]string{"accessToken": "string:true", "projectId": "int:true"}, c.Ctx.Input)
 	if err != nil {
 		c.Data["json"] = data{Code: ErrorLogic, Message: Message(40000, err.Error())}
 		c.ServeJSON()
 		return
 	}
-	
+
 	var replyUserPosition user.UserPosition
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{CondList: []action.CondValue{action.CondValue{Type: "And", Key: "access_token", Val: accessToken }, action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTimestamp }, }, Fileds: []string{"id", "user_id", "company_id", "type"}, }, &replyUserPosition)
 	if err != nil {

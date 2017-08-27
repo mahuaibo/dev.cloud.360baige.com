@@ -122,10 +122,7 @@ func (c *ProjectController) AddProject() {
 	link := c.GetString("link")
 	status, _ := c.GetInt8("status", 0)
 
-	err := utils.Unable(map[string]string{
-		"accessToken": "string:true",
-		"name":        "string:true",
-	}, c.Ctx.Input)
+	err := utils.Unable(map[string]string{"accessToken": "string:true", "name": "string:true" }, c.Ctx.Input)
 	if err != nil {
 		c.Data["json"] = data{Code: ErrorLogic, Message: Message(40000, err.Error())}
 		c.ServeJSON()
@@ -186,7 +183,7 @@ func (c *ProjectController) ModifyProject() {
 	link := c.GetString("list")
 	status, _ := c.GetInt8("status", 0)
 
-	err := utils.Unable(map[string]string{"accessToken": "string:true"}, c.Ctx.Input)
+	err := utils.Unable(map[string]string{"accessToken": "string:true", "id": "int:true"}, c.Ctx.Input)
 	if err != nil {
 		c.Data["json"] = data{Code: ErrorLogic, Message: Message(40000, err.Error())}
 		c.ServeJSON()
