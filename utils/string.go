@@ -43,10 +43,10 @@ func Unable(params map[string]string, input *context.BeegoInput) error {
 			}
 		}
 	}
-	if typeErr == "" {
+	if typeErr != "" {
 		typeErr = "类型错误:" + typeErr
 	}
-	if valueErr == "" {
+	if valueErr != "" {
 		valueErr = "必传参数:" + valueErr
 	}
 	if typeErr == "" && valueErr == "" {
