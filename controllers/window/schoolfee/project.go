@@ -8,7 +8,6 @@ import (
 	"dev.model.360baige.com/models/user"
 	"dev.model.360baige.com/models/schoolfee"
 	"dev.model.360baige.com/action"
-	"time"
 	"encoding/json"
 )
 
@@ -32,14 +31,16 @@ func (c *ProjectController) ListOfProject() {
 	currentTimestamp := utils.CurrentTimestamp()
 	pageSize, _ := c.GetInt64("pageSize", 50)
 	currentPage, _ := c.GetInt64("current", 1)
-	if accessToken == "" {
-		c.Data["json"] = data{Code: ErrorLogic, Message: Message(40000)}
+
+	err := utils.Unable(map[string]string{"accessToken": "string:true"}, c.Ctx.Input)
+	if err != nil {
+		c.Data["json"] = data{Code: ErrorLogic, Message: Message(40000, err.Error())}
 		c.ServeJSON()
 		return
 	}
 
 	var replyUserPosition user.UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{CondList: []action.CondValue{action.CondValue{Type: "And", Key: "access_token", Val: accessToken }, action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTimestamp }, }, Fileds: []string{"id", "user_id", "company_id", "type"}, }, &replyUserPosition)
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{CondList: []action.CondValue{action.CondValue{Type: "And", Key: "access_token", Val: accessToken }, action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTimestamp }, }, Fileds: []string{"id", "user_id", "company_id", "type"}, }, &replyUserPosition)
 	if err != nil {
 		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
 		c.ServeJSON()
@@ -52,7 +53,7 @@ func (c *ProjectController) ListOfProject() {
 	}
 
 	var replyPageByCond action.PageByCond
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "Project", "PageByCond", action.PageByCond{
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "Project", "PageByCond", &action.PageByCond{
 		CondList: []action.CondValue{
 			action.CondValue{Type: "And", Key: "company_id", Val: replyUserPosition.CompanyId },
 			action.CondValue{Type: "And", Key: "status__gt", Val: -1},
@@ -120,25 +121,29 @@ func (c *ProjectController) AddProject() {
 	desc := c.GetString("desc")
 	link := c.GetString("link")
 	status, _ := c.GetInt8("status", 0)
-	if accessToken == "" {
-		c.Data["json"] = data{Code: ErrorLogic, Message: Message(40000, "")}
+
+	err := utils.Unable(map[string]string{
+		"accessToken": "string:true",
+		"name":        "string:true",
+	}, c.Ctx.Input)
+	if err != nil {
+		c.Data["json"] = data{Code: ErrorLogic, Message: Message(40000, err.Error())}
 		c.ServeJSON()
 		return
 	}
 
 	var replyUserPosition user.UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{CondList: []action.CondValue{action.CondValue{Type: "And", Key: "access_token", Val: accessToken }, action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTimestamp }, }, Fileds: []string{"id", "user_id", "company_id", "type"}, }, &replyUserPosition)
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{CondList: []action.CondValue{action.CondValue{Type: "And", Key: "access_token", Val: accessToken }, action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTimestamp }, }, Fileds: []string{"id", "user_id", "company_id", "type"}, }, &replyUserPosition)
 	if err != nil {
 		c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌无效"}
 		c.ServeJSON()
 		return
 	}
 
-	operationTime := time.Now().UnixNano() / 1e6
 	var replyProject schoolfee.Project
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Project", "Add", &schoolfee.Project{
-		CreateTime: operationTime,
-		UpdateTime: operationTime,
+		CreateTime: currentTimestamp,
+		UpdateTime: currentTimestamp,
 		CompanyId:  replyUserPosition.CompanyId,
 		Name:       name,
 		IsLimit:    isLimit,
@@ -181,8 +186,9 @@ func (c *ProjectController) ModifyProject() {
 	link := c.GetString("list")
 	status, _ := c.GetInt8("status", 0)
 
-	if accessToken == "" {
-		c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌无效1"}
+	err := utils.Unable(map[string]string{"accessToken": "string:true"}, c.Ctx.Input)
+	if err != nil {
+		c.Data["json"] = data{Code: ErrorLogic, Message: Message(40000, err.Error())}
 		c.ServeJSON()
 		return
 	}
@@ -212,12 +218,11 @@ func (c *ProjectController) ModifyProject() {
 		return
 	}
 
-	operationTime := time.Now().UnixNano() / 1e6
 	var replyNum action.Num
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Project", "UpdateById", &action.UpdateByIdCond{
 		Id: []int64{replyProject.Id},
 		UpdateList: []action.UpdateValue{
-			action.UpdateValue{Key: "UpdateTime", Val: operationTime},
+			action.UpdateValue{Key: "UpdateTime", Val: currentTimestamp},
 			action.UpdateValue{Key: "Name", Val: name},
 			action.UpdateValue{Key: "IsLimit", Val: isLimit},
 			action.UpdateValue{Key: "Desc", Val: desc},

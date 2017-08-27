@@ -4,7 +4,10 @@ import (
 	"math/rand"
 	"time"
 	"strconv"
-	//"reflect"
+	"reflect"
+	"github.com/astaxie/beego/context"
+	"strings"
+	"errors"
 )
 
 func RandomName(prefix string, suffix string) string {
@@ -25,10 +28,47 @@ func Amount(price float64) string {
 	return strconv.FormatFloat(price, 'f', 2, 64)
 }
 
-func Unable(params map[string]interface{}) string {
-	str := ""
-	for key, value := range params {
-		//reflect.
+func Unable(params map[string]string, input *context.BeegoInput) error {
+	typeErr := ""
+	valueErr := ""
+	for key, param := range params {
+		value := input.Query(key)
+		s := strings.Split(param, ":")
+		if len(s) == 2 {
+			if s[1] == "true" && value == "" {
+				valueErr += " " + key + " "
+			}
+			if !checkType(value, s[0]) {
+				typeErr += " " + key + " "
+			}
+		}
 	}
-	return str
+	if typeErr == "" {
+		typeErr = "类型错误:" + typeErr
+	}
+	if valueErr == "" {
+		valueErr = "必传参数:" + valueErr
+	}
+	if typeErr == "" && valueErr == "" {
+		return nil
+	} else {
+		return errors.New(typeErr + valueErr)
+	}
+}
+
+func existStringArray(key string, array []string) bool {
+	for _, obj := range array {
+		if key == obj {
+			return true
+		}
+	}
+	return false
+}
+
+func checkType(param interface{}, t string) bool {
+	if reflect.ValueOf(param).Type().String() == t {
+		return true
+	} else {
+		return false
+	}
 }
