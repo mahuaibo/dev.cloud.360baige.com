@@ -56,19 +56,22 @@ func Unable(params map[string]string, input *context.BeegoInput) error {
 	}
 }
 
-func existStringArray(key string, array []string) bool {
-	for _, obj := range array {
-		if key == obj {
+func checkType(param string, paramType string) bool {
+	switch paramType {
+	case "string":
+		if reflect.ValueOf(param).Type().String() == paramType {
+			return true
+		}
+	case "int64":
+		value, err := strconv.ParseInt(param, 10, 64)
+		if err == nil && param != "" && reflect.ValueOf(value).Type().String() == paramType {
+			return true
+		}
+	case "float64":
+		value, err := strconv.ParseFloat(param, 64)
+		if err == nil && param != "" && reflect.ValueOf(value).Type().String() == paramType {
 			return true
 		}
 	}
 	return false
-}
-
-func checkType(param interface{}, t string) bool {
-	if reflect.ValueOf(param).Type().String() == t {
-		return true
-	} else {
-		return false
-	}
 }
