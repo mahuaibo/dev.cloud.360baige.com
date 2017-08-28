@@ -188,7 +188,7 @@ func (c *UserPositionController) GetAccessToken() {
 
 	if currentTime > replyUserPosition.ExpireIn {
 		createAccessToken := utils.CreateAccessValue(strconv.FormatInt(replyUserPosition.Id, 10) + "#" + strconv.FormatInt(replyUserPosition.UserId, 10) + "#" + strconv.FormatInt(currentTime, 10))
-		expireIn := currentTime + 7200*1000
+		expireIn := currentTime + 3600*1000*24*30
 		err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "UpdateById", &action.UpdateByIdCond{
 			Id: []int64{userPositionId},
 			UpdateList: [] action.UpdateValue{
