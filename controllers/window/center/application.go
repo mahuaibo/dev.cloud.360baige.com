@@ -292,27 +292,26 @@ func GetPayCycleName(ptype int8) string {
 // @Param   id     query   string true       "id"
 // @Param   status     query   string true       " 0 启用 1 停用 2 退订"
 // @Failure 400 {"code":400,"message":"获取应用修改状态失败"}
-// @router /modifystatus [get]
+// @router /modifyStatus [post]
 func (c *ApplicationController) ModifyStatus() {
 	type data ModifyApplicationStatusResponse
-	access_token := c.GetString("access_token")
+	accessToken := c.GetString("accessToken")
 	ap_id, _ := c.GetInt64("id")
 	status, _ := c.GetInt8("status")
-	if access_token == "" {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "访问令牌无效"}
+	if accessToken == "" {
+		c.Data["json"] = data{Code: ResponseLogicErr, Message: "访问令牌不能为空"}
 		c.ServeJSON()
 		return
 	}
-	//检测 accessToken
-	var args action.FindByCond
-	args.CondList = append(args.CondList, action.CondValue{
-		Type: "And",
-		Key:  "accessToken",
-		Val:  access_token,
-	})
-	args.Fileds = []string{"id", "user_id", "company_id", "type"}
-	var replyAccessToken user.UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
+
+	var replyUserPosition user.UserPosition
+	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", action.FindByCond{
+		CondList: []action.CondValue{
+			action.CondValue{Type: "And", Key: "access_token", Val: accessToken },
+		},
+		Fileds: []string{"user_id"},
+	}, &replyUserPosition)
+
 	if err != nil {
 		c.Data["json"] = data{Code: ResponseSystemErr, Message: "访问令牌失效"}
 		c.ServeJSON()

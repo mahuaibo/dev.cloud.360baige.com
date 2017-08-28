@@ -11,6 +11,7 @@ import (
 	"sms.sdk.360baige.com/send"
 	"strconv"
 	"time"
+	"fmt"
 )
 
 // USER API
@@ -36,6 +37,7 @@ func (c *UserController) Login() {
 	}
 
 	usernameType, _ := utils.DetermineStringType(username) // 2 判断username 类型 属于 百鸽账号、邮箱、手机号码中的哪一种？
+	fmt.Print("usernameType", usernameType)
 	var replyUser user.User
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "User", "FindByCond", action.FindByCond{
 		CondList: []action.CondValue{
@@ -44,7 +46,8 @@ func (c *UserController) Login() {
 			action.CondValue{Type: "And", Key: "password", Val: password},
 		},
 	}, &replyUser)
-	if err != nil {
+	fmt.Print("replyUser", replyUser)
+	if err != nil || replyUser.Id == 0 {
 		c.Data["json"] = data{Code: ResponseSystemErr, Message: "登录失败"}
 		c.ServeJSON()
 		return
@@ -54,7 +57,7 @@ func (c *UserController) Login() {
 	if currentTime > replyUser.ExpireIn {
 		createAccessTicket := utils.CreateAccessValue(replyUser.Username + "#" + strconv.FormatInt(currentTime, 10))
 		var updateReply action.Num
-		expireIn := currentTime + 60*1000
+		expireIn := currentTime + 60 * 1000
 		err = client.Call(beego.AppConfig.String("EtcdURL"), "User", "UpdateById", action.UpdateByIdCond{
 			Id: []int64{replyUser.Id},
 			UpdateList: []action.UpdateValue{
@@ -86,7 +89,7 @@ func (c *UserController) Login() {
 // @Success 200 {"code":200,"message":"获取用户信息成功"}
 // @Param   accessToken     query   string true       "访问令牌"
 // @Failure 400 {"code":400,"message":"获取用户信息失败"}
-// @router /detail [get]
+// @router /detail [post]
 func (c *UserController) Detail() {
 	type data UserDetailResponse
 	accessToken := c.GetString("accessToken")
@@ -157,10 +160,10 @@ func (c *UserController) Logout() {
 // @router /modifyPassword [post]
 func (c *UserController) ModifyPassword() {
 	type data ModifyPasswordResponse
-	access_token := c.GetString("access_token")
+	accessToken := c.GetString("accessToken")
 	password := c.GetString("password")
 	newPassword := c.GetString("newPassword")
-	if access_token == "" {
+	if accessToken == "" {
 		c.Data["json"] = data{Code: ResponseLogicErr, Message: "访问令牌不能为空"}
 		c.ServeJSON()
 		return
@@ -169,7 +172,7 @@ func (c *UserController) ModifyPassword() {
 	var replyUserPosition user.UserPosition
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", action.FindByCond{
 		CondList: []action.CondValue{
-			action.CondValue{Type: "And", Key: "access_token", Val: access_token},
+			action.CondValue{Type: "And", Key: "access_token", Val: accessToken},
 		},
 	}, &replyUserPosition)
 

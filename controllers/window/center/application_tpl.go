@@ -10,6 +10,7 @@ import (
 	"time"
 	"dev.model.360baige.com/action"
 	"encoding/json"
+	"fmt"
 )
 
 // APPLICATIONTPL API
@@ -71,7 +72,7 @@ func (c *ApplicationTplController) List() {
 			action.CondValue{Type: "And", Key: "status__gt", Val: -1 },
 			condValue,
 		},
-		Cols:     []string{"id", "name", "image", "status", "desc"},
+		Cols:     []string{"id", "name", "image", "status", "desc", "price", "pay_cycle"},
 		OrderBy:  []string{"id"},
 		PageSize: -1,
 		Current:  currentPage,
@@ -105,6 +106,8 @@ func (c *ApplicationTplController) List() {
 	var resData []ApplicationTplValue
 	replyList := []application.ApplicationTpl{}
 	err = json.Unmarshal([]byte(reply.Json), &replyList)
+
+	fmt.Println("replyList", replyList)
 	for _, value := range replyList {
 		var restatus int8
 		if applicationList[value.Id] > 0 {
@@ -118,6 +121,8 @@ func (c *ApplicationTplController) List() {
 			Image:              value.Image,
 			SubscriptionStatus: restatus,
 			Desc:               value.Desc,
+			Price:              value.Price,
+			PayCycle:           value.PayCycle,
 		})
 	}
 	c.Data["json"] = data{Code: ResponseNormal, Message: "获取应用成功", Data: ApplicationTplList{
@@ -208,7 +213,7 @@ func (c *ApplicationTplController) Detail() {
 	}
 
 	c.Data["json"] = data{Code: ResponseNormal, Message: "获取应用成功", Data: ApplicationDetail{
-		CreateTime:  time.Unix(replyApplicationTpl.CreateTime/1000, 0).Format("2006-01-02"),
+		CreateTime:  time.Unix(replyApplicationTpl.CreateTime / 1000, 0).Format("2006-01-02"),
 		Name:        replyApplicationTpl.Name,
 		Image:       replyApplicationTpl.Image,
 		Desc:        replyApplicationTpl.Desc,

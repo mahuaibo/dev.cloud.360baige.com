@@ -89,7 +89,7 @@ func (c *LoggerController) Add() {
 // @Param   current     query   string true       "当前页"
 // @Param   pageSize     query   string true       "每页数量"
 // @Failure 400 {"code":400,"message":"获取信息失败"}
-// @router /list [get]
+// @router /list [post]
 func (c *LoggerController) List() {
 	type data LoggerListResponse
 	accessToken := c.GetString("accessToken")
