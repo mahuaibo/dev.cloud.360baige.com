@@ -11,6 +11,7 @@ import (
 	"sms.sdk.360baige.com/send"
 	"strconv"
 	"time"
+	"fmt"
 )
 
 // USER API
@@ -30,12 +31,13 @@ func (c *UserController) Login() {
 	username := c.GetString("username")
 	password := c.GetString("password")
 	if username == "" || password == "" {
-		c.Data["json"] = data{Code: ResponseLogicErr, Message: "用户名或密码不能为空"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "用户名或密码不能为空"}
 		c.ServeJSON()
 		return
 	}
 
 	usernameType, _ := utils.DetermineStringType(username) // 2 判断username 类型 属于 百鸽账号、邮箱、手机号码中的哪一种？
+	fmt.Print("usernameType", usernameType)
 	var replyUser user.User
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "User", "FindByCond", action.FindByCond{
 		CondList: []action.CondValue{
@@ -44,8 +46,9 @@ func (c *UserController) Login() {
 			action.CondValue{Type: "And", Key: "password", Val: password},
 		},
 	}, &replyUser)
-	if err != nil {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "登录失败"}
+	fmt.Print("replyUser", replyUser)
+	if err != nil || replyUser.Id == 0 {
+		c.Data["json"] = data{Code: ErrorSystem, Message: "登录失败"}
 		c.ServeJSON()
 		return
 	}
@@ -63,7 +66,7 @@ func (c *UserController) Login() {
 			},
 		}, &updateReply)
 		if err != nil {
-			c.Data["json"] = data{Code: ResponseSystemErr, Message: "登录失败"}
+			c.Data["json"] = data{Code: ErrorSystem, Message: "登录失败"}
 			c.ServeJSON()
 			return
 		} else {
@@ -72,7 +75,7 @@ func (c *UserController) Login() {
 		}
 	}
 
-	c.Data["json"] = data{Code: ResponseNormal, Message: "登录成功", Data: UserLogin{
+	c.Data["json"] = data{Code: Normal, Message: "登录成功", Data: UserLogin{
 		Head:         replyUser.Head,
 		AccessTicket: replyUser.AccessTicket,
 		ExpireIn:     replyUser.ExpireIn,
@@ -86,12 +89,12 @@ func (c *UserController) Login() {
 // @Success 200 {"code":200,"message":"获取用户信息成功"}
 // @Param   accessToken     query   string true       "访问令牌"
 // @Failure 400 {"code":400,"message":"获取用户信息失败"}
-// @router /detail [get]
+// @router /detail [post]
 func (c *UserController) Detail() {
 	type data UserDetailResponse
 	accessToken := c.GetString("accessToken")
 	if accessToken == "" {
-		c.Data["json"] = data{Code: ResponseLogicErr, Message: "访问令牌不能为空"}
+		c.Data["json"] = data{Code: Normal, Message: "访问令牌不能为空"}
 		c.ServeJSON()
 		return
 	}
@@ -105,13 +108,13 @@ func (c *UserController) Detail() {
 	}, &replyUserPosition)
 
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "访问令牌失效"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌失效"}
 		c.ServeJSON()
 		return
 	}
 
 	if replyUserPosition.UserId == 0 {
-		c.Data["json"] = data{Code: ResponseLogicErr, Message: "获取用户信息失败"}
+		c.Data["json"] = data{Code: Normal, Message: "获取用户信息失败"}
 		c.ServeJSON()
 		return
 	}
@@ -122,12 +125,12 @@ func (c *UserController) Detail() {
 	}, &reply)
 
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "获取用户信息失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "获取用户信息失败"}
 		c.ServeJSON()
 		return
 	}
 
-	c.Data["json"] = data{Code: ResponseNormal, Message: "获取用户信息成功", Data: UserDetail{
+	c.Data["json"] = data{Code: Normal, Message: "获取用户信息成功", Data: UserDetail{
 		Id:       reply.Id,
 		Username: reply.Username,
 		Email:    reply.Email,
@@ -145,7 +148,7 @@ func (c *UserController) Detail() {
 // @router /logout [post]
 func (c *UserController) Logout() {
 	type data UserDetailResponse
-	c.Data["json"] = data{Code: ResponseNormal, Message: "退出成功"}
+	c.Data["json"] = data{Code: Normal, Message: "退出成功"}
 	c.ServeJSON()
 }
 
@@ -157,11 +160,11 @@ func (c *UserController) Logout() {
 // @router /modifyPassword [post]
 func (c *UserController) ModifyPassword() {
 	type data ModifyPasswordResponse
-	access_token := c.GetString("access_token")
+	accessToken := c.GetString("accessToken")
 	password := c.GetString("password")
 	newPassword := c.GetString("newPassword")
-	if access_token == "" {
-		c.Data["json"] = data{Code: ResponseLogicErr, Message: "访问令牌不能为空"}
+	if accessToken == "" {
+		c.Data["json"] = data{Code: Normal, Message: "访问令牌不能为空"}
 		c.ServeJSON()
 		return
 	}
@@ -169,12 +172,12 @@ func (c *UserController) ModifyPassword() {
 	var replyUserPosition user.UserPosition
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", action.FindByCond{
 		CondList: []action.CondValue{
-			action.CondValue{Type: "And", Key: "access_token", Val: access_token},
+			action.CondValue{Type: "And", Key: "access_token", Val: accessToken},
 		},
 	}, &replyUserPosition)
 
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "访问令牌失效"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌失效"}
 		c.ServeJSON()
 		return
 	}
@@ -189,7 +192,7 @@ func (c *UserController) ModifyPassword() {
 	}, &replyUser)
 
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "用户密码错误"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "用户密码错误"}
 		c.ServeJSON()
 		return
 	}
@@ -204,12 +207,12 @@ func (c *UserController) ModifyPassword() {
 	}, &replyNum)
 
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "密码修改失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "密码修改失败"}
 		c.ServeJSON()
 		return
 	}
 
-	c.Data["json"] = data{Code: ResponseNormal, Message: "密码修改成功"}
+	c.Data["json"] = data{Code: Normal, Message: "密码修改成功"}
 	c.ServeJSON()
 	return
 }
@@ -227,7 +230,7 @@ func (c *UserController) Modify() {
 	phone := c.GetString("phone")
 	email := c.GetString("email")
 	if accessToken == "" {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "访问令牌无效"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌无效"}
 		c.ServeJSON()
 		return
 	}
@@ -240,7 +243,7 @@ func (c *UserController) Modify() {
 	}, &replyUserPosition)
 
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "访问令牌无效"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌无效"}
 		c.ServeJSON()
 		return
 	}
@@ -256,12 +259,12 @@ func (c *UserController) Modify() {
 	}, &replyNum)
 
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "用户信息修改失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "用户信息修改失败"}
 		c.ServeJSON()
 		return
 	}
 
-	c.Data["json"] = data{Code: ResponseNormal, Message: "用户信息修改成功"}
+	c.Data["json"] = data{Code: Normal, Message: "用户信息修改成功"}
 	c.ServeJSON()
 	return
 }
@@ -288,12 +291,12 @@ func (c *UserController) SendMessageCode() {
 		}, &replyNum)
 
 		if err != nil {
-			c.Data["json"] = data{Code: ResponseSystemErr, Message: "系统异常[手机号码验证失败]"}
+			c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常[手机号码验证失败]"}
 			c.ServeJSON()
 			return
 		}
 		if replyNum.Value > 0 {
-			c.Data["json"] = data{Code: ResponseLogicErr, Message: "手机号码已被注册"}
+			c.Data["json"] = data{Code: ErrorLogic, Message: "手机号码已被注册"}
 			c.ServeJSON()
 			return
 		}
@@ -302,11 +305,11 @@ func (c *UserController) SendMessageCode() {
 	err := send.MessageCode("百鸽互联科技有限公司", "95888", phone)
 	log.Println("err:", err)
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "验证码发送失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "验证码发送失败"}
 		c.ServeJSON()
 		return
 	} else {
-		c.Data["json"] = data{Code: ResponseNormal, Message: "验证码发送成功"}
+		c.Data["json"] = data{Code: Normal, Message: "验证码发送成功"}
 		c.ServeJSON()
 		return
 	}
@@ -333,16 +336,16 @@ func (c *UserController) ExistKey() {
 	}, &replyNum)
 
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "系统异常[" + key + "验证失败]"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常[" + key + "验证失败]"}
 		c.ServeJSON()
 		return
 	}
 	if replyNum.Value > 0 {
-		c.Data["json"] = data{Code: ResponseLogicErr, Message: key + "已被注册"}
+		c.Data["json"] = data{Code: ErrorLogic, Message: key + "已被注册"}
 		c.ServeJSON()
 		return
 	}
-	c.Data["json"] = data{Code: ResponseNormal, Message: key + "可用"}
+	c.Data["json"] = data{Code: Normal, Message: key + "可用"}
 	c.ServeJSON()
 	return
 }
@@ -367,13 +370,13 @@ func (c *UserController) Register() {
 	cuTime := time.Now().UnixNano() / 1e6
 
 	if verifyCode != "95888" {
-		c.Data["json"] = data{Code: ResponseNormal, Message: "验证码错误"}
+		c.Data["json"] = data{Code: ErrorLogic, Message: "验证码错误"}
 		c.ServeJSON()
 		return
 	}
 
 	if password != verifyPassword {
-		c.Data["json"] = data{Code: ResponseNormal, Message: "密码与确认密码不一致"}
+		c.Data["json"] = data{Code: ErrorLogic, Message: "密码与确认密码不一致"}
 		c.ServeJSON()
 		return
 	}
@@ -388,12 +391,12 @@ func (c *UserController) Register() {
 	}, &replyNum)
 
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "系统异常[用户名或手机号码验证失败]"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常[用户名或手机号码验证失败]"}
 		c.ServeJSON()
 		return
 	}
 	if replyNum.Value > 0 {
-		c.Data["json"] = data{Code: ResponseLogicErr, Message: "用户名或手机号码已被注册"}
+		c.Data["json"] = data{Code: ErrorLogic, Message: "用户名或手机号码已被注册"}
 		c.ServeJSON()
 		return
 	}
@@ -407,12 +410,12 @@ func (c *UserController) Register() {
 	}, &replyUser)
 
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "系统异常[用户注册失败]"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常[用户注册失败]"}
 		c.ServeJSON()
 		return
 	}
 
-	c.Data["json"] = data{Code: ResponseNormal, Message: "用户注册成功"}
+	c.Data["json"] = data{Code: Normal, Message: "用户注册成功"}
 	c.ServeJSON()
 	return
 }

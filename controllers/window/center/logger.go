@@ -34,7 +34,7 @@ func (c *LoggerController) Add() {
 	Type, _ := c.GetInt8("type")
 	cTime := time.Now().Unix() / 1e6
 	if accessToken == "" {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "访问令牌无效"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌无效"}
 		c.ServeJSON()
 		return
 	}
@@ -47,13 +47,13 @@ func (c *LoggerController) Add() {
 	}, &replyUserPosition)
 
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "访问令牌失效"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌失效"}
 		c.ServeJSON()
 		return
 	}
 
 	if replyUserPosition.UserId == 0 {
-		c.Data["json"] = data{Code: ResponseLogicErr, Message: "获取应用信息失败"}
+		c.Data["json"] = data{Code: ErrorLogic, Message: "获取应用信息失败"}
 		c.ServeJSON()
 		return
 	}
@@ -70,12 +70,12 @@ func (c *LoggerController) Add() {
 		UserPositionType: replyUserPosition.Type,
 	}, &replyLogger)
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "新增失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "新增失败"}
 		c.ServeJSON()
 		return
 	}
 
-	c.Data["json"] = data{Code: ResponseNormal, Message: "新增成功", Data: LoggerAdd{
+	c.Data["json"] = data{Code: Normal, Message: "新增成功", Data: LoggerAdd{
 		Id: replyLogger.Id,
 	}}
 	c.ServeJSON()
@@ -89,14 +89,14 @@ func (c *LoggerController) Add() {
 // @Param   current     query   string true       "当前页"
 // @Param   pageSize     query   string true       "每页数量"
 // @Failure 400 {"code":400,"message":"获取信息失败"}
-// @router /list [get]
+// @router /list [post]
 func (c *LoggerController) List() {
 	type data LoggerListResponse
 	accessToken := c.GetString("accessToken")
 	currentPage, _ := c.GetInt64("current")
 	pageSize, _ := c.GetInt64("pageSize")
 	if accessToken == "" {
-		c.Data["json"] = data{Code: ResponseLogicErr, Message: "访问令牌无效"}
+		c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌无效"}
 		c.ServeJSON()
 		return
 	}
@@ -110,12 +110,12 @@ func (c *LoggerController) List() {
 	}, &replyUserPosition)
 
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "访问令牌失效"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌失效"}
 		c.ServeJSON()
 		return
 	}
 	if replyUserPosition.UserId == 0 {
-		c.Data["json"] = data{Code: ResponseLogicErr, Message: "获取信息失败"}
+		c.Data["json"] = data{Code: ErrorLogic, Message: "获取信息失败"}
 		c.ServeJSON()
 		return
 	}
@@ -135,7 +135,7 @@ func (c *LoggerController) List() {
 	}, &replyPageByCond)
 
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "获取信息失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "获取信息失败"}
 		c.ServeJSON()
 		return
 	}
@@ -162,7 +162,7 @@ func (c *LoggerController) List() {
 		})
 	}
 
-	c.Data["json"] = data{Code: ResponseNormal, Message: "获取成功", Data: LoggerList{
+	c.Data["json"] = data{Code: Normal, Message: "获取成功", Data: LoggerList{
 		Total:       replyPageByCond.Total,
 		Current:     currentPage,
 		CurrentSize: replyPageByCond.CurrentSize,

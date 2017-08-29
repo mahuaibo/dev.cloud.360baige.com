@@ -11,7 +11,6 @@ func init() {
 	log.SetLogger(logs.AdapterConsole)
 	log.Debug("filter run start")
 	beego.InsertFilter("/*",beego.BeforeRouter, UrlOriginManager)
-
 	log.Debug("filter run end")
 }
 
@@ -25,7 +24,7 @@ var UrlOriginManager = func(ctx *context.Context) {
 	Origin := r.Header.Get("Origin")
 	if Origin != "" {
 		w.Header().Add("Access-Control-Allow-Origin", Origin)
-		w.Header().Add("Access-Control-Allow-Methods", "POST,GET,OPTIONS,DELETE")
+		w.Header().Add("Access-Control-Allow-Methods", "POST,GET") //OPTIONS,DELETE
 		w.Header().Add("Access-Control-Allow-Headers", "x-requested-with,content-type")
 		w.Header().Add("Access-Control-Allow-Credentials", "true")
 	}

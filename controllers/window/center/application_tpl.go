@@ -10,6 +10,7 @@ import (
 	"time"
 	"dev.model.360baige.com/action"
 	"encoding/json"
+	"fmt"
 )
 
 // APPLICATIONTPL API
@@ -35,7 +36,7 @@ func (c *ApplicationTplController) List() {
 	Type, _ := c.GetInt8("type")
 
 	if accessToken == "" {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "访问令牌无效"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌无效"}
 		c.ServeJSON()
 		return
 	}
@@ -49,13 +50,13 @@ func (c *ApplicationTplController) List() {
 	}, &replyUserPosition)
 
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "访问令牌无效"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌无效"}
 		c.ServeJSON()
 		return
 	}
 
 	if replyUserPosition.UserId == 0 {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "获取信息失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "获取信息失败"}
 		c.ServeJSON()
 		return
 	}
@@ -71,14 +72,14 @@ func (c *ApplicationTplController) List() {
 			action.CondValue{Type: "And", Key: "status__gt", Val: -1 },
 			condValue,
 		},
-		Cols:     []string{"id", "name", "image", "status", "desc"},
+		Cols:     []string{"id", "name", "image", "status", "desc", "price", "pay_cycle"},
 		OrderBy:  []string{"id"},
 		PageSize: -1,
 		Current:  currentPage,
 	}, &reply)
 
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "获取应用信息失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "获取应用信息失败"}
 		c.ServeJSON()
 		return
 	}
@@ -105,6 +106,8 @@ func (c *ApplicationTplController) List() {
 	var resData []ApplicationTplValue
 	replyList := []application.ApplicationTpl{}
 	err = json.Unmarshal([]byte(reply.Json), &replyList)
+
+	fmt.Println("replyList", replyList)
 	for _, value := range replyList {
 		var restatus int8
 		if applicationList[value.Id] > 0 {
@@ -118,9 +121,11 @@ func (c *ApplicationTplController) List() {
 			Image:              value.Image,
 			SubscriptionStatus: restatus,
 			Desc:               value.Desc,
+			Price:              value.Price,
+			PayCycle:           value.PayCycle,
 		})
 	}
-	c.Data["json"] = data{Code: ResponseNormal, Message: "获取应用成功", Data: ApplicationTplList{
+	c.Data["json"] = data{Code: Normal, Message: "获取应用成功", Data: ApplicationTplList{
 		Total:       reply.Total,
 		Current:     currentPage,
 		CurrentSize: reply.CurrentSize,
@@ -147,7 +152,7 @@ func (c *ApplicationTplController) Detail() {
 	//Type, _ := c.GetInt64("type")
 
 	if accessToken == "" {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "访问令牌无效"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌无效"}
 		c.ServeJSON()
 		return
 	}
@@ -161,7 +166,7 @@ func (c *ApplicationTplController) Detail() {
 	}, &replyUserPosition)
 
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "访问令牌无效"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌无效"}
 		c.ServeJSON()
 		return
 	}
@@ -172,7 +177,7 @@ func (c *ApplicationTplController) Detail() {
 		Id: id,
 	}, &replyApplication)
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "获取应用信息失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "获取应用信息失败"}
 		c.ServeJSON()
 		return
 	}
@@ -183,7 +188,7 @@ func (c *ApplicationTplController) Detail() {
 		Id: replyApplication.ApplicationTplId,
 	}, &replyApplicationTpl)
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "获取应用信息失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "获取应用信息失败"}
 		c.ServeJSON()
 		return
 	}
@@ -192,7 +197,7 @@ func (c *ApplicationTplController) Detail() {
 		Id: replyApplicationTpl.UserId,
 	}, &replyUser)
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "获取应用信息失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "获取应用信息失败"}
 		c.ServeJSON()
 		return
 	}
@@ -202,13 +207,13 @@ func (c *ApplicationTplController) Detail() {
 		Id: replyApplicationTpl.CompanyId,
 	}, &replyCompany)
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "获取应用信息失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "获取应用信息失败"}
 		c.ServeJSON()
 		return
 	}
 
-	c.Data["json"] = data{Code: ResponseNormal, Message: "获取应用成功", Data: ApplicationDetail{
-		CreateTime:  time.Unix(replyApplicationTpl.CreateTime/1000, 0).Format("2006-01-02"),
+	c.Data["json"] = data{Code: Normal, Message: "获取应用成功", Data: ApplicationDetail{
+		CreateTime:  time.Unix(replyApplicationTpl.CreateTime / 1000, 0).Format("2006-01-02"),
 		Name:        replyApplicationTpl.Name,
 		Image:       replyApplicationTpl.Image,
 		Desc:        replyApplicationTpl.Desc,
@@ -235,7 +240,7 @@ func (c *ApplicationTplController) Subscription() {
 	accessToken := c.GetString("accessToken")
 	applicationTplId, _ := c.GetInt64("id")
 	if accessToken == "" {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "访问令牌无效"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌无效"}
 		c.ServeJSON()
 		return
 	}
@@ -247,13 +252,13 @@ func (c *ApplicationTplController) Subscription() {
 		Fileds: []string{"id", "user_id", "company_id", "type"},
 	}, &replyUserPosition)
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "访问令牌失效"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌失效"}
 		c.ServeJSON()
 		return
 	}
 
 	if replyUserPosition.UserId == 0 {
-		c.Data["json"] = data{Code: ResponseLogicErr, Message: "获取应用信息失败"}
+		c.Data["json"] = data{Code: ErrorLogic, Message: "获取应用信息失败"}
 		c.ServeJSON()
 		return
 	}
@@ -270,7 +275,7 @@ func (c *ApplicationTplController) Subscription() {
 		Fileds: []string{"id", "application_tpl_id" },
 	}, &replyApplication)
 	if err == nil {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "此应用已经订阅过"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "此应用已经订阅过"}
 		c.ServeJSON()
 		return
 	}
@@ -280,12 +285,12 @@ func (c *ApplicationTplController) Subscription() {
 		Id: applicationTplId,
 	}, &reply)
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "获取应用信息失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "获取应用信息失败"}
 		c.ServeJSON()
 		return
 	}
 	if reply.Status == 0 {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "此应用已经下架"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "此应用已经下架"}
 		c.ServeJSON()
 		return
 	}
@@ -306,12 +311,12 @@ func (c *ApplicationTplController) Subscription() {
 		EndTime:          1,
 	}, &replyApplication2)
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "应用订阅失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "应用订阅失败"}
 		c.ServeJSON()
 		return
 	}
 
-	c.Data["json"] = data{Code: ResponseNormal, Message: "应用订阅成功", Data: ApplicationTplStatus{
+	c.Data["json"] = data{Code: Normal, Message: "应用订阅成功", Data: ApplicationTplStatus{
 		ApplicationTplId: reply.Id,
 		AppId:            replyApplication2.Id,
 	}}
@@ -333,7 +338,7 @@ func (c *ApplicationTplController) ModifyStatus() {
 	status, _ := c.GetInt8("status")
 	applicationTplId, _ := c.GetInt64("id")
 	if accessToken == "" {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "访问令牌无效"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌无效"}
 		c.ServeJSON()
 		return
 	}
@@ -344,7 +349,7 @@ func (c *ApplicationTplController) ModifyStatus() {
 		AccessToken: accessToken,
 	}, &replyUserPosition)
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "访问令牌无效"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌无效"}
 		c.ServeJSON()
 		return
 	}
@@ -354,7 +359,7 @@ func (c *ApplicationTplController) ModifyStatus() {
 		Id: applicationTplId,
 	}, &replyApplicationTpl)
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "获取应用信息失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "获取应用信息失败"}
 		c.ServeJSON()
 		return
 	}
@@ -363,11 +368,11 @@ func (c *ApplicationTplController) ModifyStatus() {
 	replyApplicationTpl.Status = status
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "ApplicationTpl", "UpdateById", replyApplicationTpl, nil)
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "应用信息修改失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "应用信息修改失败"}
 		c.ServeJSON()
 		return
 	}
 
-	c.Data["json"] = data{Code: ResponseNormal, Message: "应用信息修改成功"}
+	c.Data["json"] = data{Code: Normal, Message: "应用信息修改成功"}
 	c.ServeJSON()
 }

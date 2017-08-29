@@ -25,7 +25,7 @@ func (c *CompanyController) Detail() {
 	type data CompanyDetailResponse
 	accessToken := c.GetString("accessToken")
 	if accessToken == "" {
-		c.Data["json"] = data{Code: ResponseLogicErr, Message: "访问令牌不能为空"}
+		c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌不能为空"}
 		c.ServeJSON()
 		return
 	}
@@ -40,12 +40,12 @@ func (c *CompanyController) Detail() {
 	}, &replyUserPosition)
 
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "系统异常[访问令牌失效]"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常[访问令牌失效]"}
 		c.ServeJSON()
 		return
 	}
 	if replyUserPosition.Id == 0 {
-		c.Data["json"] = data{Code: ResponseLogicErr, Message: "访问令牌失效"}
+		c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌失效"}
 		c.ServeJSON()
 		return
 	}
@@ -56,13 +56,14 @@ func (c *CompanyController) Detail() {
 	}, &replyCompany)
 
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "系统异常[公司信息失败]"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常[公司信息失败]"}
 		c.ServeJSON()
 		return
 	}
 
-	c.Data["json"] = data{Code: ResponseNormal, Message: "获取公司信息成功",
+	c.Data["json"] = data{Code: Normal, Message: "获取公司信息成功",
 		Data: CompanyDetail{
+			Id:         replyCompany.Id,
 			Logo:       replyCompany.Logo,
 			Name:       replyCompany.Name,
 			ProvinceId: replyCompany.ProvinceId,
@@ -101,26 +102,26 @@ func (c *CompanyController) Modify() {
 	brief := c.GetString("brief")
 	accessToken := c.GetString("accessToken")
 	if accessToken == "" {
-		c.Data["json"] = data{Code: ResponseLogicErr, Message: "访问令牌无效"}
+		c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌不能为空"}
 		c.ServeJSON()
 		return
 	}
-
+	//检测 accessToken
 	var replyUserPosition user.UserPosition
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", action.FindByCond{
-		CondList: []action.CondValue{
+		CondList: [] action.CondValue{
 			action.CondValue{Type: "And", Key: "accessToken", Val: accessToken },
 		},
 		Fileds: []string{"id", "user_id", "company_id", "type"},
 	}, &replyUserPosition)
 
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "访问令牌失效"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌失效"}
 		c.ServeJSON()
 		return
 	}
 	if replyUserPosition.Id == 0 {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "获取公司信息失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "获取公司信息失败"}
 		c.ServeJSON()
 		return
 	}
@@ -145,17 +146,17 @@ func (c *CompanyController) Modify() {
 	}, &replyNum)
 
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "企业信息修改失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "企业信息修改失败"}
 		c.ServeJSON()
 		return
 	}
 	if replyNum.Value == 0 {
-		c.Data["json"] = data{Code: ResponseLogicErr, Message: "企业信息修改失败"}
+		c.Data["json"] = data{Code: ErrorLogic, Message: "企业信息修改失败"}
 		c.ServeJSON()
 		return
 	}
 
-	c.Data["json"] = data{Code: ResponseNormal, Message: "企业信息修改成功"}
+	c.Data["json"] = data{Code: Normal, Message: "企业信息修改成功"}
 	c.ServeJSON()
 	return
 }

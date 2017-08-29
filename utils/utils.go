@@ -125,3 +125,4 @@ func CreateAccessValue(value string) string {
 	mac.Write([]byte(value))
 	return fmt.Sprintf("%x", mac.Sum(nil))
 }
+
