@@ -36,12 +36,12 @@ func (c *UserPositionController) PositionList() {
 		Fileds: []string{"id", "expire_in"},
 	}, &replyUser)
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "系统异常[验证访问票据失败]"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常[验证访问票据失败]"}
 		c.ServeJSON()
 		return
 	}
 	if replyUser.Id == 0 {
-		c.Data["json"] = data{Code: ResponseLogicErr, Message: "访问票据无效"}
+		c.Data["json"] = data{Code: ErrorLogic, Message: "访问票据无效"}
 		c.ServeJSON()
 		return
 	}
@@ -57,7 +57,7 @@ func (c *UserPositionController) PositionList() {
 		Cols:     []string{"id", "user_id", "company_id", "type", "person_id"},
 	}, &replyUserPosition)
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "获取用户身份失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "获取用户身份失败"}
 		c.ServeJSON()
 		return
 	}
@@ -77,7 +77,7 @@ func (c *UserPositionController) PositionList() {
 	}, &replyCompany)
 
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "获取用户身份失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "获取用户身份失败"}
 		c.ServeJSON()
 		return
 	}
@@ -96,7 +96,7 @@ func (c *UserPositionController) PositionList() {
 			})
 		}
 	}
-	c.Data["json"] = data{Code: ResponseNormal, Message: "获取用户身份成功", Data: resData}
+	c.Data["json"] = data{Code: Normal, Message: "获取用户身份成功", Data: resData}
 	c.ServeJSON()
 	return
 }
@@ -129,12 +129,12 @@ func (c *UserPositionController) GetAccessToken() {
 		}, &replyUserPosition)
 
 		if err != nil {
-			c.Data["json"] = data{Code: ResponseSystemErr, Message: "系统异常[验证访问令牌失败]"}
+			c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常[验证访问令牌失败]"}
 			c.ServeJSON()
 			return
 		}
 		if replyUserPosition.UserId == 0 {
-			c.Data["json"] = data{Code: ResponseLogicErr, Message: "访问令牌失败"}
+			c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌失败"}
 			c.ServeJSON()
 			return
 		}
@@ -150,13 +150,13 @@ func (c *UserPositionController) GetAccessToken() {
 		}, &replyUser)
 		log.Println("replyUser:", replyUser)
 		if err != nil {
-			c.Data["json"] = data{Code: ResponseSystemErr, Message: "系统异常[验证访问票据失败]"}
+			c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常[验证访问票据失败]"}
 			c.ServeJSON()
 			return
 		}
 
 		if replyUser.Id == 0 {
-			c.Data["json"] = data{Code: ResponseLogicErr, Message: "访问票据无效"}
+			c.Data["json"] = data{Code: ErrorLogic, Message: "访问票据无效"}
 			c.ServeJSON()
 			return
 		}
@@ -175,13 +175,13 @@ func (c *UserPositionController) GetAccessToken() {
 	}, &replyUserPosition)
 
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "获取访问令牌失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "获取访问令牌失败"}
 		c.ServeJSON()
 		return
 	}
 
 	if replyUserPosition.Id == 0 {
-		c.Data["json"] = data{Code: ResponseLogicErr, Message: "访问票据权限不足"}
+		c.Data["json"] = data{Code: ErrorLogic, Message: "访问票据权限不足"}
 		c.ServeJSON()
 		return
 	}
@@ -197,7 +197,7 @@ func (c *UserPositionController) GetAccessToken() {
 			},
 		}, nil)
 		if err != nil {
-			c.Data["json"] = data{Code: ResponseSystemErr, Message: "获取访问令牌失败"}
+			c.Data["json"] = data{Code: ErrorSystem, Message: "获取访问令牌失败"}
 			c.ServeJSON()
 			return
 		} else {
@@ -206,7 +206,7 @@ func (c *UserPositionController) GetAccessToken() {
 		}
 	}
 
-	c.Data["json"] = data{Code: ResponseNormal, Message: "获取访问令牌成功", Data: UserPositionToken{
+	c.Data["json"] = data{Code: Normal, Message: "获取访问令牌成功", Data: UserPositionToken{
 		AccessToken: replyUserPosition.AccessToken,
 		ExpireIn:    replyUserPosition.ExpireIn,
 	}}

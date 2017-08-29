@@ -27,7 +27,7 @@ func (c *AccountController) Statistics() {
 	accessToken := c.GetString("accessToken")
 	currentTimestamp := utils.CurrentTimestamp()
 	if accessToken == "" {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "访问令牌无效"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌无效"}
 		c.ServeJSON()
 		return
 	}
@@ -42,13 +42,13 @@ func (c *AccountController) Statistics() {
 	}, &replyUserPosition)
 
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "验证访问令牌失效"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "验证访问令牌失效"}
 		c.ServeJSON()
 		return
 	}
 
 	if replyUserPosition.Id == 0 {
-		c.Data["json"] = data{Code: ResponseLogicErr, Message: "访问令牌失效"}
+		c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌失效"}
 		c.ServeJSON()
 		return
 	}
@@ -65,7 +65,7 @@ func (c *AccountController) Statistics() {
 	}, &replyAccount)
 
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "获取账务统计信息失败1"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "获取账务统计信息失败1"}
 		c.ServeJSON()
 		return
 	}
@@ -81,7 +81,7 @@ func (c *AccountController) Statistics() {
 	}, &replyAccountItemList)
 
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "获取账务统计信息失败2"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "获取账务统计信息失败2"}
 		c.ServeJSON()
 		return
 	}
@@ -95,7 +95,7 @@ func (c *AccountController) Statistics() {
 		}
 	}
 
-	c.Data["json"] = data{Code: ResponseNormal, Message: "获取账务统计信息成功", Data: AccountStatistics{
+	c.Data["json"] = data{Code: Normal, Message: "获取账务统计信息成功", Data: AccountStatistics{
 		Balance:    replyAccount.Balance,
 		InAccount:  inAccount,
 		OutAccount: outAccount,

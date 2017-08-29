@@ -32,7 +32,7 @@ func (c *OrderController) List() {
 	currentPage, _ := c.GetInt64("current")
 	pageSize, _ := c.GetInt64("pageSize")
 	if accessToken == "" {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "访问令牌无效"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌无效"}
 		c.ServeJSON()
 		return
 	}
@@ -45,13 +45,13 @@ func (c *OrderController) List() {
 	}, &replyUserPosition)
 
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "访问令牌失效"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌失效"}
 		c.ServeJSON()
 		return
 	}
 
 	if replyUserPosition.UserId == 0 {
-		c.Data["json"] = data{Code: ResponseLogicErr, Message: "获取信息失败"}
+		c.Data["json"] = data{Code: ErrorLogic, Message: "获取信息失败"}
 		c.ServeJSON()
 		return
 	}
@@ -76,7 +76,7 @@ func (c *OrderController) List() {
 	}, &replyPageByCond)
 
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "获取订单信息失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "获取订单信息失败"}
 		c.ServeJSON()
 		return
 	}
@@ -101,7 +101,7 @@ func (c *OrderController) List() {
 		})
 	}
 
-	c.Data["json"] = data{Code: ResponseNormal, Message: "获取信息成功", Data: OrderList{
+	c.Data["json"] = data{Code: Normal, Message: "获取信息成功", Data: OrderList{
 		Total:       replyPageByCond.Total,
 		Current:     currentPage,
 		CurrentSize: replyPageByCond.CurrentSize,
@@ -145,7 +145,7 @@ func (c *OrderController) Detail() {
 	accessToken := c.GetString("accessToken")
 	orderId, _ := c.GetInt64("id")
 	if accessToken == "" {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "访问令牌无效"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌无效"}
 		c.ServeJSON()
 		return
 	}
@@ -158,12 +158,12 @@ func (c *OrderController) Detail() {
 		Fileds: []string{"id", "user_id", "company_id", "type"},
 	}, &replyUserPosition)
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "访问令牌失效"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌失效"}
 		c.ServeJSON()
 		return
 	}
 	if orderId == 0 {
-		c.Data["json"] = data{Code: ResponseLogicErr, Message: "获取订单信息失败"}
+		c.Data["json"] = data{Code: ErrorLogic, Message: "获取订单信息失败"}
 		c.ServeJSON()
 		return
 	}
@@ -173,7 +173,7 @@ func (c *OrderController) Detail() {
 		Id: orderId,
 	}, &replyOrder)
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "获取订单信息失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "获取订单信息失败"}
 		c.ServeJSON()
 		return
 	}
@@ -182,7 +182,7 @@ func (c *OrderController) Detail() {
 	if replyOrder.PayType == 1 {
 		rPayType = "在线支付"
 	}
-	c.Data["json"] = data{Code: ResponseNormal, Message: "获取订单详情成功", Data: OrderDetail{
+	c.Data["json"] = data{Code: Normal, Message: "获取订单详情成功", Data: OrderDetail{
 		CreateTime: time.Unix(replyOrder.CreateTime/1000, 0).Format("2006-01-02"),
 		Code:       replyOrder.Code,
 		Price:      replyOrder.Price,
@@ -207,7 +207,7 @@ func (c *OrderController) DetailByCode() {
 	accessToken := c.GetString("accessToken")
 	code := c.GetString("code")
 	if accessToken == "" {
-		c.Data["json"] = data{Code: ResponseLogicErr, Message: "访问令牌无效"}
+		c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌无效"}
 		c.ServeJSON()
 		return
 	}
@@ -221,12 +221,12 @@ func (c *OrderController) DetailByCode() {
 	}, &replyUserPosition)
 
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "访问令牌失效"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌失效"}
 		c.ServeJSON()
 		return
 	}
 	if code == "" {
-		c.Data["json"] = data{Code: ResponseLogicErr, Message: "获取信息失败"}
+		c.Data["json"] = data{Code: ErrorLogic, Message: "获取信息失败"}
 		c.ServeJSON()
 		return
 	}
@@ -240,7 +240,7 @@ func (c *OrderController) DetailByCode() {
 	}, &replyOrder)
 
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "获取信息失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "获取信息失败"}
 		c.ServeJSON()
 		return
 	}
@@ -249,7 +249,7 @@ func (c *OrderController) DetailByCode() {
 	if replyOrder.PayType == 1 {
 		rPayType = "在线支付"
 	}
-	c.Data["json"] = data{Code: ResponseNormal, Message: "获取信息成功", Data: OrderDetail{
+	c.Data["json"] = data{Code: Normal, Message: "获取信息成功", Data: OrderDetail{
 		CreateTime: time.Unix(replyOrder.CreateTime/1000, 0).Format("2006-01-02"),
 		Code:       replyOrder.Code,
 		Price:      replyOrder.Price,

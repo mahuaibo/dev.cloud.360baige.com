@@ -34,7 +34,7 @@ func (c *AccountItemController) List() {
 	currentPage, _ := c.GetInt64("current", 1)
 	pageSize, _ := c.GetInt64("pageSize", 50)
 	if accessToken == "" {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "访问令牌无效"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌无效"}
 		c.ServeJSON()
 		return
 	}
@@ -64,12 +64,12 @@ func (c *AccountItemController) List() {
 	}, &replyUserPosition)
 
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "访问令牌失效"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌失效"}
 		c.ServeJSON()
 		return
 	}
 	if replyUserPosition.UserId == 0 {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "访问令牌失效"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌失效"}
 		c.ServeJSON()
 		return
 	}
@@ -86,7 +86,7 @@ func (c *AccountItemController) List() {
 	}, &replyAccount)
 
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "获取失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "获取失败"}
 		c.ServeJSON()
 		return
 	}
@@ -104,7 +104,7 @@ func (c *AccountItemController) List() {
 		Current:  currentPage,
 	}, &replyPageByCond)
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "获取失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "获取失败"}
 		c.ServeJSON()
 		return
 	}
@@ -120,7 +120,7 @@ func (c *AccountItemController) List() {
 	}, &replyAccountItemList)
 
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "获取账务统计信息失败2"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "获取账务统计信息失败2"}
 		c.ServeJSON()
 		return
 	}
@@ -153,7 +153,7 @@ func (c *AccountItemController) List() {
 			Remark:     value.Remark,
 		})
 	}
-	c.Data["json"] = data{Code: ResponseNormal, Message: "获取信息成功", Data: AccountItemList{
+	c.Data["json"] = data{Code: Normal, Message: "获取信息成功", Data: AccountItemList{
 		Total:       replyPageByCond.Total,
 		Current:     currentPage,
 		CurrentSize: replyPageByCond.CurrentSize,
@@ -184,7 +184,7 @@ func (c *AccountItemController) TradingList() {
 	currentPage, _ := c.GetInt64("current")
 	pageSize, _ := c.GetInt64("pageSize")
 	if accessToken == "" {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "访问令牌无效"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌无效"}
 		c.ServeJSON()
 		return
 	}
@@ -197,13 +197,13 @@ func (c *AccountItemController) TradingList() {
 		Fileds: []string{"id", "user_id", "company_id", "type"},
 	}, &replyUserPosition)
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "获取失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "获取失败"}
 		c.ServeJSON()
 		return
 	}
 
 	if replyUserPosition.UserId == 0 {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "获取失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "获取失败"}
 		c.ServeJSON()
 		return
 	}
@@ -220,7 +220,7 @@ func (c *AccountItemController) TradingList() {
 	}, &replyAccount)
 
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "获取失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "获取失败"}
 		c.ServeJSON()
 		return
 	}
@@ -240,7 +240,7 @@ func (c *AccountItemController) TradingList() {
 		Current:  currentPage,
 	}, &replyPageByCond)
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "获取失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "获取失败"}
 		c.ServeJSON()
 		return
 	}
@@ -267,7 +267,7 @@ func (c *AccountItemController) TradingList() {
 		})
 	}
 
-	c.Data["json"] = data{Code: ResponseNormal, Message: "获取信息成功", Data: AccountItemList{
+	c.Data["json"] = data{Code: Normal, Message: "获取信息成功", Data: AccountItemList{
 		Total:       replyPageByCond.Total,
 		Current:     currentPage,
 		CurrentSize: replyPageByCond.CurrentSize,
@@ -290,7 +290,7 @@ func (c *AccountItemController) Detail() {
 	accessToken := c.GetString("accessToken")
 	accountItemId, _ := c.GetInt64("id")
 	if accessToken == "" {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "获取失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "获取失败"}
 		c.ServeJSON()
 		return
 	}
@@ -303,12 +303,12 @@ func (c *AccountItemController) Detail() {
 		Fileds: []string{"id", "user_id", "company_id", "type"},
 	}, &replyAccessToken)
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "获取失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "获取失败"}
 		c.ServeJSON()
 		return
 	}
 	if accountItemId == 0 {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "获取失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "获取失败"}
 		c.ServeJSON()
 		return
 	}
@@ -318,7 +318,7 @@ func (c *AccountItemController) Detail() {
 		Id: accountItemId,
 	}, &replyAccountItem)
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseSystemErr, Message: "获取失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "获取失败"}
 		c.ServeJSON()
 		return
 	}
@@ -341,13 +341,13 @@ func (c *AccountItemController) Detail() {
 		var transactionReply account.Transaction
 		err = client.Call(beego.AppConfig.String("EtcdURL"), "Transaction", "FindById", transactionArgs, &transactionReply)
 		if err != nil {
-			c.Data["json"] = data{Code: ResponseSystemErr, Message: "获取失败"}
+			c.Data["json"] = data{Code: ErrorSystem, Message: "获取失败"}
 			c.ServeJSON()
 			return
 		}
 		OrderCode = transactionReply.OrderCode
 		if transactionReply.ToAccountId > 0 {
-			c.Data["json"] = data{Code: ResponseSystemErr, Message: "获取失败"}
+			c.Data["json"] = data{Code: ErrorSystem, Message: "获取失败"}
 			c.ServeJSON()
 			return
 		}
@@ -356,7 +356,7 @@ func (c *AccountItemController) Detail() {
 		var accountReply account.Account
 		err = client.Call(beego.AppConfig.String("EtcdURL"), "Account", "FindById", accountArgs, &accountReply)
 		if err == nil && accountReply.CompanyId > 0 {
-			c.Data["json"] = data{Code: ResponseSystemErr, Message: "获取失败"}
+			c.Data["json"] = data{Code: ErrorSystem, Message: "获取失败"}
 			c.ServeJSON()
 			return
 		}
@@ -369,7 +369,7 @@ func (c *AccountItemController) Detail() {
 		}
 	}
 
-	c.Data["json"] = data{Code: ResponseNormal, Message: "获取信息成功", Data: AccountItemDetail{
+	c.Data["json"] = data{Code: Normal, Message: "获取信息成功", Data: AccountItemDetail{
 		CreateTime: re,
 		Amount:     replyAccountItem.Amount,
 		AmountType: aType,
