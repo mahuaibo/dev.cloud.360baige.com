@@ -7,7 +7,6 @@ import (
 	"dev.model.360baige.com/models/user"
 	"dev.model.360baige.com/models/account"
 	"dev.model.360baige.com/action"
-	"dev.cloud.360baige.com/log"
 	"dev.cloud.360baige.com/utils"
 )
 
@@ -69,7 +68,6 @@ func (c *AccountController) Statistics() {
 		c.ServeJSON()
 		return
 	}
-	log.Println("replyAccount", replyAccount)
 
 	var replyAccountItemList []account.AccountItem
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "AccountItem", "ListByCond", &action.ListByCond{
