@@ -6,7 +6,6 @@ import (
 	"strings"
 	"crypto/md5"
 	"encoding/hex"
-	"github.com/silenceper/wechat"
 	"dev.cloud.360baige.com/utils"
 )
 

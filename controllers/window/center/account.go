@@ -48,7 +48,7 @@ func (c *AccountController) UnifiedOrder() {
 		Spbill_create_ip: fmt.Sprintf("%v", params["spbill_create_ip"]),
 		Total_fee:        params["total_fee"].(int),
 		Out_trade_no:     fmt.Sprintf("%v", params["out_trade_no"]),
-		Sign:             Sign(params, "17DA9CAF1E16CF508609FEB6944CE97A"), //39f22f62edf5163a8efc107d63e81c9c 17DA9CAF1E16CF508609FEB6944CE97A
+		Sign:             "2323",//Sign(params, "17DA9CAF1E16CF508609FEB6944CE97A"), //39f22f62edf5163a8efc107d63e81c9c 17DA9CAF1E16CF508609FEB6944CE97A
 	}
 	urlStr := "https://api.mch.weixin.qq.com/pay/unifiedorder"
 	//url := Url(params, prefix)
