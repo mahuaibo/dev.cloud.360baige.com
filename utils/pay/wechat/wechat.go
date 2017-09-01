@@ -159,17 +159,25 @@ type OrderQueryRequest struct {
 }
 
 type OrderQueryResponse struct {
-	Return_code  string `xml:"return_code"`
-	Return_msg   string `xml:"return_msg"`
-	Appid        string `xml:"appid"`
-	Mch_id       string `xml:"mch_id"`
-	Nonce_str    string `xml:"nonce_str"`
-	Sign         string `xml:"sign"`
-	Result_code  string `xml:"result_code"`
-	Err_code     string `xml:"err_code"`
-	Err_code_des string `xml:"err_code_des"`
-	Out_trade_no string `xml:"out_trade_no"`
-	Attach       string `xml:"attach"`
+	ReturnCode     string `xml:"return_code"`
+	ReturnMsg      string `xml:"return_msg"`
+	Appid          string `xml:"appid"`
+	MchId          string `xml:"mch_id"`
+	NonceStr       string `xml:"nonce_str"`
+	Sign           string `xml:"sign"`
+	ResultCode     string `xml:"result_code"`
+	ErrCode        string `xml:"err_code"`
+	ErrCodeDes     string `xml:"err_code_des"`
+	TradeType      string `xml:"trade_type"`
+	TradeState     string `xml:"trade_state"`
+	BankType       string `xml:"bank_type"`
+	TotalFee       string `xml:"total_fee"`
+	CashFee        string `xml:"cash_fee"`
+	TransactionId  string `xml:"transaction_id"`
+	OutTradeNo     string `xml:"out_trade_no"`
+	Attach         string `xml:"attach"`
+	TimeEnd        string `xml:"time_end"`
+	TradeStateDesc string `xml:"trade_state_desc"`
 }
 
 func OrderQuery(out_trade_no string) (OrderQueryResponse, error) {

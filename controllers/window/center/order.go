@@ -460,7 +460,7 @@ func (c *OrderController) PayResult() {
 			c.ServeJSON()
 			return
 		}
-		if orderQuery.Return_code == "SUCCESS" && orderQuery.Result_code == "SUCCESS" {
+		if orderQuery.ReturnCode == "SUCCESS" && orderQuery.ResultCode == "SUCCESS" && orderQuery.TradeState == "SUCCESS" {
 			var replyNum *action.Num
 			err = client.Call(beego.AppConfig.String("EtcdURL"), "Order", "UpdateById", &order.Order{
 				Id:         replyOrder.Id,
