@@ -7,10 +7,19 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"dev.cloud.360baige.com/utils"
+	"encoding/xml"
+	"net/http"
+	"bytes"
+	"io/ioutil"
 )
 
 var (
+	appid        = "wxc2cbb6b5a46fc13e"
+	mch_id       = 1457803302
+	notify_url   = "http://wxpay.figool.cn/account"
 	unifiedorder = "https://api.mch.weixin.qq.com/pay/unifiedorder"
+	orderquery   = "https://api.mch.weixin.qq.com/pay/orderquery"
+	key          = "17DA9CAF1E16CF508609FEB6944CE97A"
 )
 
 type UnifyOrderRequest struct {
@@ -38,37 +47,6 @@ type UnifyOrderResponse struct {
 	Trade_type  string `xml:"trade_type"`
 	Code_url    string `xml:"code_url"`
 	Openid      string `xml:"openid"`
-}
-
-func UnifiedOrder(ip, body, out_trade_no string, total_fee int64) error {
-	//remoteAddr := strings.Split(c.Ctx.Request.RemoteAddr, ":")
-	//log.Println("remoteAddr:", remoteAddr[0])
-	params := map[string]interface{}{
-		"appid":            "wxc2cbb6b5a46fc13e",
-		"mch_id":           1457803302,
-		"nonce_str":        utils.RandomString(20),
-		"trade_type":       "NATIVE",
-		"body":             body,
-		"notify_url":       "http://wxpay.figool.cn/account",
-		"spbill_create_ip": ip,
-		"total_fee":        total_fee,
-		"out_trade_no":     out_trade_no,
-	}
-	unifyOrder := UnifyOrderRequest{
-		Appid:            fmt.Sprintf("%v", params["appid"]),
-		Body:             fmt.Sprintf("%v", params["body"]),
-		Mch_id:           fmt.Sprintf("%v", params["mch_id"]),
-		Nonce_str:        fmt.Sprintf("%v", params["nonce_str"]),
-		Notify_url:       fmt.Sprintf("%v", params["notify_url"]),
-		Trade_type:       fmt.Sprintf("%v", params["trade_type"]),
-		Spbill_create_ip: fmt.Sprintf("%v", params["spbill_create_ip"]),
-		Total_fee:        params["total_fee"].(int),
-		Out_trade_no:     fmt.Sprintf("%v", params["out_trade_no"]),
-		Sign:             Sign(params, "17DA9CAF1E16CF508609FEB6944CE97A"), //39f22f62edf5163a8efc107d63e81c9c 17DA9CAF1E16CF508609FEB6944CE97A
-	}
-	//urlStr := "https://api.mch.weixin.qq.com/pay/unifiedorder"
-	fmt.Println(unifyOrder)
-	return nil
 }
 
 func Url(params map[string]interface{}, prefix string) string {
@@ -116,4 +94,124 @@ func Sign(params map[string]interface{}, key ...string) string {
 	cipherStr := md5Ctx.Sum(nil)
 	upperSign := strings.ToUpper(hex.EncodeToString(cipherStr))
 	return upperSign
+}
+
+func UnifiedOrder(ip, body, out_trade_no, total_fee string) (UnifyOrderResponse, error) {
+	xmlResp := UnifyOrderResponse{}
+	params := map[string]interface{}{
+		"appid":            appid,
+		"mch_id":           mch_id,
+		"nonce_str":        utils.RandomString(20),
+		"trade_type":       "NATIVE",
+		"body":             body,
+		"notify_url":       notify_url,
+		"spbill_create_ip": ip,
+		"total_fee":        total_fee,
+		"out_trade_no":     out_trade_no,
+	}
+	unifyOrder := UnifyOrderRequest{
+		Appid:            fmt.Sprintf("%v", params["appid"]),
+		Body:             fmt.Sprintf("%v", params["body"]),
+		Mch_id:           fmt.Sprintf("%v", params["mch_id"]),
+		Nonce_str:        fmt.Sprintf("%v", params["nonce_str"]),
+		Notify_url:       fmt.Sprintf("%v", params["notify_url"]),
+		Trade_type:       fmt.Sprintf("%v", params["trade_type"]),
+		Spbill_create_ip: fmt.Sprintf("%v", params["spbill_create_ip"]),
+		Total_fee:        params["total_fee"].(int),
+		Out_trade_no:     fmt.Sprintf("%v", params["out_trade_no"]),
+		Sign:             Sign(params, key),
+	}
+	bytes_req, err := xml.Marshal(unifyOrder)
+	if err != nil {
+		return xmlResp, err
+	}
+	str_req := string(bytes_req)
+	str_req = strings.Replace(str_req, "UnifyOrderRequest", "xml", -1)
+	bytes_req = []byte(str_req)
+	req, err := http.NewRequest("POST", unifiedorder, bytes.NewReader(bytes_req))
+	if err != nil {
+		return xmlResp, err
+	}
+	req.Header.Set("Accept", "application/xml")
+	req.Header.Set("Content-Type", "application/xml;charset=utf-8")
+	client := http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return xmlResp, err
+	}
+	respBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return xmlResp, err
+	}
+	err = xml.Unmarshal(respBytes, &xmlResp)
+	if err != nil {
+		return xmlResp, err
+	}
+	return xmlResp, nil
+}
+
+type OrderQueryRequest struct {
+	Appid        string `xml:"appid"`        //
+	Mch_id       string `xml:"mch_id"`       //
+	Nonce_str    string `xml:"nonce_str"`    //
+	Out_trade_no string `xml:"out_trade_no"` //
+	Sign         string `xml:"sign"`         //
+}
+
+type OrderQueryResponse struct {
+	Return_code  string `xml:"return_code"`
+	Return_msg   string `xml:"return_msg"`
+	Appid        string `xml:"appid"`
+	Mch_id       string `xml:"mch_id"`
+	Nonce_str    string `xml:"nonce_str"`
+	Sign         string `xml:"sign"`
+	Result_code  string `xml:"result_code"`
+	Err_code     string `xml:"err_code"`
+	Err_code_des string `xml:"err_code_des"`
+	Out_trade_no string `xml:"out_trade_no"`
+	Attach       string `xml:"attach"`
+}
+
+func OrderQuery(out_trade_no string) (OrderQueryResponse, error) {
+	xmlResp := OrderQueryResponse{}
+	params := map[string]interface{}{
+		"appid":        appid,
+		"mch_id":       mch_id,
+		"nonce_str":    utils.RandomString(20),
+		"out_trade_no": out_trade_no,
+	}
+	orderQuery := OrderQueryRequest{
+		Appid:        fmt.Sprintf("%v", params["appid"]),
+		Mch_id:       fmt.Sprintf("%v", params["mch_id"]),
+		Nonce_str:    fmt.Sprintf("%v", params["nonce_str"]),
+		Out_trade_no: fmt.Sprintf("%v", params["out_trade_no"]),
+		Sign:         Sign(params, key),
+	}
+	bytes_req, err := xml.Marshal(orderQuery)
+	if err != nil {
+		return xmlResp, err
+	}
+	str_req := string(bytes_req)
+	str_req = strings.Replace(str_req, "OrderQueryRequest", "xml", -1)
+	bytes_req = []byte(str_req)
+	req, err := http.NewRequest("POST", unifiedorder, bytes.NewReader(bytes_req))
+	if err != nil {
+		return xmlResp, err
+	}
+	req.Header.Set("Accept", "application/xml")
+	req.Header.Set("Content-Type", "application/xml;charset=utf-8")
+	client := http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return xmlResp, err
+	}
+	respBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return xmlResp, err
+	}
+	err = xml.Unmarshal(respBytes, &xmlResp)
+	if err != nil {
+		return xmlResp, err
+	}
+	return xmlResp, nil
 }
