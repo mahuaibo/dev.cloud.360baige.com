@@ -355,7 +355,6 @@ func (c *UserController) ExistKey() {
 // @Success 200 {"code":200,"message":"用户注册成功"}
 // @Param   username     query   string true       "用户名"
 // @Param   password     query   string true       "密码"
-// @Param   verifyPassword query   string true       "确认密码"
 // @Param   phone query   string true       "手机号码"
 // @Param   verifyCode query   string true       "验证码"
 // @Failure 400 {"code":400,"message":"用户注册失败"}
@@ -364,19 +363,12 @@ func (c *UserController) Register() {
 	type data UserRegisterResponse
 	username := c.GetString("username")
 	password := c.GetString("password")
-	verifyPassword := c.GetString("verifyPassword")
 	phone := c.GetString("phone")
 	verifyCode := c.GetString("verifyCode")
-	cuTime := time.Now().UnixNano() / 1e6
+	currentTimestamp := utils.CurrentTimestamp()
 
 	if verifyCode != "95888" {
 		c.Data["json"] = data{Code: ErrorLogic, Message: "验证码错误"}
-		c.ServeJSON()
-		return
-	}
-
-	if password != verifyPassword {
-		c.Data["json"] = data{Code: ErrorLogic, Message: "密码与确认密码不一致"}
 		c.ServeJSON()
 		return
 	}
@@ -402,8 +394,8 @@ func (c *UserController) Register() {
 	}
 	var replyUser user.User
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "User", "Add", &user.User{
-		CreateTime: cuTime,
-		UpdateTime: cuTime,
+		CreateTime: currentTimestamp,
+		UpdateTime: currentTimestamp,
 		Username:   username,
 		Password:   password,
 		Phone:      phone,

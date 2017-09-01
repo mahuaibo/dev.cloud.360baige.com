@@ -13,6 +13,7 @@ import (
 	"dev.model.360baige.com/action"
 	"encoding/json"
 	"fmt"
+	"dev.cloud.360baige.com/utils"
 )
 
 type AccountItemController struct {
@@ -31,7 +32,7 @@ type AccountItemController struct {
 func (c *AccountItemController) List() {
 	type data AccountItemListResponse
 	accessToken := c.GetString("accessToken")
-	cycleType := c.GetString("cycleType", "1")
+	cycleType := c.GetString("cycleType", "4")
 	currentPage, _ := c.GetInt64("current", 1)
 	pageSize, _ := c.GetInt64("pageSize", 50)
 	if accessToken == "" {
@@ -148,8 +149,8 @@ func (c *AccountItemController) List() {
 		}
 		ailv = append(ailv, AccountItemListValue{
 			Id:         value.Id,
-			CreateTime: time.Unix(value.CreateTime / 1000, 0).Format("2006-01-02 15:04"),
-			Amount:     value.Amount,
+			CreateTime: time.Unix(value.CreateTime/1000, 0).Format("2006-01-02 15:04"),
+			Amount:     utils.Amount(value.Amount),
 			AmountType: aType,
 			Remark:     value.Remark,
 		})
@@ -161,8 +162,8 @@ func (c *AccountItemController) List() {
 		OrderBy:     replyPageByCond.OrderBy,
 		PageSize:    pageSize,
 		List:        ailv,
-		InAccount:   inAccount,
-		OutAccount:  outAccount,
+		InAccount:   utils.Amount(inAccount),
+		OutAccount:  utils.Amount(outAccount),
 	}}
 	c.ServeJSON()
 }
@@ -170,20 +171,21 @@ func (c *AccountItemController) List() {
 // @Title 交易详情列表接口
 // @Description 交易详情列表接口
 // @Success 200 {"code":200,"message":"获取账务列表成功"}
+// @Failure 400 {"code":400,"message":"获取账务统计信息失败"}
 // @Param   accessToken     query   string true       "访问令牌"
 // @Param   startDate     query   string true       "开始日期：2017-01-01"
 // @Param   endDate     query   string true       "结束日期：2017-01-01"
 // @Param   current     query   string true       "当前页"
 // @Param   pageSize     query   string true       "每页数量"
-// @Failure 400 {"code":400,"message":"获取账务统计信息失败"}
 // @router /tradingList [post]
 func (c *AccountItemController) TradingList() {
 	type data AccountItemListResponse
+	currentTimestamp := utils.CurrentTimestamp()
 	accessToken := c.GetString("accessToken")
 	startDate := c.GetString("startDate")
 	endDate := c.GetString("endDate")
-	currentPage, _ := c.GetInt64("current")
-	pageSize, _ := c.GetInt64("pageSize")
+	currentPage, _ := c.GetInt64("current", 1)
+	pageSize, _ := c.GetInt64("pageSize", 50)
 	if accessToken == "" {
 		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌无效"}
 		c.ServeJSON()
@@ -191,20 +193,15 @@ func (c *AccountItemController) TradingList() {
 	}
 
 	var replyUserPosition user.UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", action.FindByCond{
-		CondList: []action.CondValue{
-			action.CondValue{Type: "And", Key: "access_token", Val: accessToken},
-		},
-		Fileds: []string{"id", "user_id", "company_id", "type"},
-	}, &replyUserPosition)
+	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{CondList: []action.CondValue{action.CondValue{Type: "And", Key: "access_token", Val: accessToken }, action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTimestamp }, }, Fileds: []string{"id", "user_id", "company_id", "type"}, }, &replyUserPosition)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "获取失败"}
+		c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌无效"}
 		c.ServeJSON()
 		return
 	}
 
 	if replyUserPosition.UserId == 0 {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "获取失败"}
+		c.Data["json"] = data{Code: ErrorLogic, Message: "获取用户信息失败"}
 		c.ServeJSON()
 		return
 	}
@@ -221,7 +218,7 @@ func (c *AccountItemController) TradingList() {
 	}, &replyAccount)
 
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "获取失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "获取失败3"}
 		c.ServeJSON()
 		return
 	}
@@ -241,7 +238,7 @@ func (c *AccountItemController) TradingList() {
 		Current:  currentPage,
 	}, &replyPageByCond)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "获取失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "获取失败4"}
 		c.ServeJSON()
 		return
 	}
@@ -257,12 +254,11 @@ func (c *AccountItemController) TradingList() {
 		} else {
 			aType = "支出"
 		}
-		re := time.Unix(value.CreateTime / 1000, 0).Format("2006-01-02")
 		ailv = append(ailv, AccountItemListValue{
 			Id:         value.Id,
-			CreateTime: re,
-			Amount:     value.Amount,
-			Balance:    value.Balance,
+			CreateTime: utils.Datetime(value.CreateTime, "2006-01-02 15:04:05"),
+			Amount:     utils.Amount(value.Amount),
+			Balance:    utils.Amount(value.Balance),
 			AmountType: aType,
 			Remark:     value.Remark,
 		})
@@ -290,26 +286,28 @@ func (c *AccountItemController) Detail() {
 	type data AccountItemDetailResponse
 	accessToken := c.GetString("accessToken")
 	accountItemId, _ := c.GetInt64("id")
-	if accessToken == "" {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "获取失败"}
+
+	err := utils.Unable(map[string]string{"accessToken": "string:true", "id": "int:true"}, c.Ctx.Input)
+	if err != nil {
+		c.Data["json"] = data{Code: ErrorSystem, Message: Message(40000, err.Error())}
 		c.ServeJSON()
 		return
 	}
 
-	var replyAccessToken user.UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", action.FindByCond{
+	var replyUserPosition user.UserPosition
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", action.FindByCond{
 		CondList: []action.CondValue{
-			action.CondValue{Type: "And", Key: "access_token", Val: accessToken },
+			action.CondValue{Type: "And", Key: "accessToken", Val: accessToken },
 		},
 		Fileds: []string{"id", "user_id", "company_id", "type"},
-	}, &replyAccessToken)
+	}, &replyUserPosition)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "获取失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
 		c.ServeJSON()
 		return
 	}
-	if accountItemId == 0 {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "获取失败"}
+	if replyUserPosition.UserId == 0 {
+		c.Data["json"] = data{Code: ErrorSystem, Message: Message(30000)}
 		c.ServeJSON()
 		return
 	}
@@ -319,13 +317,12 @@ func (c *AccountItemController) Detail() {
 		Id: accountItemId,
 	}, &replyAccountItem)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "获取失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "获取失败3"}
 		c.ServeJSON()
 		return
 	}
 
 	var aType string
-	re := time.Unix(replyAccountItem.CreateTime / 1000, 0).Format("2006-01-02")
 	if replyAccountItem.Amount < 0 {
 		aType = "收入"
 		replyAccountItem.Amount, _ = strconv.ParseFloat(strings.Replace(strconv.FormatFloat(replyAccountItem.Amount, 'f', 5, 64), "-", "", 1), 64)
@@ -339,18 +336,18 @@ func (c *AccountItemController) Detail() {
 	if replyAccountItem.TransactionId > 0 {
 		var transactionReply account.Transaction
 		err = client.Call(beego.AppConfig.String("EtcdURL"), "Transaction", "FindById", account.Transaction{
-			Id:replyAccountItem.TransactionId,
+			Id: replyAccountItem.TransactionId,
 		}, &transactionReply)
 		fmt.Println("transactionReply", transactionReply)
 		fmt.Println("err", err)
 		if err != nil {
-			c.Data["json"] = data{Code: ErrorSystem, Message: "获取失败"}
+			c.Data["json"] = data{Code: ErrorSystem, Message: "获取失败4"}
 			c.ServeJSON()
 			return
 		}
 		OrderCode = transactionReply.OrderCode
-		if transactionReply.ToAccountId > 0 {
-			c.Data["json"] = data{Code: ErrorSystem, Message: "获取失败"}
+		if transactionReply.ToAccountId == 0 {
+			c.Data["json"] = data{Code: ErrorSystem, Message: "获取失败5"}
 			c.ServeJSON()
 			return
 		}
@@ -359,36 +356,37 @@ func (c *AccountItemController) Detail() {
 		var accountReply account.Account
 		err = client.Call(beego.AppConfig.String("EtcdURL"), "Account", "FindById", accountArgs, &accountReply)
 		if err == nil && accountReply.CompanyId > 0 {
-			c.Data["json"] = data{Code: ErrorSystem, Message: "获取失败"}
+			c.Data["json"] = data{Code: ErrorSystem, Message: "获取失败6"}
 
-		var accountReply account.Account
-		err = client.Call(beego.AppConfig.String("EtcdURL"), "Account", "FindById", account.Account{
-			Id:transactionReply.ToAccountId,
-		}, &accountReply)
-		fmt.Println("accountReply", accountReply)
-		fmt.Println("err", err)
-		if err != nil {
-			c.Data["json"] = data{Code: ResponseSystemErr, Message: "获取失败"}
-			c.ServeJSON()
-			return
+			var accountReply account.Account
+			err = client.Call(beego.AppConfig.String("EtcdURL"), "Account", "FindById", account.Account{
+				Id: transactionReply.ToAccountId,
+			}, &accountReply)
+			fmt.Println("accountReply", accountReply)
+			fmt.Println("err", err)
+			if err != nil {
+				c.Data["json"] = data{Code: ErrorSystem, Message: "获取失败7"}
+				c.ServeJSON()
+				return
+			}
+			var companyArgs company.Company
+			companyArgs.Id = accountReply.CompanyId
+			var companyReply company.Company
+			err = client.Call(beego.AppConfig.String("EtcdURL"), "Company", "FindById", companyArgs, &companyReply)
+			if err == nil {
+				ToAccount = companyReply.Name
+			}
 		}
-		var companyArgs company.Company
-		companyArgs.Id = accountReply.CompanyId
-		var companyReply company.Company
-		err = client.Call(beego.AppConfig.String("EtcdURL"), "Company", "FindById", companyArgs, &companyReply)
-		if err == nil {
-			ToAccount = companyReply.Name
-		}
+
+		c.Data["json"] = data{Code: Normal, Message: "获取信息成功", Data: AccountItemDetail{
+			CreateTime: utils.Datetime(replyAccountItem.CreateTime, "2006-01-02 03:04:05"),
+			Amount:     utils.Amount(replyAccountItem.Amount),
+			AmountType: aType,
+			Balance:    utils.Amount(replyAccountItem.Balance),
+			Remark:     replyAccountItem.Remark,
+			OrderCode:  OrderCode,
+			ToAccount:  ToAccount,
+		}}
+		c.ServeJSON()
 	}
-
-	c.Data["json"] = data{Code: Normal, Message: "获取信息成功", Data: AccountItemDetail{
-		CreateTime: re,
-		Amount:     replyAccountItem.Amount,
-		AmountType: aType,
-		Balance:    replyAccountItem.Balance,
-		Remark:     replyAccountItem.Remark,
-		OrderCode:  OrderCode,
-		ToAccount:  ToAccount,
-	}}
-	c.ServeJSON()
 }

@@ -6,12 +6,23 @@ import (
 	"strconv"
 	"reflect"
 	"github.com/astaxie/beego/context"
+	qrcode "github.com/skip2/go-qrcode"
 	"strings"
 	"errors"
 )
 
 func RandomName(prefix string, suffix string) string {
 	return prefix + Datetime(CurrentTimestamp(), "20060102") + CreateAccessValue(RandomString(10)) + suffix
+}
+
+func RandomNum(length int) string {
+	bytes := []byte("0123456789")
+	result := []byte{}
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	for i := 0; i < length; i++ {
+		result = append(result, bytes[r.Intn(len(bytes))])
+	}
+	return string(result)
 }
 
 func RandomString(length int) string {
@@ -64,14 +75,19 @@ func checkType(param string, paramType string) bool {
 		}
 	case "int":
 		value, err := strconv.ParseInt(param, 10, 64)
-		if err == nil && param != "" && reflect.ValueOf(value).Type().String() == paramType {
+		if err == nil && param != "" && reflect.ValueOf(value).Type().String() == "int64" {
 			return true
 		}
 	case "float":
 		value, err := strconv.ParseFloat(param, 64)
-		if err == nil && param != "" && reflect.ValueOf(value).Type().String() == paramType {
+		if err == nil && param != "" && reflect.ValueOf(value).Type().String() == "float64" {
 			return true
 		}
 	}
 	return false
+}
+
+func Qr(url string, size int) []byte {
+	qr, _ := qrcode.Encode(url, qrcode.Medium, size)
+	return qr
 }

@@ -6,11 +6,11 @@ import (
 	. "dev.model.360baige.com/http/window/center"
 	"dev.model.360baige.com/models/user"
 	"dev.model.360baige.com/models/application"
-	"dev.model.360baige.com/models/company"
 	"time"
 	"dev.model.360baige.com/action"
 	"encoding/json"
 	"fmt"
+	"dev.cloud.360baige.com/utils"
 )
 
 // APPLICATIONTPL API
@@ -121,10 +121,11 @@ func (c *ApplicationTplController) List() {
 			Image:              value.Image,
 			SubscriptionStatus: restatus,
 			Desc:               value.Desc,
-			Price:              value.Price,
+			Price:              utils.Amount(value.Price),
 			PayCycle:           value.PayCycle,
 		})
 	}
+
 	c.Data["json"] = data{Code: Normal, Message: "获取应用成功", Data: ApplicationTplList{
 		Total:       reply.Total,
 		Current:     currentPage,
@@ -141,15 +142,15 @@ func (c *ApplicationTplController) List() {
 // @Title 应用详情接口
 // @Description 应用详情接口
 // @Success 200 {"code":200,"message":"获取应用详情成功"}
-// @Param   accessToken     query   string true       "访问令牌"
-// @Param   id     query   string true       "id"
 // @Failure 400 {"code":400,"message":"获取应用详情失败"}
-// @router /detail [get]
+// @Param   accessToken     query   string true       "访问令牌"
+// @Param   applicationTplId     query   string true       "applicationTplId"
+// @router /detail [post]
 func (c *ApplicationTplController) Detail() {
-	type data ApplicationDetailResponse
+	type data ApplicationTalDetailResponse
+	currentTimestamp := utils.CurrentTimestamp()
 	accessToken := c.GetString("accessToken")
-	id, _ := c.GetInt64("id")
-	//Type, _ := c.GetInt64("type")
+	applicationTplId, _ := c.GetInt64("applicationTplId")
 
 	if accessToken == "" {
 		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌无效"}
@@ -158,71 +159,61 @@ func (c *ApplicationTplController) Detail() {
 	}
 
 	var replyUserPosition user.UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", action.FindByCond{
-		CondList: []action.CondValue{
-			action.CondValue{Type: "And", Key: "accessToken", Val: accessToken },
-		},
-		Fileds: []string{"id", "user_id", "company_id", "type"},
-	}, &replyUserPosition)
-
+	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{CondList: []action.CondValue{action.CondValue{Type: "And", Key: "access_token", Val: accessToken }, action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTimestamp }, }, Fileds: []string{"id", "user_id", "company_id", "type"}, }, &replyUserPosition)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌无效"}
+		c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌无效"}
 		c.ServeJSON()
 		return
 	}
 
-	var replyApplication application.Application
-	//if Type == 1 {
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "Application", "FindById", application.Application{
-		Id: id,
-	}, &replyApplication)
-	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "获取应用信息失败"}
+	if replyUserPosition.UserId == 0 {
+		c.Data["json"] = data{Code: Normal, Message: "获取用户信息失败"}
 		c.ServeJSON()
 		return
 	}
-	//}
 
 	var replyApplicationTpl application.ApplicationTpl
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "ApplicationTpl", "FindById", application.ApplicationTpl{
-		Id: replyApplication.ApplicationTplId,
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "ApplicationTpl", "FindById", &application.ApplicationTpl{
+		Id: applicationTplId,
 	}, &replyApplicationTpl)
 	if err != nil {
 		c.Data["json"] = data{Code: ErrorSystem, Message: "获取应用信息失败"}
 		c.ServeJSON()
 		return
 	}
-	var replyUser user.User
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "User", "FindById", user.User{
-		Id: replyApplicationTpl.UserId,
-	}, &replyUser)
+	var replyApplication application.Application
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "Application", "FindByCond", &action.FindByCond{
+		CondList: []action.CondValue{
+			action.CondValue{Type: "And", Key: "ApplicationTplId", Val: applicationTplId},
+			action.CondValue{Type: "And", Key: "CompanyId", Val: replyUserPosition.CompanyId},
+			action.CondValue{Type: "And", Key: "UserId", Val: replyUserPosition.UserId},
+			action.CondValue{Type: "And", Key: "UserPositionId", Val: replyUserPosition.Id},
+			action.CondValue{Type: "And", Key: "UserPositionType", Val: replyUserPosition.Type},
+		},
+	}, &replyApplication)
 	if err != nil {
 		c.Data["json"] = data{Code: ErrorSystem, Message: "获取应用信息失败"}
 		c.ServeJSON()
 		return
 	}
-
-	var replyCompany company.Company
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "Company", "FindById", company.Company{
-		Id: replyApplicationTpl.CompanyId,
-	}, &replyCompany)
-	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "获取应用信息失败"}
-		c.ServeJSON()
-		return
+	var application Application
+	if replyApplication.Id != 0 {
+		application = Application{
+			Id:        replyApplication.Id,
+			StartTime: utils.Datetime(replyApplication.StartTime, "2016-01-02 03:04:05"),
+			EndTime:   utils.Datetime(replyApplication.EndTime, "2016-01-02 03:04:05"),
+		}
 	}
 
-	c.Data["json"] = data{Code: Normal, Message: "获取应用成功", Data: ApplicationDetail{
-		CreateTime:  time.Unix(replyApplicationTpl.CreateTime / 1000, 0).Format("2006-01-02"),
+	c.Data["json"] = data{Code: Normal, Message: "获取应用成功", Data: ApplicationTalDetail{
 		Name:        replyApplicationTpl.Name,
 		Image:       replyApplicationTpl.Image,
 		Desc:        replyApplicationTpl.Desc,
+		PriceDesc:   "该应用功能￥72.00/月，您可以根据自己的需求选择是否订购使用。",
 		Price:       replyApplicationTpl.Price,
-		Site:        replyApplicationTpl.Site,
 		PayType:     GetPayTypeName(replyApplicationTpl.PayType),
 		PayCycle:    GetPayCycleName(replyApplicationTpl.PayCycle),
-		UserName:    replyUser.Username,
-		CompanyName: replyCompany.Name,
+		Application: application,
 	}}
 	c.ServeJSON()
 	return
