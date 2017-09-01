@@ -32,7 +32,7 @@ func (c *ApplicationTplController) List() {
 	accessToken := c.GetString("accessToken")
 	currentPage, _ := c.GetInt64("current", 1)
 	pageSize, _ := c.GetInt64("pageSize", 20)
-	appname := c.GetString("name", "")
+	appName := c.GetString("name", "")
 	Type, _ := c.GetInt8("type")
 
 	if accessToken == "" {
@@ -68,7 +68,7 @@ func (c *ApplicationTplController) List() {
 	var reply action.PageByCond
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "ApplicationTpl", "PageByCond", action.PageByCond{
 		CondList: []action.CondValue{
-			action.CondValue{Type: "And", Key: "name__icontains", Val: appname },
+			action.CondValue{Type: "And", Key: "name__icontains", Val: appName },
 			action.CondValue{Type: "And", Key: "status__gt", Val: -1 },
 			condValue,
 		},
@@ -119,9 +119,10 @@ func (c *ApplicationTplController) List() {
 			Id:                 value.Id,
 			Name:               value.Name,
 			Image:              value.Image,
+			Subscription:       value.Subscription,
 			SubscriptionStatus: restatus,
 			Desc:               value.Desc,
-			Price:              utils.Amount(value.Price),
+			Price:              value.Price,
 			PayCycle:           value.PayCycle,
 		})
 	}
@@ -132,7 +133,7 @@ func (c *ApplicationTplController) List() {
 		CurrentSize: reply.CurrentSize,
 		OrderBy:     reply.OrderBy,
 		PageSize:    pageSize,
-		Name:        appname,
+		Name:        appName,
 		List:        resData,
 	}}
 	c.ServeJSON()
@@ -196,24 +197,23 @@ func (c *ApplicationTplController) Detail() {
 		c.ServeJSON()
 		return
 	}
-	var application Application
+	var subscriptionStatus int8 = 0
 	if replyApplication.Id != 0 {
-		application = Application{
-			Id:        replyApplication.Id,
-			StartTime: utils.Datetime(replyApplication.StartTime, "2016-01-02 03:04:05"),
-			EndTime:   utils.Datetime(replyApplication.EndTime, "2016-01-02 03:04:05"),
-		}
+		subscriptionStatus = replyApplication.Status
 	}
 
 	c.Data["json"] = data{Code: Normal, Message: "获取应用成功", Data: ApplicationTalDetail{
-		Name:        replyApplicationTpl.Name,
-		Image:       replyApplicationTpl.Image,
-		Desc:        replyApplicationTpl.Desc,
-		PriceDesc:   "该应用功能￥72.00/月，您可以根据自己的需求选择是否订购使用。",
-		Price:       replyApplicationTpl.Price,
-		PayType:     GetPayTypeName(replyApplicationTpl.PayType),
-		PayCycle:    GetPayCycleName(replyApplicationTpl.PayCycle),
-		Application: application,
+		Id:                 replyApplicationTpl.Id,
+		Name:               replyApplicationTpl.Name,
+		Image:              replyApplicationTpl.Image,
+		Desc:               replyApplicationTpl.Desc,
+		PriceDesc:          "该应用功能￥72.00/月，您可以根据自己的需求选择是否订购使用。",
+		Price:              replyApplicationTpl.Price,
+		PayType:            replyApplicationTpl.PayType,
+		PayCycle:           GetPayCycleName(replyApplicationTpl.PayCycle),
+		SubscriptionStatus: subscriptionStatus,
+		StartTime:          utils.Datetime(replyApplication.StartTime, "2016-01-02 03:04:05"),
+		EndTime:            utils.Datetime(replyApplication.EndTime, "2016-01-02 03:04:05"),
 	}}
 	c.ServeJSON()
 	return

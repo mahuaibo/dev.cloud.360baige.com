@@ -9,6 +9,7 @@ import (
 	"time"
 	"dev.model.360baige.com/action"
 	"encoding/json"
+	"dev.cloud.360baige.com/utils"
 )
 
 // APPLICATION API
@@ -123,7 +124,7 @@ func (c *ApplicationController) List() {
 		}
 		al = append(al, ApplicationValue{
 			Id:         value.Id,
-			CreateTime: time.Unix(value.CreateTime/1000, 0).Format("2006-01-02"),
+			CreateTime: utils.Datetime(value.CreateTime, "2006-01-02 15:04:05"),
 			Name:       rename,
 			Image:      reimage,
 			Status:     value.Status,

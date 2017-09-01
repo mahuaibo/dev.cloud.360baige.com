@@ -35,10 +35,6 @@ func RandomString(length int) string {
 	return string(result)
 }
 
-func Amount(price float64) string {
-	return strconv.FormatFloat(price, 'f', 2, 64)
-}
-
 func Unable(params map[string]string, input *context.BeegoInput) error {
 	typeErr := ""
 	valueErr := ""

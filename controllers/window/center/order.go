@@ -13,7 +13,8 @@ import (
 	"dev.cloud.360baige.com/utils"
 	"dev.cloud.360baige.com/utils/pay/wechat"
 	"strings"
-	"fmt"
+	"strconv"
+	"dev.cloud.360baige.com/log"
 )
 
 type OrderController struct {
@@ -259,7 +260,7 @@ func (c *OrderController) Add() {
 	currentTimestamp := utils.CurrentTimestamp()
 	accessToken := c.GetString("accessToken")
 	applicationTplId, _ := c.GetInt64("applicationTplId")
-	num, _ := c.GetFloat("num", 0)
+	num, _ := c.GetInt64("num", 0)
 	payType, _ := c.GetInt8("payType", 1)
 	remoteAddr := strings.Split(c.Ctx.Request.RemoteAddr, ":")
 
@@ -297,10 +298,12 @@ func (c *OrderController) Add() {
 		c.ServeJSON()
 		return
 	}
-	brief := replyApplicationTpl.Name + "(" + utils.Amount(replyApplicationTpl.Price*num) + ")"
+	brief := replyApplicationTpl.Name + "(￥:" + strconv.FormatInt(replyApplicationTpl.Price*num, 10) + ")"
 	orderCode := utils.Datetime(utils.CurrentTimestamp(), "20060102030405") + utils.RandomNum(6)
-	total_fee := fmt.Sprintf("%v", replyApplicationTpl.Price*num*100)
-
+	total_fee := replyApplicationTpl.Price * num
+	log.Println("brief:", brief)
+	log.Println("orderCode:", orderCode)
+	log.Println("total_fee:", total_fee)
 	var replyOrder order.Order
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Order", "Add", &order.Order{
 		CreateTime:       currentTimestamp,
@@ -310,12 +313,13 @@ func (c *OrderController) Add() {
 		UserPositionType: replyUserPosition.Type,
 		UserPositionId:   replyUserPosition.Id,
 		Code:             orderCode,
-		Price:            replyApplicationTpl.Price * num,
+		Price:            total_fee,
 		Type:             0,
 		PayType:          payType,
 		Brief:            brief,
 		Status:           0,
 	}, &replyOrder)
+	log.Println("replyOrder:", replyOrder)
 	if err != nil {
 		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌失效"}
 		c.ServeJSON()
@@ -333,13 +337,15 @@ func (c *OrderController) Add() {
 		return
 	}
 	var replyNum *action.Num
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "Order", "UpdateById", &order.Order{
-		Id:         replyOrder.Id,
-		UpdateTime: currentTimestamp,
-		TradeType:  unifyOrderResponse.Trade_type,
-		PrepayId:   unifyOrderResponse.Prepay_id,
-		CodeUrl:    unifyOrderResponse.Code_url,
-		Openid:     unifyOrderResponse.Openid,
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "Order", "UpdateById", &action.UpdateByIdCond{
+		Id: []int64{replyOrder.Id},
+		UpdateList: []action.UpdateValue{
+			action.UpdateValue{"UpdateTime", currentTimestamp},
+			action.UpdateValue{"TradeType", unifyOrderResponse.Trade_type},
+			action.UpdateValue{"PrepayId", unifyOrderResponse.Prepay_id},
+			action.UpdateValue{"CodeUrl", unifyOrderResponse.Code_url},
+			action.UpdateValue{"Openid", unifyOrderResponse.Openid},
+		},
 	}, &replyNum)
 	if err != nil {
 		c.Data["json"] = data{Code: Normal, Message: "修改订单信息失败"}
@@ -347,64 +353,7 @@ func (c *OrderController) Add() {
 		return
 	}
 
-	c.Data["json"] = data{Code: Normal, Message: "订单新增成功", Data: OrderAdd{Id: replyOrder.Id}}
-	c.ServeJSON()
-	return
-}
-
-// @Title 订单支付接口
-// @Description 订单支付接口
-// @Success 200 {"code":200,"message":"获取订单详情成功"}
-// @Param   accessToken     query   string true       "访问令牌"
-// @Param   id     query   string true       "id"
-// @Failure 400 {"code":400,"message":"获取取订单信息失败"}
-// @router /pay [post]
-func (c *OrderController) Pay() {
-	type data OrderPayResponse
-	accessToken := c.GetString("accessToken")
-	orderId, _ := c.GetInt64("id")
-	if accessToken == "" {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌无效"}
-		c.ServeJSON()
-		return
-	}
-
-	var replyUserPosition user.UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", action.FindByCond{
-		CondList: []action.CondValue{
-			action.CondValue{Type: "And", Key: "accessToken", Val: accessToken },
-		},
-		Fileds: []string{"id", "user_id", "company_id", "type"},
-	}, &replyUserPosition)
-	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌失效"}
-		c.ServeJSON()
-		return
-	}
-	if orderId == 0 {
-		c.Data["json"] = data{Code: ErrorLogic, Message: "获取订单信息失败"}
-		c.ServeJSON()
-		return
-	}
-
-	var replyOrder order.Order
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "Order", "FindById", order.Order{
-		Id: orderId,
-	}, &replyOrder)
-	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "获取订单信息失败"}
-		c.ServeJSON()
-		return
-	}
-	c.Data["json"] = data{Code: Normal, Message: "获取订单信息", Data: OrderPay{
-		Code:      replyOrder.Code,
-		Price:     utils.Amount(replyOrder.Price),
-		Brief:     replyOrder.Brief,
-		TradeType: replyOrder.TradeType,
-		PrepayId:  replyOrder.PrepayId,
-		CodeUrl:   replyOrder.CodeUrl,
-		Openid:    replyOrder.Openid,
-	}}
+	c.Data["json"] = data{Code: Normal, Message: "订单新增成功", Data: OrderAdd{Id: replyOrder.Id, CodeUrl: unifyOrderResponse.Code_url}}
 	c.ServeJSON()
 	return
 }
@@ -415,7 +364,7 @@ func (c *OrderController) Pay() {
 // @Param   accessToken     query   string true       "访问令牌"
 // @Param   id     query   string true       "id"
 // @Failure 400 {"code":400,"message":"获取取订单信息失败"}
-// @router /payResult [post]
+// @router /payResult [get,post]
 func (c *OrderController) PayResult() {
 	type data OrderPayResultResponse
 	currentTimestamp := utils.CurrentTimestamp()
@@ -428,7 +377,7 @@ func (c *OrderController) PayResult() {
 	}
 
 	var replyUserPosition user.UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", action.FindByCond{
+	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{
 		CondList: []action.CondValue{
 			action.CondValue{Type: "And", Key: "accessToken", Val: accessToken },
 		},
@@ -445,7 +394,7 @@ func (c *OrderController) PayResult() {
 		return
 	}
 	var replyOrder order.Order
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "Order", "FindById", order.Order{
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "Order", "FindById", &order.Order{
 		Id: orderId,
 	}, &replyOrder)
 	if err != nil {
@@ -455,6 +404,7 @@ func (c *OrderController) PayResult() {
 	}
 	if replyOrder.Status == 0 {
 		orderQuery, err := wechat.OrderQuery(replyOrder.Code)
+		log.Println("orderQuery:", orderQuery, err)
 		if err != nil {
 			c.Data["json"] = data{Code: ErrorSystem, Message: err.Error()}
 			c.ServeJSON()
@@ -472,6 +422,8 @@ func (c *OrderController) PayResult() {
 				c.ServeJSON()
 				return
 			}
+			// 充值 + 消费 + 交易记录
+
 		}
 	}
 
@@ -483,8 +435,8 @@ func (c *OrderController) PayResult() {
 // @Title 获取二维码
 // @Param   url     query   string true       "url"
 // @Param   size     query   int true       "size 默认256"
-// @router /qr [get]
-func (c *AccountController) Qr() {
+// @router /qr [get,post]
+func (c *OrderController) Qr() {
 	url := c.GetString("url")
 	size, _ := c.GetInt("size", 256)
 	c.Ctx.Output.Body(utils.Qr(url, size))

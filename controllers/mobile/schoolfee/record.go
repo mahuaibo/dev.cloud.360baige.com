@@ -162,7 +162,7 @@ func (c *RecordController) AddRecord() {
 		num = no
 	}
 	phone := c.GetString("phone")
-	price, _ := c.GetFloat("price")
+	price, _ := c.GetInt64("price")
 	var isFee int8 = 1
 	feeTime, _ := c.GetInt64("feeTime")
 	desc := c.GetString("desc")

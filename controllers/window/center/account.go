@@ -14,6 +14,7 @@ import (
 type AccountController struct {
 	beego.Controller
 }
+
 // @Title 账户统计接口
 // @Description 账户统计接口
 // @Success 200 {"code":200,"message":"获取账务统计信息成功"}
@@ -83,7 +84,7 @@ func (c *AccountController) Statistics() {
 		return
 	}
 
-	var inAccount, outAccount float64
+	var inAccount, outAccount int64
 	for _, accountItem := range replyAccountItemList {
 		if accountItem.Amount > 0 {
 			inAccount += accountItem.Amount
@@ -93,9 +94,9 @@ func (c *AccountController) Statistics() {
 	}
 
 	c.Data["json"] = data{Code: Normal, Message: "获取账务统计信息成功", Data: AccountStatistics{
-		Balance:    utils.Amount(replyAccount.Balance),
-		InAccount:  utils.Amount(inAccount),
-		OutAccount: utils.Amount(outAccount),
+		Balance:    replyAccount.Balance,
+		InAccount:  inAccount,
+		OutAccount: outAccount,
 	}}
 	c.ServeJSON()
 	return

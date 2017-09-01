@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"bytes"
 	"io/ioutil"
+	"dev.cloud.360baige.com/log"
 )
 
 var (
@@ -30,7 +31,7 @@ type UnifyOrderRequest struct {
 	Notify_url       string `xml:"notify_url"`
 	Trade_type       string `xml:"trade_type"`
 	Spbill_create_ip string `xml:"spbill_create_ip"`
-	Total_fee        int    `xml:"total_fee"`
+	Total_fee        string `xml:"total_fee"`
 	Out_trade_no     string `xml:"out_trade_no"`
 	Sign             string `xml:"sign"`
 }
@@ -96,7 +97,7 @@ func Sign(params map[string]interface{}, key ...string) string {
 	return upperSign
 }
 
-func UnifiedOrder(ip, body, out_trade_no, total_fee string) (UnifyOrderResponse, error) {
+func UnifiedOrder(ip, body, out_trade_no string, total_fee int64) (UnifyOrderResponse, error) {
 	xmlResp := UnifyOrderResponse{}
 	params := map[string]interface{}{
 		"appid":            appid,
@@ -117,7 +118,7 @@ func UnifiedOrder(ip, body, out_trade_no, total_fee string) (UnifyOrderResponse,
 		Notify_url:       fmt.Sprintf("%v", params["notify_url"]),
 		Trade_type:       fmt.Sprintf("%v", params["trade_type"]),
 		Spbill_create_ip: fmt.Sprintf("%v", params["spbill_create_ip"]),
-		Total_fee:        params["total_fee"].(int),
+		Total_fee:        fmt.Sprintf("%v", params["total_fee"]),
 		Out_trade_no:     fmt.Sprintf("%v", params["out_trade_no"]),
 		Sign:             Sign(params, key),
 	}
@@ -151,11 +152,13 @@ func UnifiedOrder(ip, body, out_trade_no, total_fee string) (UnifyOrderResponse,
 }
 
 type OrderQueryRequest struct {
-	Appid        string `xml:"appid"`        //
-	Mch_id       string `xml:"mch_id"`       //
-	Nonce_str    string `xml:"nonce_str"`    //
-	Out_trade_no string `xml:"out_trade_no"` //
-	Sign         string `xml:"sign"`         //
+	Appid         string `xml:"appid"`          //
+	Mch_id        string `xml:"mch_id"`         //
+	Nonce_str     string `xml:"nonce_str"`      //
+	TransactionId string `xml:"transaction_id"` //
+	Out_trade_no  string `xml:"out_trade_no"`   //
+	SignType      string `xml:"sign_type"`      //
+	Sign          string `xml:"sign"`           //
 }
 
 type OrderQueryResponse struct {
@@ -187,6 +190,7 @@ func OrderQuery(out_trade_no string) (OrderQueryResponse, error) {
 		"mch_id":       mch_id,
 		"nonce_str":    utils.RandomString(20),
 		"out_trade_no": out_trade_no,
+		//"sign_type":    "MD5",
 	}
 	orderQuery := OrderQueryRequest{
 		Appid:        fmt.Sprintf("%v", params["appid"]),
@@ -200,9 +204,11 @@ func OrderQuery(out_trade_no string) (OrderQueryResponse, error) {
 		return xmlResp, err
 	}
 	str_req := string(bytes_req)
+	log.Println("str_req:", str_req)
 	str_req = strings.Replace(str_req, "OrderQueryRequest", "xml", -1)
+	log.Println("str_req:", str_req)
 	bytes_req = []byte(str_req)
-	req, err := http.NewRequest("POST", unifiedorder, bytes.NewReader(bytes_req))
+	req, err := http.NewRequest("POST", orderquery, bytes.NewReader(bytes_req))
 	if err != nil {
 		return xmlResp, err
 	}

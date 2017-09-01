@@ -8,8 +8,6 @@ import (
 	"dev.model.360baige.com/models/account"
 	"dev.model.360baige.com/models/company"
 	"time"
-	"strconv"
-	"strings"
 	"dev.model.360baige.com/action"
 	"encoding/json"
 	"fmt"
@@ -127,7 +125,7 @@ func (c *AccountItemController) List() {
 		return
 	}
 
-	var inAccount, outAccount float64 = 0, 0
+	var inAccount, outAccount int64 = 0, 0
 	for _, accountItem := range replyAccountItemList {
 		if accountItem.Amount > 0 {
 			inAccount += accountItem.Amount
@@ -150,7 +148,7 @@ func (c *AccountItemController) List() {
 		ailv = append(ailv, AccountItemListValue{
 			Id:         value.Id,
 			CreateTime: time.Unix(value.CreateTime/1000, 0).Format("2006-01-02 15:04"),
-			Amount:     utils.Amount(value.Amount),
+			Amount:     value.Amount,
 			AmountType: aType,
 			Remark:     value.Remark,
 		})
@@ -162,8 +160,8 @@ func (c *AccountItemController) List() {
 		OrderBy:     replyPageByCond.OrderBy,
 		PageSize:    pageSize,
 		List:        ailv,
-		InAccount:   utils.Amount(inAccount),
-		OutAccount:  utils.Amount(outAccount),
+		InAccount:   inAccount,
+		OutAccount:  outAccount,
 	}}
 	c.ServeJSON()
 }
@@ -250,15 +248,15 @@ func (c *AccountItemController) TradingList() {
 	for _, value := range accountItemList {
 		if value.Amount < 0 {
 			aType = "收入"
-			value.Amount, _ = strconv.ParseFloat(strings.Replace(strconv.FormatFloat(value.Amount, 'f', 5, 64), "-", "", 1), 64)
+			value.Amount = -value.Amount
 		} else {
 			aType = "支出"
 		}
 		ailv = append(ailv, AccountItemListValue{
 			Id:         value.Id,
 			CreateTime: utils.Datetime(value.CreateTime, "2006-01-02 15:04:05"),
-			Amount:     utils.Amount(value.Amount),
-			Balance:    utils.Amount(value.Balance),
+			Amount:     value.Amount,
+			Balance:    value.Balance,
 			AmountType: aType,
 			Remark:     value.Remark,
 		})
@@ -325,12 +323,12 @@ func (c *AccountItemController) Detail() {
 	var aType string
 	if replyAccountItem.Amount < 0 {
 		aType = "收入"
-		replyAccountItem.Amount, _ = strconv.ParseFloat(strings.Replace(strconv.FormatFloat(replyAccountItem.Amount, 'f', 5, 64), "-", "", 1), 64)
+		replyAccountItem.Amount = -replyAccountItem.Amount
 	} else {
 		aType = "支出"
 	}
 	if replyAccountItem.Balance < 0 {
-		replyAccountItem.Balance, _ = strconv.ParseFloat(strings.Replace(strconv.FormatFloat(replyAccountItem.Balance, 'f', 5, 64), "-", "", 1), 64)
+		replyAccountItem.Amount = -replyAccountItem.Amount
 	}
 	var ToAccount, OrderCode string
 	if replyAccountItem.TransactionId > 0 {
@@ -380,9 +378,9 @@ func (c *AccountItemController) Detail() {
 
 		c.Data["json"] = data{Code: Normal, Message: "获取信息成功", Data: AccountItemDetail{
 			CreateTime: utils.Datetime(replyAccountItem.CreateTime, "2006-01-02 03:04:05"),
-			Amount:     utils.Amount(replyAccountItem.Amount),
+			Amount:     replyAccountItem.Amount,
 			AmountType: aType,
-			Balance:    utils.Amount(replyAccountItem.Balance),
+			Balance:    replyAccountItem.Balance,
 			Remark:     replyAccountItem.Remark,
 			OrderCode:  OrderCode,
 			ToAccount:  ToAccount,

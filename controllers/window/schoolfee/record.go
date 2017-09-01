@@ -93,7 +93,7 @@ func (c *RecordController) ListOfRecord() {
 			IdCard:     rec.IdCard,
 			Num:        rec.Num,
 			Phone:      rec.Phone,
-			Price:      utils.Amount(rec.Price),
+			Price:      rec.Price,
 			IsFee:      rec.IsFee,
 			FeeTime:    resFeeTime,
 			Desc:       rec.Desc,
@@ -132,7 +132,7 @@ func (c *RecordController) AddRecord() {
 	idCard := c.GetString("idCard")
 	num := c.GetString("num")
 	phone := c.GetString("phone")
-	price, _ := c.GetFloat("price")
+	price, _ := c.GetInt64("price")
 	isFee, _ := c.GetInt8("isFee")
 	feeTime, _ := c.GetInt64("feeTime")
 	desc := c.GetString("desc")
@@ -236,7 +236,7 @@ func (c *RecordController) DetailRecord() {
 			Num:        replyRecord.Num,
 			Phone:      replyRecord.Phone,
 			Status:     replyRecord.Status,
-			Price:      utils.Amount(replyRecord.Price),
+			Price:      replyRecord.Price,
 			IsFee:      replyRecord.IsFee,
 			FeeTime:    resFeeTime,
 			Desc:       replyRecord.Desc,
@@ -420,7 +420,6 @@ func (c *RecordController) UploadRecord() {
 			c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌无效"}
 			return
 		}
-
 		xlsx, err := excelize.OpenFile(objectKey)
 		if err != nil {
 			os.Exit(1)
@@ -431,7 +430,7 @@ func (c *RecordController) UploadRecord() {
 		var argsRecordList []schoolfee.Record = make([]schoolfee.Record, len(rows)-1)
 		for key, row := range rows {
 			if key > 0 {
-				Price, err := strconv.ParseFloat(row[5], 64)
+				Price, err := strconv.ParseInt(row[5], 10, 64)
 				if err != nil {
 					c.Data["json"] = data{Code: ErrorLogic, Message: "上传缴费名单失败"}
 					c.ServeJSON()
@@ -531,7 +530,7 @@ func (c *RecordController) DownloadRecord() {
 		row.AddCell().Value = rec.IdCard
 		row.AddCell().Value = rec.Num
 		row.AddCell().Value = rec.Phone
-		row.AddCell().Value = utils.Amount(rec.Price)
+		row.AddCell().Value = strconv.FormatInt(rec.Price, 10)
 		if rec.IsFee == 1 {
 			row.AddCell().Value = "已缴费"
 			row.AddCell().Value = utils.Datetime(rec.FeeTime, "2006-01-02 15:04")
