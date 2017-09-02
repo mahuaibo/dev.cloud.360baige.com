@@ -390,6 +390,7 @@ func (c *OrderController) PayResult() {
 		c.ServeJSON()
 		return
 	}
+	var orderQuery wechat.OrderQueryResponse
 	if replyOrder.Status == 0 {
 		orderQuery, err := wechat.OrderQuery(replyOrder.Code)
 		log.Println("orderQuery:", orderQuery, err)
@@ -410,12 +411,13 @@ func (c *OrderController) PayResult() {
 				c.ServeJSON()
 				return
 			}
-			// 充值 + 消费 + 交易记录
 
 		}
 	}
 
-	c.Data["json"] = data{Code: Normal, Message: "获取订单信息"}
+	c.Data["json"] = data{Code: Normal, Message: "获取订单信息", Data: OrderPayResult{
+		TradeState: orderQuery.TradeState,
+	}}
 	c.ServeJSON()
 	return
 }
