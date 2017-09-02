@@ -287,11 +287,7 @@ func (c *OrderController) Add() {
 		return
 	}
 	brief := replyApplicationTpl.Name + "(￥:" + strconv.FormatInt(replyApplicationTpl.Price*num, 10) + ")"
-	orderCode := utils.Datetime(utils.CurrentTimestamp(), "20060102030405") + utils.RandomNum(6)
-	total_fee := replyApplicationTpl.Price * num
-	log.Println("brief:", brief)
-	log.Println("orderCode:", orderCode)
-	log.Println("total_fee:", total_fee)
+	orderCode := utils.Datetime(utils.CurrentTimestamp(), "20060102150405") + utils.RandomNum(6)
 	var replyOrder order.Order
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Order", "Add", &order.Order{
 		CreateTime:       currentTimestamp,
@@ -301,8 +297,11 @@ func (c *OrderController) Add() {
 		UserPositionType: replyUserPosition.Type,
 		UserPositionId:   replyUserPosition.Id,
 		Code:             orderCode,
-		Price:            total_fee,
+		Price:            replyApplicationTpl.Price,
+		Num:              num,
+		TotalPrice:       replyApplicationTpl.Price * num,
 		ProductType:      0,
+		ProductId:        replyApplicationTpl.Id,
 		PayType:          payType,
 		Brief:            brief,
 		Status:           0,
@@ -318,7 +317,7 @@ func (c *OrderController) Add() {
 		c.ServeJSON()
 		return
 	}
-	unifyOrderResponse, err := wechat.UnifiedOrder(remoteAddr[0], brief, orderCode, total_fee)
+	unifyOrderResponse, err := wechat.UnifiedOrder(remoteAddr[0], brief, orderCode, replyApplicationTpl.Price*num)
 	if err != nil {
 		c.Data["json"] = data{Code: ErrorSystem, Message: "统一下单失败"}
 		c.ServeJSON()
@@ -390,7 +389,8 @@ func (c *OrderController) PayResult() {
 		c.ServeJSON()
 		return
 	}
-	var orderQuery wechat.OrderQueryResponse
+
+	var tradeState = ""
 	if replyOrder.Status == 0 {
 		orderQuery, err := wechat.OrderQuery(replyOrder.Code)
 		log.Println("orderQuery:", orderQuery, err)
@@ -399,12 +399,15 @@ func (c *OrderController) PayResult() {
 			c.ServeJSON()
 			return
 		}
+		tradeState = orderQuery.TradeState
 		if orderQuery.ReturnCode == "SUCCESS" && orderQuery.ResultCode == "SUCCESS" && orderQuery.TradeState == "SUCCESS" {
 			var replyNum *action.Num
-			err = client.Call(beego.AppConfig.String("EtcdURL"), "Order", "UpdateById", &order.Order{
-				Id:         replyOrder.Id,
-				UpdateTime: currentTimestamp,
-				Status:     4,
+			err = client.Call(beego.AppConfig.String("EtcdURL"), "Order", "UpdateById", &action.UpdateByIdCond{
+				Id: []int64{replyOrder.Id},
+				UpdateList: []action.UpdateValue{
+					action.UpdateValue{"UpdateTime", currentTimestamp},
+					action.UpdateValue{"Status", 4},
+				},
 			}, &replyNum)
 			if err != nil {
 				c.Data["json"] = data{Code: Normal, Message: "修改订单信息失败"}
@@ -416,7 +419,7 @@ func (c *OrderController) PayResult() {
 	}
 
 	c.Data["json"] = data{Code: Normal, Message: "获取订单信息", Data: OrderPayResult{
-		TradeState: orderQuery.TradeState,
+		TradeState: tradeState,
 	}}
 	c.ServeJSON()
 	return
