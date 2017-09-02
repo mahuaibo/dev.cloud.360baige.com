@@ -91,19 +91,15 @@ func (c *OrderController) List() {
 	err = json.Unmarshal([]byte(replyPageByCond.Json), &orderList)
 	var resData []OrderValue
 	for _, value := range orderList {
-		var rPayType = "线下支付"
-		if value.PayType == 1 {
-			rPayType = "在线支付"
-		}
 		resData = append(resData, OrderValue{
-			Id:         value.Id,
-			CreateTime: time.Unix(value.CreateTime/1000, 0).Format("2006-01-02"),
-			Code:       value.Code,
-			Price:      value.Price,
-			Type:       value.Type,
-			PayType:    rPayType,
-			Brief:      value.Brief,
-			Status:     GetStatus(value.Status),
+			Id:          value.Id,
+			CreateTime:  time.Unix(value.CreateTime/1000, 0).Format("2006-01-02"),
+			Code:        value.Code,
+			Price:       value.Price,
+			ProductType: value.ProductType,
+			ProductId:   value.ProductId,
+			//Brief:      value.Brief,
+			Status: value.Status,
 		})
 	}
 	c.Data["json"] = data{Code: Normal, Message: "获取信息成功", Data: OrderList{
@@ -164,18 +160,14 @@ func (c *OrderController) Detail() {
 		return
 	}
 
-	rPayType := "线下支付"
-	if replyOrder.PayType == 1 {
-		rPayType = "在线支付"
-	}
 	c.Data["json"] = data{Code: Normal, Message: "获取订单详情成功", Data: OrderDetail{
-		CreateTime: time.Unix(replyOrder.CreateTime/1000, 0).Format("2006-01-02"),
-		Code:       replyOrder.Code,
-		Price:      replyOrder.Price,
-		Type:       replyOrder.Type,
-		PayType:    rPayType,
-		Brief:      replyOrder.Brief,
-		Status:     GetStatus(replyOrder.Status),
+		CreateTime:  time.Unix(replyOrder.CreateTime/1000, 0).Format("2006-01-02"),
+		Code:        replyOrder.Code,
+		Price:       replyOrder.Price,
+		ProductType: replyOrder.ProductType,
+		PayType:     replyOrder.PayType,
+		Brief:       replyOrder.Brief,
+		Status:      replyOrder.Status,
 	}}
 	c.ServeJSON()
 	return
@@ -231,18 +223,14 @@ func (c *OrderController) DetailByCode() {
 		return
 	}
 
-	rPayType := "线下支付"
-	if replyOrder.PayType == 1 {
-		rPayType = "在线支付"
-	}
 	c.Data["json"] = data{Code: Normal, Message: "获取信息成功", Data: OrderDetail{
-		CreateTime: time.Unix(replyOrder.CreateTime/1000, 0).Format("2006-01-02"),
-		Code:       replyOrder.Code,
-		Price:      replyOrder.Price,
-		Type:       replyOrder.Type,
-		PayType:    rPayType,
-		Brief:      replyOrder.Brief,
-		Status:     GetStatus(replyOrder.Status),
+		CreateTime:  time.Unix(replyOrder.CreateTime/1000, 0).Format("2006-01-02"),
+		Code:        replyOrder.Code,
+		Price:       replyOrder.Price,
+		ProductType: replyOrder.ProductType,
+		PayType:     replyOrder.PayType,
+		Brief:       replyOrder.Brief,
+		Status:      replyOrder.Status,
 	}}
 	c.ServeJSON()
 	return
@@ -314,7 +302,7 @@ func (c *OrderController) Add() {
 		UserPositionId:   replyUserPosition.Id,
 		Code:             orderCode,
 		Price:            total_fee,
-		Type:             0,
+		ProductType:      0,
 		PayType:          payType,
 		Brief:            brief,
 		Status:           0,
