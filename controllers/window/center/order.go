@@ -75,7 +75,7 @@ func (c *OrderController) List() {
 			action.CondValue{Type: "And", Key: "user_position_type", Val: replyUserPosition.Type},
 			condValue,
 		},
-		Cols:     []string{"id", "create_time", "code", "price", "type", "pay_type", "brief", "status"},
+		Cols:     []string{"id", "create_time", "code", "price", "product_type", "pay_type", "brief", "status"},
 		OrderBy:  []string{"id"},
 		PageSize: pageSize,
 		Current:  currentPage,
@@ -93,7 +93,7 @@ func (c *OrderController) List() {
 	for _, value := range orderList {
 		resData = append(resData, OrderValue{
 			Id:          value.Id,
-			CreateTime:  time.Unix(value.CreateTime/1000, 0).Format("2006-01-02"),
+			CreateTime:  time.Unix(value.CreateTime / 1000, 0).Format("2006-01-02"),
 			Code:        value.Code,
 			Price:       value.Price,
 			ProductType: value.ProductType,
@@ -161,7 +161,7 @@ func (c *OrderController) Detail() {
 	}
 
 	c.Data["json"] = data{Code: Normal, Message: "获取订单详情成功", Data: OrderDetail{
-		CreateTime:  time.Unix(replyOrder.CreateTime/1000, 0).Format("2006-01-02"),
+		CreateTime:  time.Unix(replyOrder.CreateTime / 1000, 0).Format("2006-01-02"),
 		Code:        replyOrder.Code,
 		Price:       replyOrder.Price,
 		ProductType: replyOrder.ProductType,
@@ -224,7 +224,7 @@ func (c *OrderController) DetailByCode() {
 	}
 
 	c.Data["json"] = data{Code: Normal, Message: "获取信息成功", Data: OrderDetail{
-		CreateTime:  time.Unix(replyOrder.CreateTime/1000, 0).Format("2006-01-02"),
+		CreateTime:  time.Unix(replyOrder.CreateTime / 1000, 0).Format("2006-01-02"),
 		Code:        replyOrder.Code,
 		Price:       replyOrder.Price,
 		ProductType: replyOrder.ProductType,
@@ -286,7 +286,7 @@ func (c *OrderController) Add() {
 		c.ServeJSON()
 		return
 	}
-	brief := replyApplicationTpl.Name + "(￥:" + strconv.FormatInt(replyApplicationTpl.Price*num, 10) + ")"
+	brief := replyApplicationTpl.Name + "(￥:" + strconv.FormatInt(replyApplicationTpl.Price * num, 10) + ")"
 	orderCode := utils.Datetime(utils.CurrentTimestamp(), "20060102030405") + utils.RandomNum(6)
 	total_fee := replyApplicationTpl.Price * num
 	log.Println("brief:", brief)
@@ -301,7 +301,10 @@ func (c *OrderController) Add() {
 		UserPositionType: replyUserPosition.Type,
 		UserPositionId:   replyUserPosition.Id,
 		Code:             orderCode,
-		Price:            total_fee,
+		Price:            replyApplicationTpl.Price,
+		Num:              num,
+		TotalPrice:       total_fee,
+		ProductId :       replyApplicationTpl.Id,
 		ProductType:      0,
 		PayType:          payType,
 		Brief:            brief,
