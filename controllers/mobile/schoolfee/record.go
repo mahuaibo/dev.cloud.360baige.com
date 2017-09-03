@@ -8,9 +8,9 @@ import (
 	"dev.model.360baige.com/models/schoolfee"
 	"dev.model.360baige.com/action"
 	"encoding/json"
-	"time"
 	"strings"
-	//"fmt"
+	"dev.cloud.360baige.com/utils"
+	"regexp"
 )
 
 // Record API
@@ -27,54 +27,58 @@ type RecordController struct {
 // @router /history [*]
 func (c *RecordController) ListOfRecord() {
 	type data RecordHistoryResponse
+	currentTimestamp := utils.CurrentTimestamp()
 	accessToken := c.GetString("accessToken")
+	searchType := c.GetString("searchType", "num")
 	searchKey := c.GetString("searchKey")
-	pageSize, _ := c.GetInt64("pageSize")
-	currentPage, _ := c.GetInt64("current")
-	if accessToken == "" {
-		c.Data["json"] = data{Code: ResponseLogicErr, Message: "访问令牌无效"}
-		c.ServeJSON()
-		return
-	}
-	//fmt.Println("--------------------")
-	//fmt.Println(currentPage)
-	var replyUserPosition user.UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", action.FindByCond{
-		CondList: []action.CondValue{
-			action.CondValue{Type: "And", Key: "accessToken", Val: accessToken },
-		},
-		Fileds: []string{"id", "user_id", "company_id", "type"},
-	}, &replyUserPosition)
+	pageSize, _ := c.GetInt64("pageSize", 50)
+	currentPage, _ := c.GetInt64("current", 1)
+	err := utils.Unable(map[string]string{"accessToken": "string:true", "searchKey": "string:true"}, c.Ctx.Input)
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseLogicErr, Message: "访问令牌失效"}
+		c.Data["json"] = data{Code: ErrorLogic, Message: Message(40000, err.Error())}
 		c.ServeJSON()
 		return
 	}
-	searchTypeKey := "num"
-	if len(searchKey) >= 15 {
-		searchTypeKey = "id_card"
+
+	var replyUserPosition user.UserPosition
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{CondList: []action.CondValue{action.CondValue{Type: "And", Key: "access_token", Val: accessToken }, action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTimestamp }, }, Fileds: []string{"id", "user_id", "company_id", "type"}, }, &replyUserPosition)
+	if err != nil {
+		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
+		c.ServeJSON()
+		return
 	}
-	var reply action.PageByCond
+	if replyUserPosition.UserId == 0 {
+		c.Data["json"] = data{Code: ErrorPower, Message: Message(30000)}
+		c.ServeJSON()
+		return
+	}
+
+	r, _ := regexp.Compile("^[1-9]\\d{7}((0\\d)|(1[0-2]))(([0|1|2]\\d)|3[0-1])\\d{3}$|^[1-9]\\d{5}[1-9]\\d{3}((0\\d)|(1[0-2]))(([0|1|2]\\d)|3[0-1])\\d{3}([0-9]|X)$")
+	if r.MatchString(searchKey) {
+		searchType = "id_card"
+	}
+	var replyPageByCond action.PageByCond
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Record", "PageByCond", action.PageByCond{
 		CondList: []action.CondValue{
 			action.CondValue{Type: "And", Key: "company_id", Val: replyUserPosition.CompanyId},
 			action.CondValue{Type: "And", Key: "is_fee", Val: 1},
 			action.CondValue{Type: "And", Key: "status", Val: 0},
-			action.CondValue{Type: "And", Key: searchTypeKey, Val: searchKey},
+			action.CondValue{Type: "And", Key: searchType, Val: searchKey},
 		},
 		OrderBy:  []string{"id"},
 		PageSize: pageSize,
 		Current:  currentPage,
-	}, &reply)
-	replyRecord := []schoolfee.Record{}
-	err = json.Unmarshal([]byte(reply.Json), &replyRecord)
+	}, &replyPageByCond)
+	jsonReplyRecord := []schoolfee.Record{}
+	err = json.Unmarshal([]byte(replyPageByCond.Json), &jsonReplyRecord)
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseLogicErr, Message: "获取缴费项目列表失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50002, "Record")}
 		c.ServeJSON()
 		return
 	}
+
 	var project_ids []int64
-	for _, record := range replyRecord {
+	for _, record := range jsonReplyRecord {
 		project_ids = append(project_ids, record.ProjectId)
 	}
 
@@ -91,8 +95,8 @@ func (c *RecordController) ListOfRecord() {
 		projectList[pro.Id] = pro
 	}
 
-	var recordProjectList []RecordProject = make([]RecordProject, len(replyRecord), len(replyRecord))
-	for index, record := range replyRecord {
+	var recordProjectList []RecordProject = make([]RecordProject, len(jsonReplyRecord), len(jsonReplyRecord))
+	for index, record := range jsonReplyRecord {
 		recordProjectList[index] = RecordProject{
 			Id:         record.Id,
 			CreateTime: record.CreateTime,
@@ -123,12 +127,12 @@ func (c *RecordController) ListOfRecord() {
 		}
 	}
 
-	c.Data["json"] = data{Code: ResponseNormal, Message: "", Data: ListOfRecordProject{
+	c.Data["json"] = data{Code: Normal, Message: Message(20003), Data: ListOfRecordProject{
 		List:        recordProjectList,
-		Total:       reply.Total,
+		Total:       replyPageByCond.Total,
 		Current:     currentPage,
-		CurrentSize: reply.CurrentSize,
-		OrderBy:     reply.OrderBy,
+		CurrentSize: replyPageByCond.CurrentSize,
+		OrderBy:     replyPageByCond.OrderBy,
 		PageSize:    pageSize,
 		SearchKey:   searchKey,
 	}}
@@ -150,6 +154,7 @@ func (c *RecordController) ListOfRecord() {
 // @router /add [post]
 func (c *RecordController) AddRecord() {
 	type data AddRecordResponse
+	currentTimestamp := utils.CurrentTimestamp()
 	accessToken := c.GetString("accessToken")
 	projectId, _ := c.GetInt64("projectId", 0)
 	name := c.GetString("name")
@@ -166,29 +171,31 @@ func (c *RecordController) AddRecord() {
 	var isFee int8 = 1
 	feeTime, _ := c.GetInt64("feeTime")
 	desc := c.GetString("desc")
-	if accessToken == "" {
-		c.Data["json"] = data{Code: ResponseLogicErr, Message: "访问令牌无效"}
+
+	err := utils.Unable(map[string]string{"accessToken": "string:true", "searchKey": "string:true"}, c.Ctx.Input)
+	if err != nil {
+		c.Data["json"] = data{Code: ErrorLogic, Message: Message(40000, err.Error())}
 		c.ServeJSON()
 		return
 	}
 
 	var replyUserPosition user.UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", action.FindByCond{
-		CondList: []action.CondValue{
-			action.CondValue{Type: "And", Key: "accessToken", Val: accessToken },
-		},
-		Fileds: []string{"id", "user_id", "company_id", "type"},
-	}, &replyUserPosition)
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{CondList: []action.CondValue{action.CondValue{Type: "And", Key: "access_token", Val: accessToken }, action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTimestamp }, }, Fileds: []string{"id", "user_id", "company_id", "type"}, }, &replyUserPosition)
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseLogicErr, Message: "访问令牌失效"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
+		c.ServeJSON()
+		return
+	}
+	if replyUserPosition.UserId == 0 {
+		c.Data["json"] = data{Code: ErrorPower, Message: Message(30000)}
 		c.ServeJSON()
 		return
 	}
 
-	operationTime := time.Now().UnixNano() / 1e6
-	args2 := &schoolfee.Record{
-		CreateTime: operationTime,
-		UpdateTime: operationTime,
+	var replyRecord schoolfee.Record
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "Record", "Add", &schoolfee.Record{
+		CreateTime: currentTimestamp,
+		UpdateTime: currentTimestamp,
 		CompanyId:  replyUserPosition.CompanyId,
 		ProjectId:  projectId,
 		Name:       name,
@@ -200,15 +207,13 @@ func (c *RecordController) AddRecord() {
 		IsFee:      isFee,
 		FeeTime:    feeTime,
 		Status:     0,
-	}
-	var replyRecord schoolfee.Record
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "Record", "Add", args2, &replyRecord)
+	}, &replyRecord)
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseLogicErr, Message: "添加失败"}
+		c.Data["json"] = data{Code: ErrorLogic, Message: Message(50001)}
 		c.ServeJSON()
 		return
 	}
-	c.Data["json"] = data{Code: ResponseNormal, Message: "添加成功", Data: AddRecord{
+	c.Data["json"] = data{Code: Normal, Message: Message(20004), Data: AddRecord{
 		Id: replyRecord.Id,
 	}}
 	c.ServeJSON()
@@ -225,39 +230,32 @@ func (c *RecordController) AddRecord() {
 // @router /addMulti [post]
 func (c *RecordController) AddMultiRecord() {
 	type data AddMultipleRecordResponse
+	currentTimestamp := utils.CurrentTimestamp()
 	accessToken := c.GetString("accessToken")
 	recordIds := c.GetString("recordIds")
-	var isFee int8 = 1
 	feeTime, _ := c.GetInt64("feeTime")
-	if accessToken == "" {
-		c.Data["json"] = data{Code: ResponseLogicErr, Message: "访问令牌无效"}
+
+	err := utils.Unable(map[string]string{"accessToken": "string:true", "recordIds": "string:true"}, c.Ctx.Input)
+	if err != nil {
+		c.Data["json"] = data{Code: ErrorLogic, Message: Message(40000, err.Error())}
 		c.ServeJSON()
 		return
 	}
 
-	var replyUserPosition user.UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", action.FindByCond{
-		CondList: []action.CondValue{
-			action.CondValue{Type: "And", Key: "accessToken", Val: accessToken },
-		},
-		Fileds: []string{"id", "user_id", "company_id", "type"},
-	}, &replyUserPosition)
-	if err != nil {
-		c.Data["json"] = data{Code: ResponseLogicErr, Message: "访问令牌失效"}
-		c.ServeJSON()
-		return
-	}
-	if recordIds == "" {
-		c.Data["json"] = data{Code: ResponseLogicErr, Message: "添加缴费失败"}
-		c.ServeJSON()
-		return
-	}
 	recordIdsArr := strings.Split(recordIds, ",")
-	if len(recordIdsArr) == 0 {
-		c.Data["json"] = data{Code: ResponseLogicErr, Message: "添加缴费失败"}
+	var replyUserPosition user.UserPosition
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{CondList: []action.CondValue{action.CondValue{Type: "And", Key: "access_token", Val: accessToken }, action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTimestamp }, }, Fileds: []string{"id", "user_id", "company_id", "type"}, }, &replyUserPosition)
+	if err != nil {
+		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
 		c.ServeJSON()
 		return
 	}
+	if replyUserPosition.UserId == 0 {
+		c.Data["json"] = data{Code: ErrorPower, Message: Message(30000)}
+		c.ServeJSON()
+		return
+	}
+
 	var replyRecords []schoolfee.Record
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Record", "ListByCond", action.FindByCond{
 		CondList: []action.CondValue{
@@ -266,41 +264,38 @@ func (c *RecordController) AddMultiRecord() {
 			action.CondValue{Type: "And", Key: "is_fee", Val: 0},
 		},
 	}, &replyRecords)
-	var args2 []schoolfee.Record
-	operationTime := time.Now().UnixNano() / 1e6
-	if len(replyRecords) == 0 {
-		c.Data["json"] = data{Code: ResponseLogicErr, Message: "添加缴费失败"}
+	if err != nil {
+		c.Data["json"] = data{Code: ErrorLogic, Message: Message(50001)}
 		c.ServeJSON()
 		return
 	}
-	var temp schoolfee.Record
+	var listOfRecord []schoolfee.Record
 	for _, record := range replyRecords {
-		temp.CreateTime = operationTime
-		temp.UpdateTime = operationTime
-		temp.CompanyId = record.CompanyId
-		temp.ProjectId = record.ProjectId
-		temp.Name = record.Name
-		temp.ClassName = record.ClassName
-		temp.IdCard = record.IdCard
-		temp.Num = record.Num
-		temp.Phone = record.Phone
-		temp.Price = 0
-		temp.Price = record.Price
-		temp.FeeTime = feeTime
-		temp.IsFee = isFee
-		temp.FeeTime = feeTime
-		temp.Desc = record.Desc
-		args2 = append(args2, temp)
+		listOfRecord = append(listOfRecord, schoolfee.Record{
+			CreateTime: currentTimestamp,
+			UpdateTime: currentTimestamp,
+			CompanyId:  record.CompanyId,
+			ProjectId:  record.ProjectId,
+			Name:       record.Name,
+			ClassName:  record.ClassName,
+			IdCard:     record.IdCard,
+			Num:        record.Num,
+			Phone:      record.Phone,
+			Price:      record.Price,
+			FeeTime:    feeTime,
+			IsFee:      1,
+			Desc:       record.Desc,
+		})
 	}
 
 	var replyRecord action.Num
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "Record", "AddMultiple", args2, &replyRecord)
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "Record", "AddMultiple", &listOfRecord, &replyRecord)
 	if err != nil {
-		c.Data["json"] = data{Code: ResponseLogicErr, Message: "添加失败"}
+		c.Data["json"] = data{Code: ErrorLogic, Message: Message(50001)}
 		c.ServeJSON()
 		return
 	}
-	c.Data["json"] = data{Code: ResponseNormal, Message: "添加成功", Data: AddMultipleRecord{
+	c.Data["json"] = data{Code: Normal, Message: Message(20005), Data: AddMultipleRecord{
 		Num: replyRecord.Value,
 	}}
 	c.ServeJSON()
