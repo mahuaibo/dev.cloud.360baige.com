@@ -9,7 +9,6 @@ import (
 	"time"
 	"dev.model.360baige.com/action"
 	"encoding/json"
-	"fmt"
 	"dev.cloud.360baige.com/utils"
 )
 
@@ -29,34 +28,29 @@ type ApplicationTplController struct {
 // @router /list [post]
 func (c *ApplicationTplController) List() {
 	type data ApplicationTplListResponse
+	currentTimestamp := utils.CurrentTimestamp()
 	accessToken := c.GetString("accessToken")
 	currentPage, _ := c.GetInt64("current", 1)
 	pageSize, _ := c.GetInt64("pageSize", 20)
 	appName := c.GetString("name", "")
 	Type, _ := c.GetInt8("type")
 
-	if accessToken == "" {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌无效"}
+	err := utils.Unable(map[string]string{"accessToken": "string:true"}, c.Ctx.Input)
+	if err != nil {
+		c.Data["json"] = data{Code: ErrorLogic, Message: Message(40000, err.Error())}
 		c.ServeJSON()
 		return
 	}
 
 	var replyUserPosition user.UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", action.FindByCond{
-		CondList: []action.CondValue{
-			action.CondValue{Type: "And", Key: "accessToken", Val: accessToken },
-		},
-		Fileds: []string{"id", "user_id", "company_id", "type"},
-	}, &replyUserPosition)
-
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{CondList: []action.CondValue{action.CondValue{Type: "And", Key: "access_token", Val: accessToken }, action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTimestamp }, }, Fileds: []string{"id", "user_id", "company_id", "type"}, }, &replyUserPosition)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌无效"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
 		c.ServeJSON()
 		return
 	}
-
 	if replyUserPosition.UserId == 0 {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "获取信息失败"}
+		c.Data["json"] = data{Code: ErrorPower, Message: Message(30000)}
 		c.ServeJSON()
 		return
 	}
@@ -107,7 +101,6 @@ func (c *ApplicationTplController) List() {
 	replyList := []application.ApplicationTpl{}
 	err = json.Unmarshal([]byte(reply.Json), &replyList)
 
-	fmt.Println("replyList", replyList)
 	for _, value := range replyList {
 		var restatus int8
 		if applicationList[value.Id] > 0 {
@@ -146,7 +139,7 @@ func (c *ApplicationTplController) List() {
 // @Failure 400 {"code":400,"message":"获取应用详情失败"}
 // @Param   accessToken     query   string true       "访问令牌"
 // @Param   applicationTplId     query   string true       "applicationTplId"
-// @router /detail [post]
+// @router /detail [get,post]
 func (c *ApplicationTplController) Detail() {
 	type data ApplicationTalDetailResponse
 	currentTimestamp := utils.CurrentTimestamp()
@@ -185,11 +178,11 @@ func (c *ApplicationTplController) Detail() {
 	var replyApplication application.Application
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Application", "FindByCond", &action.FindByCond{
 		CondList: []action.CondValue{
-			action.CondValue{Type: "And", Key: "ApplicationTplId", Val: applicationTplId},
 			action.CondValue{Type: "And", Key: "CompanyId", Val: replyUserPosition.CompanyId},
 			action.CondValue{Type: "And", Key: "UserId", Val: replyUserPosition.UserId},
-			action.CondValue{Type: "And", Key: "UserPositionId", Val: replyUserPosition.Id},
 			action.CondValue{Type: "And", Key: "UserPositionType", Val: replyUserPosition.Type},
+			action.CondValue{Type: "And", Key: "UserPositionId", Val: replyUserPosition.Id},
+			action.CondValue{Type: "And", Key: "ApplicationTplId", Val: applicationTplId},
 		},
 	}, &replyApplication)
 	if err != nil {
@@ -207,13 +200,12 @@ func (c *ApplicationTplController) Detail() {
 		Name:               replyApplicationTpl.Name,
 		Image:              replyApplicationTpl.Image,
 		Desc:               replyApplicationTpl.Desc,
-		PriceDesc:          "该应用功能￥72.00/月，您可以根据自己的需求选择是否订购使用。",
+		PriceDesc:          "该应用功能￥8.00，您可以根据自己的需求选择是否订购使用。",
 		Price:              replyApplicationTpl.Price,
 		PayType:            replyApplicationTpl.PayType,
 		PayCycle:           GetPayCycleName(replyApplicationTpl.PayCycle),
 		SubscriptionStatus: subscriptionStatus,
-		StartTime:          utils.Datetime(replyApplication.StartTime, "2016-01-02 03:04:05"),
-		EndTime:            utils.Datetime(replyApplication.EndTime, "2016-01-02 03:04:05"),
+		EndTime:            utils.Datetime(replyApplication.EndTime, "2006-01-02 15:04:05"),
 	}}
 	c.ServeJSON()
 	return
