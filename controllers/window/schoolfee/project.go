@@ -81,7 +81,7 @@ func (c *ProjectController) ListOfProject() {
 	for index, pro := range jsonProjectList {
 		projectList[index] = Project{
 			Id:         pro.Id,
-			CreateTime: utils.Datetime(pro.CreateTime, "2006-01-02 03:04"),
+			CreateTime: utils.Datetime(pro.CreateTime, "2006-01-02 15:04"),
 			CompanyId:  pro.CompanyId,
 			Name:       pro.Name,
 			IsLimit:    pro.IsLimit,

@@ -17,11 +17,11 @@ import (
 )
 
 func init() {
-	centerWindowRouter() // window->admin后台管理
-	centerMobileRouter()
+	centerWindowRouter() // window->后台管理
+	centerMobileRouter() // mobile->后台管理
 
 	schoolFeeWindowRouter() // window->缴费管理
-	schoolFeeMobileRouter()
+	schoolFeeMobileRouter() // mobile->缴费管理
 
 	personnelWindowRouter() // window->人事管理
 }
@@ -111,51 +111,6 @@ func centerWindowRouter() {
 
 func centerMobileRouter() {
 	centerMobileRouter := beego.NewNamespace("/cloud/mobile/v1",
-		//beego.NSNamespace("/user",
-		//	beego.NSInclude(
-		//		&centerMobile.UserController{},
-		//	),
-		//),
-		//beego.NSNamespace("/userPosition",
-		//	beego.NSInclude(
-		//		&centerMobile.UserPositionController{},
-		//	),
-		//),
-		//beego.NSNamespace("/account",
-		//	beego.NSInclude(
-		//		&centerMobile.AccountController{},
-		//	),
-		//),
-		//beego.NSNamespace("/accountItem",
-		//	beego.NSInclude(
-		//		&centerMobile.AccountItemController{},
-		//	),
-		//),
-		//beego.NSNamespace("/order",
-		//	beego.NSInclude(
-		//		&centerMobile.OrderController{},
-		//	),
-		//),
-		//beego.NSNamespace("/application",
-		//	beego.NSInclude(
-		//		&centerMobile.ApplicationController{},
-		//	),
-		//),
-		//beego.NSNamespace("/applicationTpl",
-		//	beego.NSInclude(
-		//		&centerMobile.ApplicationTplController{},
-		//	),
-		//),
-		//beego.NSNamespace("/messageTemp",
-		//	beego.NSInclude(
-		//		&centerMobile.MessageTempController{},
-		//	),
-		//),
-		//beego.NSNamespace("/logger",
-		//	beego.NSInclude(
-		//		&centerMobile.LoggerController{},
-		//	),
-		//),
 
 	)
 	beego.AddNamespace(centerMobileRouter)
