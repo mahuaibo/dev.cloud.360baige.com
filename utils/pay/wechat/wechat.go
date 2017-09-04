@@ -47,6 +47,7 @@ type UnifyOrderResponse struct {
 	Prepay_id   string `xml:"prepay_id"`
 	Trade_type  string `xml:"trade_type"`
 	Code_url    string `xml:"code_url"`
+	Mweb_url    string `xml:"mweb_url"`
 	Openid      string `xml:"openid"`
 }
 
@@ -97,13 +98,13 @@ func Sign(params map[string]interface{}, key ...string) string {
 	return upperSign
 }
 
-func UnifiedOrder(ip, body, out_trade_no string, total_fee int64) (UnifyOrderResponse, error) {
+func UnifiedOrder(ip, body, out_trade_no, trade_type string, total_fee int64) (UnifyOrderResponse, error) {
 	xmlResp := UnifyOrderResponse{}
 	params := map[string]interface{}{
 		"appid":            appid,
 		"mch_id":           mch_id,
 		"nonce_str":        utils.RandomString(20),
-		"trade_type":       "NATIVE",
+		"trade_type":       trade_type,
 		"body":             body,
 		"notify_url":       notify_url,
 		"spbill_create_ip": ip,

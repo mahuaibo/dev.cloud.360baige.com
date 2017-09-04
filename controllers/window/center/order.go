@@ -298,7 +298,7 @@ func (c *OrderController) DetailByCode() {
 // @Param   accessToken     query   string true       "访问令牌"
 // @Param   code     query   string true       "code"
 // @Failure 400 {"code":400,"message":"获取账务统计信息失败"}
-// @router /add [post]
+// @router /add [get,post]
 func (c *OrderController) Add() {
 	type data OrderAddResponse
 	currentTimestamp := utils.CurrentTimestamp()
@@ -373,11 +373,16 @@ func (c *OrderController) Add() {
 		c.ServeJSON()
 		return
 	}
-	unifyOrderResponse, err := wechat.UnifiedOrder(remoteAddr[0], replyApplicationTpl.Name, orderCode, replyApplicationTpl.Price*num)
+	// NATIVE MWEB
+	unifyOrderResponse, err := wechat.UnifiedOrder(remoteAddr[0], replyApplicationTpl.Name, orderCode, "MWEB", replyApplicationTpl.Price*num)
 	if err != nil {
 		c.Data["json"] = data{Code: ErrorSystem, Message: "统一下单失败"}
 		c.ServeJSON()
 		return
+	}
+	url := unifyOrderResponse.Code_url
+	if url == "" {
+		url = unifyOrderResponse.Mweb_url
 	}
 	var replyNum *action.Num
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Order", "UpdateById", &action.UpdateByIdCond{
@@ -386,7 +391,7 @@ func (c *OrderController) Add() {
 			action.UpdateValue{"UpdateTime", currentTimestamp},
 			action.UpdateValue{"TradeType", unifyOrderResponse.Trade_type},
 			action.UpdateValue{"PrepayId", unifyOrderResponse.Prepay_id},
-			action.UpdateValue{"CodeUrl", unifyOrderResponse.Code_url},
+			action.UpdateValue{"CodeUrl", url},
 			action.UpdateValue{"Openid", unifyOrderResponse.Openid},
 		},
 	}, &replyNum)

@@ -10,7 +10,7 @@ package routers
 import (
 	"github.com/astaxie/beego"
 	centerWindow "dev.cloud.360baige.com/controllers/window/center"
-	centerMobile "dev.cloud.360baige.com/controllers/mobile/center"
+	//centerMobile "dev.cloud.360baige.com/controllers/mobile/center"
 	schoolFeeMobile "dev.cloud.360baige.com/controllers/mobile/schoolfee"
 	schoolFeeWindow "dev.cloud.360baige.com/controllers/window/schoolfee"
 	personnelWindow "dev.cloud.360baige.com/controllers/window/personnel"
