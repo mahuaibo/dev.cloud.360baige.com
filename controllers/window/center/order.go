@@ -13,6 +13,8 @@ import (
 	"dev.cloud.360baige.com/utils/pay/wechat"
 	"strings"
 	"dev.cloud.360baige.com/log"
+	"dev.model.360baige.com/models/account"
+	"fmt"
 )
 
 type OrderController struct {
@@ -217,9 +219,9 @@ func (c *OrderController) Detail() {
 	}
 
 	c.Data["json"] = data{Code: Normal, Message: "获取订单详情成功", Data: OrderDetail{
-		Price:       replyOrder.Price,
-		Num:         replyOrder.Num,
-		Status:      replyOrder.Status,
+		Price:  replyOrder.Price,
+		Num:    replyOrder.Num,
+		Status: replyOrder.Status,
 	}}
 	c.ServeJSON()
 	return
@@ -567,6 +569,27 @@ func (c *OrderController) PayResult() {
 					action.UpdateValue{"subscription", replyApplicationTpl.Subscription + 1},
 				},
 			}, &replyNum)
+
+			//FindByCond(args *action.FindByCond,
+			var replyAccount account.Account
+			err = client.Call(beego.AppConfig.String("EtcdURL"), "Account", "FindByCond", &action.FindByCond{
+				CondList: []action.CondValue{
+					action.CondValue{"And", "company_id", 1},
+					action.CondValue{"And", "user_id", 1},
+					action.CondValue{"And", "user_position_id", 1},
+					action.CondValue{"And", "user_position_type", 1},
+					action.CondValue{"And", "type", account.AccountTypeMoney},
+				},
+			}, &replyAccount)
+
+			//FindByCond(args *action.FindByCond,
+			var replyAccountItem account.AccountItem
+			err = client.Call(beego.AppConfig.String("EtcdURL"), "AccountItem", "FindByCond", &action.FindByCond{
+				CondList: []action.CondValue{
+					action.CondValue{"And", "", ""},
+				},
+			}, &replyAccountItem)
+
 		}
 	}
 
@@ -585,4 +608,24 @@ func (c *OrderController) Qr() {
 	url := c.GetString("url")
 	size, _ := c.GetInt("size", 256)
 	c.Ctx.Output.Body(utils.Qr(url, size))
+}
+
+func AccountTransaction() {
+	// form | to
+
+	args := []account.Transaction{
+		account.Transaction{},
+		account.Transaction{},
+	}
+	var replyNum action.Num
+	err := client.Call(beego.AppConfig.String("EtcdURL"), "Transaction", "AddMultiple", &args, &replyNum)
+
+	//func (*TransactionAction) AddMultiple(args []*account.Transaction, reply *action.Num) error {
+	//		 o := GetOrmer(DB_account)
+	//	num, err := o.InsertMulti(len(args), args)
+	//	reply.Value = num
+	//	return err
+	//}
+	fmt.Println(err)
+
 }

@@ -4,13 +4,11 @@ import (
 	"github.com/astaxie/beego"
 	"dev.cloud.360baige.com/rpc/client"
 	"dev.cloud.360baige.com/utils"
-	"dev.cloud.360baige.com/log"
 	"dev.model.360baige.com/models/user"
 	. "dev.model.360baige.com/http/window/center"
 	"dev.model.360baige.com/action"
 	"sms.sdk.360baige.com/send"
 	"strconv"
-	"time"
 	"fmt"
 	"dev.model.360baige.com/models/account"
 )
@@ -54,11 +52,11 @@ func (c *UserController) Login() {
 		return
 	}
 
-	currentTime := time.Now().UnixNano() / 1e6
-	if currentTime > replyUser.ExpireIn {
-		createAccessTicket := utils.CreateAccessValue(replyUser.Username + "#" + strconv.FormatInt(currentTime, 10))
+	currentTimestamp := utils.CurrentTimestamp()
+	if currentTimestamp > replyUser.ExpireIn {
+		createAccessTicket := utils.CreateAccessValue(replyUser.Username + "#" + strconv.FormatInt(currentTimestamp, 10))
 		var updateReply action.Num
-		expireIn := currentTime + 60*1000
+		expireIn := currentTimestamp + 60*1000
 		err = client.Call(beego.AppConfig.String("EtcdURL"), "User", "UpdateById", action.UpdateByIdCond{
 			Id: []int64{replyUser.Id},
 			UpdateList: []action.UpdateValue{
@@ -161,6 +159,7 @@ func (c *UserController) Logout() {
 // @router /modifyPassword [post]
 func (c *UserController) ModifyPassword() {
 	type data ModifyPasswordResponse
+	currentTimestamp := utils.CurrentTimestamp()
 	accessToken := c.GetString("accessToken")
 	password := c.GetString("password")
 	newPassword := c.GetString("newPassword")
@@ -202,7 +201,7 @@ func (c *UserController) ModifyPassword() {
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "User", "UpdateById", action.UpdateByIdCond{
 		Id: []int64{replyUser.Id},
 		UpdateList: []action.UpdateValue{
-			action.UpdateValue{Key: "update_time", Val: time.Now().UnixNano() / 1e6 },
+			action.UpdateValue{Key: "update_time", Val: currentTimestamp},
 			action.UpdateValue{Key: "password", Val: newPassword},
 		},
 	}, &replyNum)
