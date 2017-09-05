@@ -33,7 +33,7 @@ type OrderController struct {
 func (c *OrderController) List() {
 	type data OrderListResponse
 	accessToken := c.GetString("accessToken")
-	status, _ := c.GetInt8("status")
+	status, _ := c.GetInt8("status", -100)
 	currentPage, _ := c.GetInt64("current", 1)
 	pageSize, _ := c.GetInt64("pageSize", 50)
 	if accessToken == "" {
@@ -61,7 +61,7 @@ func (c *OrderController) List() {
 		return
 	}
 	var condValue action.CondValue
-	if status != -1 {
+	if status != -100 {
 		condValue = action.CondValue{Type: "And", Key: "status", Val: status }
 	}
 
