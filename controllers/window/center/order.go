@@ -14,7 +14,6 @@ import (
 	"strings"
 	"dev.cloud.360baige.com/log"
 	"dev.model.360baige.com/models/account"
-	"fmt"
 )
 
 type OrderController struct {
@@ -570,25 +569,43 @@ func (c *OrderController) PayResult() {
 				},
 			}, &replyNum)
 
-			//FindByCond(args *action.FindByCond,
-			var replyAccount account.Account
-			err = client.Call(beego.AppConfig.String("EtcdURL"), "Account", "FindByCond", &action.FindByCond{
+			// 充值
+			AccountTransaction(&action.FindByCond{
 				CondList: []action.CondValue{
-					action.CondValue{"And", "company_id", 1},
-					action.CondValue{"And", "user_id", 1},
-					action.CondValue{"And", "user_position_id", 1},
-					action.CondValue{"And", "user_position_type", 1},
-					action.CondValue{"And", "type", account.AccountTypeMoney},
+					action.CondValue{"And", "CompanyId", user.UserPositionCompanyIdAudit},
+					action.CondValue{"And", "UserId", user.UserIdAudit},
+					action.CondValue{"And", "UserPositionType", user.UserPositionTypeAudit},
+					action.CondValue{"And", "UserPositionId", user.UserPositionIdAudit},
+					action.CondValue{"And", "Type", account.AccountTypeMoney},
 				},
-			}, &replyAccount)
+			}, &action.FindByCond{
+				CondList: []action.CondValue{
+					action.CondValue{"And", "CompanyId", replyUserPosition.CompanyId},
+					action.CondValue{"And", "UserId", replyUserPosition.UserId},
+					action.CondValue{"And", "UserPositionType", replyUserPosition.Type},
+					action.CondValue{"And", "UserPositionId", replyUserPosition.Id},
+					action.CondValue{"And", "Type", account.AccountTypeMoney},
+				},
+			}, replyOrder.TotalPrice, replyOrder.Code, replyOrder.Brief)
 
-			//FindByCond(args *action.FindByCond,
-			var replyAccountItem account.AccountItem
-			err = client.Call(beego.AppConfig.String("EtcdURL"), "AccountItem", "FindByCond", &action.FindByCond{
+			// 消费
+			AccountTransaction(&action.FindByCond{
 				CondList: []action.CondValue{
-					action.CondValue{"And", "", ""},
+					action.CondValue{"And", "CompanyId", replyUserPosition.CompanyId},
+					action.CondValue{"And", "UserId", replyUserPosition.UserId},
+					action.CondValue{"And", "UserPositionType", replyUserPosition.Type},
+					action.CondValue{"And", "UserPositionId", replyUserPosition.Id},
+					action.CondValue{"And", "Type", account.AccountTypeMoney},
 				},
-			}, &replyAccountItem)
+			}, &action.FindByCond{
+				CondList: []action.CondValue{
+					action.CondValue{"And", "CompanyId", user.UserPositionCompanyIdAudit},
+					action.CondValue{"And", "UserId", user.UserIdAudit},
+					action.CondValue{"And", "UserPositionType", user.UserPositionTypeAudit},
+					action.CondValue{"And", "UserPositionId", user.UserPositionIdAudit},
+					action.CondValue{"And", "Type", account.AccountTypeMoney},
+				},
+			}, replyOrder.TotalPrice, replyOrder.Code, replyOrder.Brief)
 
 		}
 	}
@@ -610,22 +627,74 @@ func (c *OrderController) Qr() {
 	c.Ctx.Output.Body(utils.Qr(url, size))
 }
 
-func AccountTransaction() {
-	// form | to
+// form - | to +
+func AccountTransaction(fromFindByCond, toFindByCond *action.FindByCond, amount int64, orderCode, remark string) error {
+	currentTimestamp := utils.CurrentTimestamp()
 
-	args := []account.Transaction{
-		account.Transaction{},
-		account.Transaction{},
-	}
-	var replyNum action.Num
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "Transaction", "AddMultiple", &args, &replyNum)
+	// formAccount
+	var replyFormAccount account.Account
+	err := client.Call(beego.AppConfig.String("EtcdURL"), "Account", "FindByCond", &fromFindByCond, &replyFormAccount)
 
-	//func (*TransactionAction) AddMultiple(args []*account.Transaction, reply *action.Num) error {
-	//		 o := GetOrmer(DB_account)
-	//	num, err := o.InsertMulti(len(args), args)
-	//	reply.Value = num
-	//	return err
-	//}
-	fmt.Println(err)
+	// toAccount
+	var replyToAccount account.Account
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "Account", "FindByCond", &toFindByCond, &replyToAccount)
 
+	// transaction
+	var replyTransaction account.Transaction
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "Transaction", "Add", &account.Transaction{
+		CreateTime:    currentTimestamp,
+		UpdateTime:    currentTimestamp,
+		FromAccountId: replyFormAccount.Id,
+		ToAccountId:   replyToAccount.Id,
+		Amount:        amount,
+		OrderCode:     orderCode,
+		Remark:        remark,
+		Status:        account.TransactionStatusNormal,
+	}, &replyTransaction)
+
+	// formAccountItem
+	var replyFormAccountItem account.AccountItem
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "AccountItem", "Add", &account.AccountItem{
+		CreateTime:    currentTimestamp,
+		UpdateTime:    currentTimestamp,
+		TransactionId: replyTransaction.Id,
+		AccountId:     replyFormAccount.Id,
+		Balance:       replyFormAccount.Balance - amount,
+		Amount:        amount,
+		Remark:        remark,
+		Status:        account.AccountItemStatusNormal,
+	}, &replyFormAccountItem)
+	// toAccountItem
+	var replyToAccountItem account.AccountItem
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "AccountItem", "Add", &account.AccountItem{
+		CreateTime:    currentTimestamp,
+		UpdateTime:    currentTimestamp,
+		TransactionId: replyTransaction.Id,
+		AccountId:     replyToAccount.Id,
+		Balance:       replyToAccount.Balance + amount,
+		Amount:        amount,
+		Remark:        remark,
+		Status:        account.AccountItemStatusNormal,
+	}, &replyToAccountItem)
+
+	// formAccountUpdate
+	var replyFormNum action.Num
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "Account", "UpdateById", &action.UpdateByIdCond{
+		Id: []int64{replyFormAccount.Id},
+		UpdateList: []action.UpdateValue{
+			action.UpdateValue{Key: "UpdateTime", Val: currentTimestamp},
+			action.UpdateValue{Key: "Balance", Val: replyFormAccount.Balance - amount},
+		},
+	}, &replyFormNum)
+	// toAccountUpdate
+	var replyToNum action.Num
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "Account", "UpdateById", &action.UpdateByIdCond{
+		Id: []int64{replyToAccount.Id},
+		UpdateList: []action.UpdateValue{
+			action.UpdateValue{Key: "UpdateTime", Val: currentTimestamp},
+			action.UpdateValue{Key: "Balance", Val: replyToAccount.Balance + amount},
+		},
+	}, &replyToNum)
+
+	return err
 }
