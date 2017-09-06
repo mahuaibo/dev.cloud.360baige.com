@@ -31,7 +31,7 @@ func (c *LoggerController) Add() {
 	accessToken := c.GetString("accessToken")
 	content := c.GetString("content")
 	remark := c.GetString("remark")
-	Type, _ := c.GetInt8("type")
+	Type, _ := c.GetInt("type")
 	cTime := time.Now().Unix() / 1e6
 	if accessToken == "" {
 		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌无效"}

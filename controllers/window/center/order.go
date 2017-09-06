@@ -33,7 +33,7 @@ type OrderController struct {
 func (c *OrderController) List() {
 	type data OrderListResponse
 	accessToken := c.GetString("accessToken")
-	status, _ := c.GetInt8("status", -100)
+	status, _ := c.GetInt("status", -100)
 	currentPage, _ := c.GetInt64("current", 1)
 	pageSize, _ := c.GetInt64("pageSize", 50)
 	if accessToken == "" {
@@ -302,7 +302,7 @@ func (c *OrderController) Add() {
 	accessToken := c.GetString("accessToken")
 	applicationTplId, _ := c.GetInt64("applicationTplId")
 	num, _ := c.GetInt64("num", 0)
-	payType, _ := c.GetInt8("payType", 1)
+	payType, _ := c.GetInt("payType", 1)
 	remoteAddr := strings.Split(c.Ctx.Request.RemoteAddr, ":")
 
 	err := utils.Unable(map[string]string{"accessToken": "string:true", "payType": "int:true", "applicationTplId": "int:true", "num": "int:true"}, c.Ctx.Input)
@@ -660,7 +660,7 @@ func AccountTransaction(fromFindByCond, toFindByCond *action.FindByCond, amount 
 		TransactionId: replyTransaction.Id,
 		AccountId:     replyFormAccount.Id,
 		Balance:       replyFormAccount.Balance - amount,
-		Amount:        amount,
+		Amount:        -amount,
 		Remark:        remark,
 		Status:        account.AccountItemStatusNormal,
 	}, &replyFormAccountItem)

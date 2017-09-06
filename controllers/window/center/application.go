@@ -158,7 +158,7 @@ func (c *ApplicationController) ModifyStatus() {
 	type data ModifyApplicationStatusResponse
 	accessToken := c.GetString("accessToken")
 	ap_id, _ := c.GetInt64("id")
-	status, _ := c.GetInt8("status")
+	status, _ := c.GetInt("status")
 	if accessToken == "" {
 		c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌不能为空"}
 		c.ServeJSON()

@@ -240,12 +240,6 @@ func (c *AccountItemController) TradingList() {
 	//List 循环赋值
 	var aType string
 	for _, value := range accountItemList {
-		if value.Amount < 0 {
-			aType = "收入"
-			value.Amount = -value.Amount
-		} else {
-			aType = "支出"
-		}
 		ailv = append(ailv, AccountItemListValue{
 			Id:         value.Id,
 			CreateTime: utils.Datetime(value.CreateTime, "2006-01-02 15:04:05"),
@@ -314,16 +308,6 @@ func (c *AccountItemController) Detail() {
 		return
 	}
 
-	var aType string
-	if replyAccountItem.Amount < 0 {
-		aType = "收入"
-		replyAccountItem.Amount = -replyAccountItem.Amount
-	} else {
-		aType = "支出"
-	}
-	if replyAccountItem.Balance < 0 {
-		replyAccountItem.Amount = -replyAccountItem.Amount
-	}
 	var ToAccount, OrderCode string
 	if replyAccountItem.TransactionId > 0 {
 		var transactionReply account.Transaction
@@ -373,7 +357,6 @@ func (c *AccountItemController) Detail() {
 		c.Data["json"] = data{Code: Normal, Message: "获取信息成功", Data: AccountItemDetail{
 			CreateTime: utils.Datetime(replyAccountItem.CreateTime, "2006-01-02 03:04:05"),
 			Amount:     replyAccountItem.Amount,
-			AmountType: aType,
 			Balance:    replyAccountItem.Balance,
 			Remark:     replyAccountItem.Remark,
 			OrderCode:  OrderCode,

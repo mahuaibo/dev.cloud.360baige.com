@@ -156,7 +156,7 @@ func (c *PersonController) ListOfPerson() {
 // @Param   accessToken     query   string true       "访问令牌"
 // @Param   name     query   string true       "姓名"
 // @Param   sex     query   string true       "性别"
-// @Param   type     query   int8 true       "职位"
+// @Param   type     query   int true       "职位"
 // @Param   phone     query   string true       "手机号码"
 // @Param   birthday     query   int64 true       "生日"
 // @Param   contact     query   string true       "联系人"
@@ -169,7 +169,7 @@ func (c *PersonController) AddPerson() {
 	code := c.GetString("code")
 	name := c.GetString("name")
 	sex := c.GetString("sex")
-	Type, _ := c.GetInt8("type")
+	Type, _ := c.GetInt("type")
 	phone := c.GetString("phone")
 	birthday, _ := c.GetInt64("birthday")
 	contact := c.GetString("contact")
@@ -259,7 +259,7 @@ func (c *PersonController) AddPerson() {
 // @Param   id     query   int64 true       "员工id"
 // @Param   name     query   string true       "姓名"
 // @Param   sex     query   string true       "性别"
-// @Param   type     query   int8 true       "职位"
+// @Param   type     query   int true       "职位"
 // @Param   phone     query   string true       "手机号码"
 // @Param   birthday     query   int64 true       "生日"
 // @Param   contact     query   string true       "联系人"
@@ -273,7 +273,7 @@ func (c *PersonController) ModifyPerson() {
 	code := c.GetString("code")
 	name := c.GetString("name")
 	sex := c.GetString("sex")
-	Type, _ := c.GetInt8("type")
+	Type, _ := c.GetInt("type")
 	phone := c.GetString("phone")
 	birthday := c.GetString("birthday")
 	contact := c.GetString("contact")
@@ -607,7 +607,7 @@ func (c *PersonController) UploadPerson() {
 // 添加人员
 func addPerson(data []string, companyId int64) (int64, error) {
 	timestamp := time.Now().UnixNano() / 1e6
-	var Type int8 = 1
+	var Type int = 1
 	if data[4] == "学生" {
 		Type = 2
 	}

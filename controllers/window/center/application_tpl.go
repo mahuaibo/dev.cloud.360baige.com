@@ -33,7 +33,7 @@ func (c *ApplicationTplController) List() {
 	currentPage, _ := c.GetInt64("current", 1)
 	pageSize, _ := c.GetInt64("pageSize", 20)
 	appName := c.GetString("name", "")
-	Type, _ := c.GetInt8("type")
+	Type, _ := c.GetInt("type")
 
 	err := utils.Unable(map[string]string{"accessToken": "string:true"}, c.Ctx.Input)
 	if err != nil {
@@ -100,7 +100,7 @@ func (c *ApplicationTplController) List() {
 	replyList := []application.ApplicationTpl{}
 	err = json.Unmarshal([]byte(reply.Json), &replyList)
 	for _, value := range replyList {
-		var restatus int8
+		var restatus int
 		if applicationList[value.Id] > 0 {
 			restatus = 1
 		} else {
@@ -188,7 +188,7 @@ func (c *ApplicationTplController) Detail() {
 		c.ServeJSON()
 		return
 	}
-	var subscriptionStatus int8 = 0
+	var subscriptionStatus int = 0
 	if replyApplication.Id != 0 {
 		subscriptionStatus = replyApplication.Status
 	}
@@ -316,7 +316,7 @@ func (c *ApplicationTplController) Subscription() {
 func (c *ApplicationTplController) ModifyStatus() {
 	type data ModifyApplicationStatusResponse
 	accessToken := c.GetString("accessToken")
-	status, _ := c.GetInt8("status")
+	status, _ := c.GetInt("status")
 	applicationTplId, _ := c.GetInt64("id")
 	if accessToken == "" {
 		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌无效"}

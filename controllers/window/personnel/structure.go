@@ -104,7 +104,7 @@ func GetStructureList(args action.PageByCond) ListOfStructure {
 // @Param   accessToken     query   string true       "访问令牌"
 // @Param   name     query   string true       "项目名称"
 // @Param   parent_id     query   int64 true       "上级ID"
-// @Param   Type     query   int8 true       "类型 1.班级 2.部门"
+// @Param   Type     query   int true       "类型 1.班级 2.部门"
 // @Failure 400 {"code":400,"message":"添加成功"}
 // @router /add [post]
 func (c *StructureController) AddStructure() {

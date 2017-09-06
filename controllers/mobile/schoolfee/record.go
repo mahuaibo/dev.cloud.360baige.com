@@ -168,7 +168,7 @@ func (c *RecordController) AddRecord() {
 	}
 	phone := c.GetString("phone")
 	price, _ := c.GetInt64("price")
-	var isFee int8 = 1
+	var isFee int = 1
 	feeTime, _ := c.GetInt64("feeTime")
 	desc := c.GetString("desc")
 

@@ -133,7 +133,7 @@ func (c *RecordController) AddRecord() {
 	num := c.GetString("num")
 	phone := c.GetString("phone")
 	price, _ := c.GetInt64("price")
-	isFee, _ := c.GetInt8("isFee")
+	isFee, _ := c.GetInt("isFee")
 	feeTime, _ := c.GetInt64("feeTime")
 	desc := c.GetString("desc")
 	if accessToken == "" {
@@ -265,7 +265,7 @@ func (c *RecordController) ModifyRecord() {
 	num := c.GetString("num")
 	phone := c.GetString("phone")
 	price, _ := c.GetFloat("price")
-	isFee, _ := c.GetInt8("isFee")
+	isFee, _ := c.GetInt("isFee")
 	feeTime, _ := c.GetInt64("feeTime")
 	desc := c.GetString("desc")
 	if accessToken == "" {

@@ -117,10 +117,10 @@ func (c *ProjectController) AddProject() {
 	currentTimestamp := utils.CurrentTimestamp()
 	accessToken := c.GetString("accessToken")
 	name := c.GetString("name")
-	isLimit, _ := c.GetInt8("isLimit", 0)
+	isLimit, _ := c.GetInt("isLimit", 0)
 	desc := c.GetString("desc")
 	link := c.GetString("link")
-	status, _ := c.GetInt8("status", 0)
+	status, _ := c.GetInt("status", 0)
 
 	err := utils.Unable(map[string]string{"accessToken": "string:true", "name": "string:true" }, c.Ctx.Input)
 	if err != nil {
