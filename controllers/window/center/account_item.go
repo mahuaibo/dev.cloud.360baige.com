@@ -99,7 +99,7 @@ func (c *AccountItemController) List() {
 			action.CondValue{Type: "And", Key: "status__gt", Val: -1 },
 		},
 		Cols:     []string{"id", "create_time", "amount", "remark" },
-		OrderBy:  []string{"id"},
+		OrderBy:  []string{"-id"},
 		PageSize: pageSize,
 		Current:  currentPage,
 	}, &replyPageByCond)
@@ -139,15 +139,9 @@ func (c *AccountItemController) List() {
 	err = json.Unmarshal([]byte(replyPageByCond.Json), &reply2List)
 	var aType string
 	for _, value := range reply2List {
-		if value.Amount < 0 {
-			aType = "支出"
-			value.Amount = -value.Amount
-		} else {
-			aType = "收入"
-		}
 		ailv = append(ailv, AccountItemListValue{
 			Id:         value.Id,
-			CreateTime: time.Unix(value.CreateTime/1000, 0).Format("2006-01-02 15:04"),
+			CreateTime: utils.Datetime(value.CreateTime, "2006-01-02 15:04:05"),
 			Amount:     value.Amount,
 			AmountType: aType,
 			Remark:     value.Remark,
@@ -231,7 +225,7 @@ func (c *AccountItemController) TradingList() {
 			action.CondValue{Type: "And", Key: "create_time__lt", Val: endTime.UnixNano() / 1e6  },
 		},
 		Cols:     []string{"id", "create_time", "amount", "remark", "balance"},
-		OrderBy:  []string{"id"},
+		OrderBy:  []string{"-id"},
 		PageSize: pageSize,
 		Current:  currentPage,
 	}, &replyPageByCond)

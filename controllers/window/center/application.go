@@ -30,8 +30,8 @@ func (c *ApplicationController) List() {
 	type data ApplicationListResponse
 	accessToken := c.GetString("accessToken")
 	appName := c.GetString("name")
-	pageSize, _ := c.GetInt64("pageSize")
-	current, _ := c.GetInt64("current")
+	pageSize, _ := c.GetInt64("pageSize", 50)
+	current, _ := c.GetInt64("current", 1)
 
 	if accessToken == "" {
 		c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌无效"}
@@ -65,7 +65,7 @@ func (c *ApplicationController) List() {
 			action.CondValue{Type: "And", Key: "user_position_type", Val: replyUserPosition.Type },
 			action.CondValue{Type: "And", Key: "name__icontains", Val: appName},
 		},
-		Cols:     []string{"id", "create_time", "name", "image", "status", "application_tpl_id" },
+		Cols:     []string{"id", "end_time", "name", "image", "status", "application_tpl_id" },
 		OrderBy:  []string{"id"},
 		PageSize: pageSize,
 		Current:  current,
@@ -122,13 +122,14 @@ func (c *ApplicationController) List() {
 		} else {
 			reimage = value.Image
 		}
+
 		al = append(al, ApplicationValue{
-			Id:         value.Id,
-			CreateTime: utils.Datetime(value.CreateTime, "2006-01-02 15:04:05"),
-			Name:       rename,
-			Image:      reimage,
-			Status:     value.Status,
-			Site:       applicationTpls[value.ApplicationTplId].Site,
+			Id:      value.Id,
+			EndTime: utils.Datetime(value.EndTime, "2006-01-02 15:04:05"),
+			Name:    rename,
+			Image:   reimage,
+			Status:  value.Status,
+			Site:    applicationTpls[value.ApplicationTplId].Site,
 		})
 	}
 

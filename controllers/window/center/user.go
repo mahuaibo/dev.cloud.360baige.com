@@ -421,11 +421,12 @@ func (c *UserController) Register() {
 	// 注册
 	var replyUser user.User
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "User", "Add", &user.User{
-		CreateTime: currentTimestamp,
-		UpdateTime: currentTimestamp,
-		Username:   username,
-		Password:   password,
-		Phone:      phone,
+		CreateTime:   currentTimestamp,
+		UpdateTime:   currentTimestamp,
+		Username:     username,
+		Password:     password,
+		Phone:        phone,
+		AccessTicket: utils.CreateAccessValue(username),
 	}, &replyUser)
 	if err != nil {
 		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50001)}
@@ -441,11 +442,12 @@ func (c *UserController) Register() {
 	// 初始化身份
 	var replyUserPosition user.UserPosition
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "Add", &user.UserPosition{
-		CreateTime: currentTimestamp,
-		UpdateTime: currentTimestamp,
-		UserId:     replyUser.Id,
-		CompanyId:  user.UserPositionCompanyIdInit,
-		Type:       user.UserPositionTypeVisitor,
+		CreateTime:  currentTimestamp,
+		UpdateTime:  currentTimestamp,
+		UserId:      replyUser.Id,
+		CompanyId:   user.UserPositionCompanyIdInit,
+		Type:        user.UserPositionTypeVisitor,
+		AccessToken: utils.CreateAccessValue(username),
 	}, &replyUserPosition)
 	if err != nil {
 		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50001)}

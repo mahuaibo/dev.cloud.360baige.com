@@ -66,7 +66,7 @@ func (c *ApplicationTplController) List() {
 			action.CondValue{Type: "And", Key: "status__gt", Val: -1 },
 			condValue,
 		},
-		Cols:     []string{"id", "name", "image", "status", "desc", "price", "pay_cycle"},
+		Cols:     []string{"id", "name", "image", "status", "desc", "price", "pay_cycle", "subscription"},
 		OrderBy:  []string{"id"},
 		PageSize: -1,
 		Current:  currentPage,
@@ -96,11 +96,9 @@ func (c *ApplicationTplController) List() {
 	for _, value := range replyApplication {
 		applicationList[value.ApplicationTplId] = value.ApplicationTplId
 	}
-
 	var resData []ApplicationTplValue
 	replyList := []application.ApplicationTpl{}
 	err = json.Unmarshal([]byte(reply.Json), &replyList)
-
 	for _, value := range replyList {
 		var restatus int8
 		if applicationList[value.Id] > 0 {
