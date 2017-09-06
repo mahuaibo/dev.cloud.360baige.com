@@ -28,7 +28,7 @@ type PersonController struct {
 // @Title 校园收费记录列表接口
 // @Description Project List 校园收费记录列表接口
 // @Success 200 {"code":200,"message":"获取人员列表成功","data":{"access_ticket":"xxxx","expire_in":0}}
-// @Param   access_token     query   string true       "访问令牌"
+// @Param   accessToken     query   string true       "访问令牌"
 // @Param   structure_id     query   int63 true       "组织结构ID"
 // @Param   page_size     query   int64 true       "每页显示条数"
 // @Param   current     query   int64 true       "页码"
@@ -36,12 +36,12 @@ type PersonController struct {
 // @router /list [post]
 func (c *PersonController) ListOfPerson() {
 	res := ListOfPersonResponse{}
-	access_token := c.GetString("access_token")
-	structureId, _ := c.GetInt64("structure_id")
-	pageSize, _ := c.GetInt64("page_size")
+	accessToken := c.GetString("accessToken")
+	structureId, _ := c.GetInt64("structureId")
+	pageSize, _ := c.GetInt64("pageSize")
 	currentPage, _ := c.GetInt64("current")
 
-	if access_token == "" {
+	if accessToken == "" {
 		res.Code = ResponseLogicErr
 		res.Message = "访问令牌无效"
 		c.Data["json"] = res
@@ -50,7 +50,7 @@ func (c *PersonController) ListOfPerson() {
 	}
 	// 1.
 	var args action.FindByCond
-	args.CondList = append(args.CondList, action.CondValue{Type: "And", Key: "access_token", Val: access_token})
+	args.CondList = append(args.CondList, action.CondValue{Type: "And", Key: "access_token", Val: accessToken})
 	args.Fileds = []string{"id", "user_id", "company_id", "type"}
 	var replyAccessToken user.UserPosition
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
@@ -153,7 +153,7 @@ func (c *PersonController) ListOfPerson() {
 // @Title 添加人员接口
 // @Description Person Add 添加收费名单接口
 // @Success 200 {"code":200,"message":"添加收费名单成功","data":{"access_ticket":"xxxx","expire_in":0}}
-// @Param   access_token     query   string true       "访问令牌"
+// @Param   accessToken     query   string true       "访问令牌"
 // @Param   name     query   string true       "姓名"
 // @Param   sex     query   string true       "性别"
 // @Param   type     query   int8 true       "职位"
@@ -165,7 +165,7 @@ func (c *PersonController) ListOfPerson() {
 // @router /add [post]
 func (c *PersonController) AddPerson() {
 	res := AddPersonResponse{}
-	access_token := c.GetString("access_token")
+	accessToken := c.GetString("accessToken")
 	code := c.GetString("code")
 	name := c.GetString("name")
 	sex := c.GetString("sex")
@@ -175,7 +175,7 @@ func (c *PersonController) AddPerson() {
 	contact := c.GetString("contact")
 	structureIds := utils.StrArrToInt64Arr(strings.Split(c.GetString("structure_ids"), ","))
 
-	if access_token == "" {
+	if accessToken == "" {
 		res.Code = ResponseLogicErr
 		res.Message = "访问令牌无效"
 		c.Data["json"] = res
@@ -184,7 +184,7 @@ func (c *PersonController) AddPerson() {
 	}
 	// 1.
 	var args action.FindByCond
-	args.CondList = append(args.CondList, action.CondValue{Type: "And", Key: "access_token", Val: access_token})
+	args.CondList = append(args.CondList, action.CondValue{Type: "And", Key: "access_token", Val: accessToken})
 	args.Fileds = []string{"id", "user_id", "company_id", "type"}
 	var replyAccessToken user.UserPosition
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
@@ -255,7 +255,7 @@ func (c *PersonController) AddPerson() {
 // @Title 修改缴费记录接口
 // @Description Project Add 修改缴费记录接口
 // @Success 200 {"code":200,"message":"修改缴费记录成功","data":{"access_ticket":"xxxx","expire_in":0}}
-// @Param   access_token     query   string true       "访问令牌"
+// @Param   accessToken     query   string true       "访问令牌"
 // @Param   id     query   int64 true       "员工id"
 // @Param   name     query   string true       "姓名"
 // @Param   sex     query   string true       "性别"
@@ -268,7 +268,7 @@ func (c *PersonController) AddPerson() {
 // @router /modify [post]
 func (c *PersonController) ModifyPerson() {
 	res := ModifyPersonResponse{}
-	access_token := c.GetString("access_token")
+	accessToken := c.GetString("accessToken")
 	id, _ := c.GetInt64("id")
 	code := c.GetString("code")
 	name := c.GetString("name")
@@ -279,7 +279,7 @@ func (c *PersonController) ModifyPerson() {
 	contact := c.GetString("contact")
 	structureIds := utils.StrArrToInt64Arr(strings.Split(c.GetString("structure_ids"), ","))
 
-	if access_token == "" {
+	if accessToken == "" {
 		res.Code = ResponseLogicErr
 		res.Message = "访问令牌无效"
 		c.Data["json"] = res
@@ -291,7 +291,7 @@ func (c *PersonController) ModifyPerson() {
 	args.CondList = append(args.CondList, action.CondValue{
 		Type: "And",
 		Key:  "access_token",
-		Val:  access_token,
+		Val:  accessToken,
 	})
 	args.Fileds = []string{"id", "user_id", "company_id", "type"}
 	var replyAccessToken user.UserPosition
@@ -424,15 +424,15 @@ func (c *PersonController) ModifyPerson() {
 // @Title 删除校园收费记录接口
 // @Description Delete Person 删除校园收费记录接口
 // @Success 200 {"code":200,"message":"删除缴费项目记录成功","data":{"access_ticket":"xxxx","expire_in":0}}
-// @Param   access_token     query   string true       "访问令牌"
+// @Param   accessToken     query   string true       "访问令牌"
 // @Param   ids     query   string true       "员工ids"
 // @Failure 400 {"code":400,"message":"删除缴费项目记录失败"}
 // @router /delete [post]
 func (c *PersonController) DeletePerson() {
 	res := DeletePersonResponse{}
-	access_token := c.GetString("access_token")
+	accessToken := c.GetString("accessToken")
 	personIds := utils.StrArrToInt64Arr(strings.Split(c.GetString("person_ids"), ","))
-	if access_token == "" {
+	if accessToken == "" {
 		res.Code = ResponseLogicErr
 		res.Message = "访问令牌无效"
 		c.Data["json"] = res
@@ -441,7 +441,7 @@ func (c *PersonController) DeletePerson() {
 	}
 	// 1.
 	var args action.FindByCond
-	args.CondList = append(args.CondList, action.CondValue{Type: "And", Key: "access_token", Val: access_token, })
+	args.CondList = append(args.CondList, action.CondValue{Type: "And", Key: "access_token", Val: accessToken, })
 	args.Fileds = []string{"id", "user_id", "company_id", "type"}
 	var replyAccessToken user.UserPosition
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
@@ -474,13 +474,13 @@ func (c *PersonController) DeletePerson() {
 // @Title 导入人员接口
 // @Description Delete Person 导入人员接口
 // @Success 200 {"code":200,"message":"导出成功","data":{"access_ticket":"xxxx","expire_in":0}}
-// @Param   access_token     query   string true       "访问令牌"
+// @Param   accessToken     query   string true       "访问令牌"
 // @Failure 400 {"code":400,"message":"导入失败"}
 // @router /upload [options,post]
 func (c *PersonController) UploadPerson() {
 	res := UploadPersonResponse{}
-	access_token := c.GetString("access_token")
-	if access_token == "" {
+	accessToken := c.GetString("accessToken")
+	if accessToken == "" {
 		res.Code = ResponseLogicErr
 		res.Message = "访问令牌无效"
 		c.Data["json"] = res
@@ -489,7 +489,7 @@ func (c *PersonController) UploadPerson() {
 	}
 	// 1.
 	var args action.FindByCond
-	args.CondList = append(args.CondList, action.CondValue{Type: "And", Key: "access_token", Val: access_token })
+	args.CondList = append(args.CondList, action.CondValue{Type: "And", Key: "access_token", Val: accessToken })
 	args.Fileds = []string{"id", "user_id", "company_id", "type"}
 	var replyAccessToken user.UserPosition
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
@@ -666,15 +666,15 @@ func addPersonStructure(companyId int64, personId int64, structureId int64) erro
 // @Title 下载缴费记录接口
 // @Description Delete Person 下载缴费记录接口
 // @Success 200 {"code":200,"message":"下载缴费记录成功","data":{"access_ticket":"xxxx","expire_in":0}}
-// @Param   access_token     query   string true       "访问令牌"
+// @Param   accessToken     query   string true       "访问令牌"
 // @Param   Person_ids     query   int true       "项目记录IDs"
 // @Failure 400 {"code":400,"message":"下载缴费记录失败"}
 // @router /download [get,post]
 func (c *PersonController) DownloadPerson() {
 	res := DownloadPersonResponse{}
-	access_token := c.GetString("access_token")
+	accessToken := c.GetString("accessToken")
 	structureId, _ := c.GetInt64("structureId")
-	if access_token == "" {
+	if accessToken == "" {
 		res.Code = ResponseLogicErr
 		res.Message = "访问令牌无效"
 		c.Data["json"] = res
@@ -683,7 +683,7 @@ func (c *PersonController) DownloadPerson() {
 	}
 	// 1.
 	var args action.FindByCond
-	args.CondList = append(args.CondList, action.CondValue{Type: "And", Key: "access_token", Val: access_token })
+	args.CondList = append(args.CondList, action.CondValue{Type: "And", Key: "access_token", Val: accessToken })
 	args.Fileds = []string{"id", "user_id", "company_id", "type"}
 	var replyAccessToken user.UserPosition
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)

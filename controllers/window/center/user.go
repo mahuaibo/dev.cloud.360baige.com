@@ -57,7 +57,7 @@ func (c *UserController) Login() {
 	if currentTime > replyUser.ExpireIn {
 		createAccessTicket := utils.CreateAccessValue(replyUser.Username + "#" + strconv.FormatInt(currentTime, 10))
 		var updateReply action.Num
-		expireIn := currentTime + 60*1000
+		expireIn := currentTime + 60 * 1000
 		err = client.Call(beego.AppConfig.String("EtcdURL"), "User", "UpdateById", action.UpdateByIdCond{
 			Id: []int64{replyUser.Id},
 			UpdateList: []action.UpdateValue{
@@ -130,11 +130,13 @@ func (c *UserController) Detail() {
 		return
 	}
 
+	headUrl := utils.SignURLSample(reply.Head)
 	c.Data["json"] = data{Code: Normal, Message: "获取用户信息成功", Data: UserDetail{
 		Id:       reply.Id,
 		Username: reply.Username,
 		Email:    reply.Email,
 		Phone:    reply.Phone,
+		Head:     headUrl,
 	}}
 	c.ServeJSON()
 }
@@ -229,6 +231,7 @@ func (c *UserController) Modify() {
 	userId, _ := c.GetInt64("id")
 	phone := c.GetString("phone")
 	email := c.GetString("email")
+	//head := c.GetString("head")
 	if accessToken == "" {
 		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌无效"}
 		c.ServeJSON()
@@ -255,6 +258,7 @@ func (c *UserController) Modify() {
 			action.UpdateValue{Key: "update_time", Val: time.Now().UnixNano() / 1e6 },
 			action.UpdateValue{Key: "phone", Val: phone },
 			action.UpdateValue{Key: "email", Val: email },
+			//action.UpdateValue{Key: "head", Val: head },
 		},
 	}, &replyNum)
 
@@ -410,4 +414,78 @@ func (c *UserController) Register() {
 	c.Data["json"] = data{Code: Normal, Message: "用户注册成功"}
 	c.ServeJSON()
 	return
+}
+
+
+// @Title 用户注册
+// @Description 用户注册
+// @Success 200 {"code":200,"message":"用户头像上传失败"}
+// @Param   accessToken     query   string true       "访问令牌"
+// @Param   id     query   string true       "用户ID"
+// @Param   uploadFile query   string true       "file"
+// @Failure 400 {"code":400,"message":"用户头像上传成功"}
+// @router /uploadHead [options,post]
+func (c *UserController) UploadHead() {
+	requestType := c.Ctx.Request.Method
+	fmt.Println("requestType", requestType)
+	if requestType == "POST" {
+		type data UploadHeadResponse
+		accessToken := c.GetString("accessToken")
+		userId, _ := c.GetInt64("id")
+		_, handle, _ := c.Ctx.Request.FormFile("uploadFile")
+		if accessToken == "" {
+			c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌无效"}
+			c.ServeJSON()
+			return
+		}
+
+		var replyUserPosition user.UserPosition
+		err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", action.FindByCond{
+			CondList: []action.CondValue{
+				action.CondValue{Type: "And", Key: "access_token", Val: accessToken },
+			},
+		}, &replyUserPosition)
+		if err != nil {
+			c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌无效"}
+			c.ServeJSON()
+			return
+		}
+
+		objectKey, err := utils.UploadImage(handle, "User/HeadImages/")
+		if err != nil {
+			c.Data["json"] = data{Code: ErrorLogic, Message: "用户头像上传失败"}
+			c.ServeJSON()
+			return
+		}
+
+		var replyUser user.User
+		err = client.Call(beego.AppConfig.String("EtcdURL"), "User", "FindByCond", action.FindByCond{
+			CondList: []action.CondValue{action.CondValue{Type: "And", Key: "id", Val: userId },
+			},
+			Fileds: []string{"id"},
+		}, &replyUser)
+		if err != nil {
+			c.Data["json"] = data{Code: ErrorSystem, Message: "用户信息错误"}
+			c.ServeJSON()
+			return
+		}
+
+		var replyNum action.Num
+		err = client.Call(beego.AppConfig.String("EtcdURL"), "User", "UpdateById", action.UpdateByIdCond{
+			Id: []int64{replyUser.Id},
+			UpdateList: []action.UpdateValue{
+				action.UpdateValue{Key: "update_time", Val: time.Now().UnixNano() / 1e6 },
+				action.UpdateValue{Key: "head", Val: objectKey},
+			},
+		}, &replyNum)
+		if err != nil {
+			c.Data["json"] = data{Code: ErrorSystem, Message: "用户头像上传失败"}
+			c.ServeJSON()
+			return
+		}
+		headUrl := utils.SignURLSample(objectKey)
+		c.Data["json"] = data{Code: Normal, Data: headUrl, Message: "用户头像上传成功"}
+		c.ServeJSON()
+		return
+	}
 }

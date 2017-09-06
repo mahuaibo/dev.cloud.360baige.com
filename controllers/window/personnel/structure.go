@@ -20,13 +20,13 @@ type StructureController struct {
 // @Title 校园收费列表接口
 // @Description Structure List 校园收费列表接口
 // @Success 200 {"code":200,"Message":"获取成功","data":{"access_ticket":"xxxx","expire_in":0}}
-// @Param   access_token     query   string true       "访问令牌"
+// @Param   accessToken     query   string true       "访问令牌"
 // @Failure 400 {"code":400,"message":"获取失败"}
 // @router /list [post]
 func (c *StructureController) ListOfStructure() {
 	res := ListOfStructureResponse{}
-	access_token := c.GetString("access_token")
-	if access_token == "" {
+	accessToken := c.GetString("accessToken")
+	if accessToken == "" {
 		res.Code = ResponseLogicErr
 		res.Message = "访问令牌无效"
 		c.Data["json"] = res
@@ -35,7 +35,7 @@ func (c *StructureController) ListOfStructure() {
 	}
 	// 1.
 	var args action.FindByCond
-	args.CondList = append(args.CondList, action.CondValue{Type: "And", Key: "access_token", Val: access_token})
+	args.CondList = append(args.CondList, action.CondValue{Type: "And", Key: "access_token", Val: accessToken})
 	args.Fileds = []string{"id", "user_id", "company_id", "type"}
 	var replyAccessToken user.UserPosition
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
@@ -46,7 +46,6 @@ func (c *StructureController) ListOfStructure() {
 		c.ServeJSON()
 		return
 	}
-
 	// 2.
 	var args2 action.PageByCond
 	args2.CondList = append(args2.CondList,
@@ -56,6 +55,7 @@ func (c *StructureController) ListOfStructure() {
 	)
 	args2.Cols = []string{"id", "company_id", "parent_id", "name"}
 	classList := GetStructureList(args2).List
+
 	if len(classList) <= 0 {
 		res.Code = ResponseLogicErr
 		res.Message = "获取组织结构失败"
@@ -64,7 +64,6 @@ func (c *StructureController) ListOfStructure() {
 		return
 	}
 	classList = append(classList, StructureData{Id: 0, Label: "无组织人员"})
-
 	res.Code = ResponseNormal
 	res.Message = "获取组织结构成功"
 	res.Data.List = classList
@@ -102,7 +101,7 @@ func GetStructureList(args action.PageByCond) ListOfStructure {
 // @Title 添加校园收费项目接口
 // @Description Structure Add 添加校园收费项目接口
 // @Success 200 {"code":200,"Message":"添加成功","data":{"access_ticket":"xxxx","expire_in":0}}
-// @Param   access_token     query   string true       "访问令牌"
+// @Param   accessToken     query   string true       "访问令牌"
 // @Param   name     query   string true       "项目名称"
 // @Param   parent_id     query   int64 true       "上级ID"
 // @Param   Type     query   int8 true       "类型 1.班级 2.部门"
@@ -110,10 +109,10 @@ func GetStructureList(args action.PageByCond) ListOfStructure {
 // @router /add [post]
 func (c *StructureController) AddStructure() {
 	res := AddStructureResponse{}
-	access_token := c.GetString("access_token")
+	accessToken := c.GetString("accessToken")
 	nameLists := strings.Split(strings.Replace(c.GetString("name"), "；", ";", -1), ";")
 
-	if access_token == "" {
+	if accessToken == "" {
 		res.Code = ResponseLogicErr
 		res.Message = "访问令牌无效"
 		c.Data["json"] = res
@@ -122,7 +121,7 @@ func (c *StructureController) AddStructure() {
 	}
 	// 1.
 	var args action.FindByCond
-	args.CondList = append(args.CondList, action.CondValue{Type: "And", Key: "access_token", Val: access_token})
+	args.CondList = append(args.CondList, action.CondValue{Type: "And", Key: "access_token", Val: accessToken})
 	args.Fileds = []string{"id", "user_id", "company_id", "type"}
 	var replyAccessToken user.UserPosition
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
@@ -185,19 +184,19 @@ func (c *StructureController) AddStructure() {
 // @Title 修改校园收费项目接口
 // @Description Structure Add 修改校园收费项目接口
 // @Success 200 {"code":200,"Message":"修改缴费项目成功","data":{"access_ticket":"xxxx","expire_in":0}}
-// @Param   access_token     query   string true       "访问令牌"
+// @Param   accessToken     query   string true       "访问令牌"
 // @Param   id     query   int64 true       ""
 // @Param   name     query   string true       "项目名称"
 // @Failure 400 {"code":400,"message":"修改缴费项目失败"}
 // @router /modify [post]
 func (c *StructureController) ModifyStructure() {
 	res := ModifyStructureResponse{}
-	access_token := c.GetString("access_token")
+	accessToken := c.GetString("accessToken")
 	id, _ := c.GetInt64("id", 0)
 	name := c.GetString("name")
-	parentId, _ := c.GetInt64("parent_id")
+	parentId, _ := c.GetInt64("parentId")
 
-	if access_token == "" {
+	if accessToken == "" {
 		res.Code = ResponseLogicErr
 		res.Message = "访问令牌无效"
 		c.Data["json"] = res
@@ -206,7 +205,7 @@ func (c *StructureController) ModifyStructure() {
 	}
 	// 1.
 	var args action.FindByCond
-	args.CondList = append(args.CondList, action.CondValue{Type: "And", Key: "access_token", Val: access_token})
+	args.CondList = append(args.CondList, action.CondValue{Type: "And", Key: "access_token", Val: accessToken})
 	args.Fileds = []string{"id", "user_id", "company_id", "type"}
 	var replyAccessToken user.UserPosition
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
@@ -265,15 +264,15 @@ func (c *StructureController) ModifyStructure() {
 // @Title 删除校园收费记录接口
 // @Description Delete Structure 删除校园收费记录接口
 // @Success 200 {"code":200,"Message":"删除缴费项目记录成功","data":{"access_ticket":"xxxx","expire_in":0}}
-// @Param   access_token     query   string true       "访问令牌"
+// @Param   accessToken     query   string true       "访问令牌"
 // @Param   ids     query   int true       "项目记录ids"
 // @Failure 400 {"code":400,"message":"删除缴费项目记录失败"}
 // @router /delete [post]
 func (c *StructureController) DeleteStructure() {
 	res := DeleteStrectureResponse{}
-	access_token := c.GetString("access_token")
+	accessToken := c.GetString("accessToken")
 	ids := utils.StrArrToInt64Arr(strings.Split(c.GetString("ids"), ","))
-	if access_token == "" {
+	if accessToken == "" {
 		res.Code = ResponseLogicErr
 		res.Message = "访问令牌无效"
 		c.Data["json"] = res
@@ -282,7 +281,7 @@ func (c *StructureController) DeleteStructure() {
 	}
 	// 1.
 	var args action.FindByCond
-	args.CondList = append(args.CondList, action.CondValue{Type: "And", Key: "access_token", Val: access_token})
+	args.CondList = append(args.CondList, action.CondValue{Type: "And", Key: "access_token", Val: accessToken})
 	args.Fileds = []string{"id", "user_id", "company_id", "type"}
 	var replyAccessToken user.UserPosition
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)
@@ -316,15 +315,15 @@ func (c *StructureController) DeleteStructure() {
 // @Title 获取人员组织结构接口
 // @Description Delete Structure 获取人员组织结构接口
 // @Success 200 {"code":200,"Message":"获取人员组织结构成功","data":{"access_ticket":"xxxx","expire_in":0}}
-// @Param   access_token     query   string true       "访问令牌"
+// @Param   accessToken     query   string true       "访问令牌"
 // @Param   ids     query   int true       "项目记录ids"
 // @Failure 400 {"code":400,"message":"获取人员组织结构失败"}
 // @router /getStructureIds [post]
 func (c *StructureController) GetStructureIds() {
 	res := GetStrectureIdsResponse{}
-	access_token := c.GetString("access_token")
+	accessToken := c.GetString("accessToken")
 	person_id, _ := c.GetInt64("personId")
-	if access_token == "" {
+	if accessToken == "" {
 		res.Code = ResponseLogicErr
 		res.Message = "访问令牌无效"
 		c.Data["json"] = res
@@ -333,7 +332,7 @@ func (c *StructureController) GetStructureIds() {
 	}
 	// 1.
 	var args action.FindByCond
-	args.CondList = append(args.CondList, action.CondValue{Type: "And", Key: "access_token", Val: access_token})
+	args.CondList = append(args.CondList, action.CondValue{Type: "And", Key: "access_token", Val: accessToken})
 	args.Fileds = []string{"id", "user_id", "company_id", "type"}
 	var replyAccessToken user.UserPosition
 	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", args, &replyAccessToken)

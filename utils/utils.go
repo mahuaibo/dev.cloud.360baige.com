@@ -1,13 +1,17 @@
 package utils
 
 import (
-	"strings"
 	"regexp"
 	"time"
 	"strconv"
 	"crypto/hmac"
 	"crypto/sha1"
 	"fmt"
+	"path"
+	"strings"
+	"github.com/aliyun/aliyun-oss-go-sdk/oss"
+	"mime/multipart"
+	"github.com/aliyun/aliyun-oss-go-sdk/sample"
 )
 
 func DetermineStringType(str string) (string, bool) {
@@ -72,8 +76,8 @@ func GetMonthStartUnix(current string) int64 {
 }
 func GetNextMonthStartUnix(current string) int64 {
 	tm2, _ := time.ParseInLocation("2006-01-02", current, time.Local)
-	t := time.Unix(tm2.UnixNano()/1e9, 0)
-	s := time.Date(t.Year(), t.Month()+1, t.Day(), 0, 0, 0, 0, t.Location())
+	t := time.Unix(tm2.UnixNano() / 1e9, 0)
+	s := time.Date(t.Year(), t.Month() + 1, t.Day(), 0, 0, 0, 0, t.Location())
 	es := s.Format("2006-01-02")
 	estm2, _ := time.ParseInLocation("2006-01-02", es, time.Local)
 	etime := estm2.UnixNano() / 1e6
@@ -83,8 +87,8 @@ func GetNextMonthStartUnix(current string) int64 {
 //第二天
 func GetNextDayUnix(current string) int64 {
 	tm2, _ := time.ParseInLocation("2006-01-02", current, time.Local)
-	t := time.Unix(tm2.UnixNano()/1e9, 0)
-	s := time.Date(t.Year(), t.Month(), t.Day()+1, 0, 0, 0, 0, t.Location())
+	t := time.Unix(tm2.UnixNano() / 1e9, 0)
+	s := time.Date(t.Year(), t.Month(), t.Day() + 1, 0, 0, 0, 0, t.Location())
 	es := s.Format("2006-01-02")
 	estm2, _ := time.ParseInLocation("2006-01-02", es, time.Local)
 	etime := estm2.UnixNano() / 1e6
@@ -126,3 +130,57 @@ func CreateAccessValue(value string) string {
 	return fmt.Sprintf("%x", mac.Sum(nil))
 }
 
+func UploadImage(handle *multipart.FileHeader, filePath string) (string, error) {
+	objectKey := strconv.FormatInt(time.Now().Unix(), 10) + path.Base(handle.Filename)
+	suffix := path.Ext(objectKey) //获取文件后缀
+	objectKey = filePath + Reverse(strings.TrimSuffix(objectKey, suffix)) + suffix
+	client, err := oss.New("oss-cn-beijing.aliyuncs.com", "ZCPOvqJlByc96mZb", "8MV5VOzaClwYAlJh0eQuI8M1norVAK")
+	fmt.Println("client", client)
+	fmt.Println("err", err)
+	if err != nil {
+		return "", err
+	}
+	bucket, err := client.Bucket("sdk-baige")
+	fmt.Println("bucket", bucket)
+	fmt.Println("err", err)
+	if err != nil {
+		return "", err
+	}
+
+	fd, err := handle.Open()
+	defer fd.Close()
+
+	err = bucket.PutObject(objectKey, fd)
+	if err != nil {
+		return "", err
+	}
+
+	return objectKey, err
+
+}
+
+func Reverse(s string) string {
+	r := []rune(s)
+	for i, j := 0, len(r) - 1; i < j; i, j = i + 1, j - 1 {
+		r[i], r[j] = r[j], r[i]
+	}
+	return string(r)
+}
+
+func SignURLSample(objectKey string) string {
+	client, err := oss.New("oss-cn-beijing.aliyuncs.com", "ZCPOvqJlByc96mZb", "8MV5VOzaClwYAlJh0eQuI8M1norVAK")
+	if err != nil {
+		sample.HandleError(err)
+	}
+	bucket, err := client.Bucket("sdk-baige")
+	if err != nil {
+		sample.HandleError(err)
+	}
+
+	// put object
+	signedURL, err := bucket.SignURL(objectKey, oss.HTTPGet, 60)
+	if err != nil {
+		sample.HandleError(err)
+	}
+	return signedURL
+}

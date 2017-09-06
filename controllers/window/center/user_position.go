@@ -88,10 +88,11 @@ func (c *UserPositionController) PositionList() {
 	}
 	for _, value := range replyUserPosition {
 		if listOfCompany[value.CompanyId].Status != -1 {
+			logoUrl := utils.SignURLSample(listOfCompany[value.CompanyId].Logo)
 			resData = append(resData, UserPositionListItem{
 				UserPositionId:   value.Id,
 				UserPositionName: UserPositionName(value.Type),
-				CompanyLogo:      listOfCompany[value.CompanyId].Logo,
+				CompanyLogo:      logoUrl,
 				CompanyName:      listOfCompany[value.CompanyId].Name,
 			})
 		}
@@ -188,7 +189,7 @@ func (c *UserPositionController) GetAccessToken() {
 
 	if currentTime > replyUserPosition.ExpireIn {
 		createAccessToken := utils.CreateAccessValue(strconv.FormatInt(replyUserPosition.Id, 10) + "#" + strconv.FormatInt(replyUserPosition.UserId, 10) + "#" + strconv.FormatInt(currentTime, 10))
-		expireIn := currentTime + 3600*1000*24*30
+		expireIn := currentTime + 3600 * 1000 * 24 * 30
 		err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "UpdateById", &action.UpdateByIdCond{
 			Id: []int64{userPositionId},
 			UpdateList: [] action.UpdateValue{
