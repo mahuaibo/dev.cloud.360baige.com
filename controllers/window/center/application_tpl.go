@@ -31,7 +31,7 @@ func (c *ApplicationTplController) List() {
 	currentTimestamp := utils.CurrentTimestamp()
 	accessToken := c.GetString("accessToken")
 	currentPage, _ := c.GetInt64("current", 1)
-	pageSize, _ := c.GetInt64("pageSize", 20)
+	pageSize, _ := c.GetInt64("pageSize", 50)
 	appName := c.GetString("name", "")
 	Type, _ := c.GetInt("type")
 
@@ -63,6 +63,7 @@ func (c *ApplicationTplController) List() {
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "ApplicationTpl", "PageByCond", action.PageByCond{
 		CondList: []action.CondValue{
 			action.CondValue{Type: "And", Key: "name__icontains", Val: appName },
+			action.CondValue{Type: "And", Key: "user_position_type", Val: replyUserPosition.Type },
 			action.CondValue{Type: "And", Key: "status__gt", Val: -1 },
 			condValue,
 		},
