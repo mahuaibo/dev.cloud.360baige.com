@@ -63,6 +63,7 @@ func (c *ApplicationController) List() {
 			action.CondValue{Type: "And", Key: "user_position_id", Val: replyUserPosition.Id },
 			action.CondValue{Type: "And", Key: "user_position_type", Val: replyUserPosition.Type },
 			action.CondValue{Type: "And", Key: "name__icontains", Val: appName},
+			action.CondValue{Type: "And", Key: "status__in", Val: []string{"0", "1"} },
 		},
 		Cols:     []string{"id", "end_time", "name", "image", "status", "application_tpl_id" },
 		OrderBy:  []string{"id"},
