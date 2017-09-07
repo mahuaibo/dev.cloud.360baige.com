@@ -215,9 +215,9 @@ func (c *ApplicationTplController) Detail() {
 // @Param   accessToken     query   string true       "访问令牌"
 // @Param   id     query   string true       "id"
 // @Failure 400 {"code":400,"message":"获取应用详情失败"}
-// @router /subscription [get]
-func (c *ApplicationTplController) Subscription() {
-	type data ModifyApplicationTplStatusResponse
+// @router /subscribe [post]
+func (c *ApplicationTplController) Subscribe() {
+	type data SubscribeResponse
 	accessToken := c.GetString("accessToken")
 	applicationTplId, _ := c.GetInt64("id")
 	if accessToken == "" {
@@ -251,56 +251,140 @@ func (c *ApplicationTplController) Subscription() {
 			action.CondValue{Type: "And", Key: "user_id", Val: replyUserPosition.UserId },
 			action.CondValue{Type: "And", Key: "user_position_id", Val: replyUserPosition.Id },
 			action.CondValue{Type: "And", Key: "user_position_type", Val: replyUserPosition.Type },
-			action.CondValue{Type: "And", Key: "application_tpl_id", Val: applicationTplId },
+			action.CondValue{Type: "And", Key: "application_tpl_id", Val: applicationTplId},
 		},
-		Fileds: []string{"id", "application_tpl_id" },
+		Fileds: []string{"id", "application_tpl_id", "status" },
 	}, &replyApplication)
-	if err == nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "此应用已经订阅过"}
-		c.ServeJSON()
-		return
-	}
-
-	var reply application.ApplicationTpl
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "ApplicationTpl", "FindById", application.ApplicationTpl{
-		Id: applicationTplId,
-	}, &reply)
 	if err != nil {
 		c.Data["json"] = data{Code: ErrorSystem, Message: "获取应用信息失败"}
 		c.ServeJSON()
 		return
 	}
-	if reply.Status == 0 {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "此应用已经下架"}
-		c.ServeJSON()
-		return
-	}
 
+	var reply application.ApplicationTpl
 	var replyApplication2 application.Application
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "Application", "Add", application.Application{
-		CreateTime:       time.Now().UnixNano() / 1e6,
-		UpdateTime:       time.Now().UnixNano() / 1e6,
-		CompanyId:        replyUserPosition.CompanyId,
-		UserId:           replyUserPosition.UserId,
-		UserPositionId:   replyUserPosition.Id,
-		UserPositionType: replyUserPosition.Type,
-		ApplicationTplId: reply.Id,
-		Name:             reply.Name,
-		Image:            reply.Image,
-		Status:           1,
-		StartTime:        1,
-		EndTime:          1,
-	}, &replyApplication2)
-	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "应用订阅失败"}
-		c.ServeJSON()
-		return
-	}
+	if replyApplication.Status == -1 {
+		var replyNum action.Num
+		err = client.Call(beego.AppConfig.String("EtcdURL"), "Application", "UpdateById", action.UpdateByIdCond{
+			Id: []int64{replyApplication.Id},
+			UpdateList: []action.UpdateValue{
+				action.UpdateValue{Key: "update_time", Val: time.Now().UnixNano() / 1e6 },
+				action.UpdateValue{Key: "status", Val: 0},
+			},
+		}, &replyNum)
+		if err != nil {
+			c.Data["json"] = data{Code: ErrorSystem, Message: "应用订阅失败"}
+			c.ServeJSON()
+			return
+		}
+		reply.Id = replyApplication.Id
+		replyApplication2.Id = applicationTplId
+	} else {
+		err = client.Call(beego.AppConfig.String("EtcdURL"), "ApplicationTpl", "FindById", application.ApplicationTpl{
+			Id: applicationTplId,
+		}, &reply)
+		if err != nil {
+			c.Data["json"] = data{Code: ErrorSystem, Message: "应用订阅失败"}
+			c.ServeJSON()
+			return
+		}
 
+		currentTimestamp := time.Now().UnixNano() / 1e6
+		err = client.Call(beego.AppConfig.String("EtcdURL"), "Application", "Add", application.Application{
+			CreateTime:       currentTimestamp,
+			UpdateTime:       currentTimestamp,
+			CompanyId:        replyUserPosition.CompanyId,
+			UserId:           replyUserPosition.UserId,
+			UserPositionId:   replyUserPosition.Id,
+			UserPositionType: replyUserPosition.Type,
+			ApplicationTplId: reply.Id,
+			Name:             reply.Name,
+			Image:            reply.Image,
+			Status:           0,
+			StartTime:        currentTimestamp,
+			EndTime:          currentTimestamp,
+		}, &replyApplication2)
+		if err != nil {
+			c.Data["json"] = data{Code: ErrorSystem, Message: "应用订阅失败"}
+			c.ServeJSON()
+			return
+		}
+	}
 	c.Data["json"] = data{Code: Normal, Message: "应用订阅成功", Data: ApplicationTplStatus{
 		ApplicationTplId: reply.Id,
 		AppId:            replyApplication2.Id,
 	}}
+	c.ServeJSON()
+	return
+}
+
+// @Title 应用退订接口
+// @Description 应用订阅接口
+// @Success 200 {"code":200,"message":"获取应用详情成功"}
+// @Param   accessToken     query   string true       "访问令牌"
+// @Param   id     query   string true       "id"
+// @Failure 400 {"code":400,"message":"获取应用详情失败"}
+// @router /unSubscribe [post]
+func (c *ApplicationTplController) UnSubscribe() {
+	type data UnSubscribeResponse
+	accessToken := c.GetString("accessToken")
+	applicationTplId, _ := c.GetInt64("id")
+	if accessToken == "" {
+		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌无效"}
+		c.ServeJSON()
+		return
+	}
+	var replyUserPosition user.UserPosition
+	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", action.FindByCond{
+		CondList: []action.CondValue{
+			action.CondValue{Type: "And", Key: "accessToken", Val: accessToken },
+		},
+		Fileds: []string{"id", "user_id", "company_id", "type"},
+	}, &replyUserPosition)
+	if err != nil {
+		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌失效"}
+		c.ServeJSON()
+		return
+	}
+
+	if replyUserPosition.UserId == 0 {
+		c.Data["json"] = data{Code: ErrorLogic, Message: "获取应用信息失败"}
+		c.ServeJSON()
+		return
+	}
+
+	var replyApplication application.Application
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "Application", "FindByCond", action.FindByCond{
+		CondList: []action.CondValue{
+			action.CondValue{Type: "And", Key: "company_id", Val: replyUserPosition.CompanyId },
+			action.CondValue{Type: "And", Key: "user_id", Val: replyUserPosition.UserId },
+			action.CondValue{Type: "And", Key: "user_position_id", Val: replyUserPosition.Id },
+			action.CondValue{Type: "And", Key: "user_position_type", Val: replyUserPosition.Type },
+			action.CondValue{Type: "And", Key: "application_tpl_id", Val: applicationTplId},
+		},
+		Fileds: []string{"id", "application_tpl_id", "status" },
+	}, &replyApplication)
+	if err != nil {
+		c.Data["json"] = data{Code: ErrorSystem, Message: "获取应用信息失败"}
+		c.ServeJSON()
+		return
+	}
+
+	var replyNum action.Num
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "Application", "UpdateById", action.UpdateByIdCond{
+		Id: []int64{replyApplication.Id},
+		UpdateList: []action.UpdateValue{
+			action.UpdateValue{Key: "update_time", Val: time.Now().UnixNano() / 1e6 },
+			action.UpdateValue{Key: "status", Val: -1},
+		},
+	}, &replyNum)
+	if err != nil {
+		c.Data["json"] = data{Code: ErrorSystem, Message: "应用退订失败"}
+		c.ServeJSON()
+		return
+	}
+
+	c.Data["json"] = data{Code: Normal, Message: "应用退订成功"}
 	c.ServeJSON()
 	return
 }

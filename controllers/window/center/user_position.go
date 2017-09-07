@@ -27,29 +27,58 @@ type UserPositionController struct {
 func (c *UserPositionController) PositionList() {
 	type data UserPositionResponse
 	accessTicket := c.GetString("accessTicket")
+	accessType := c.GetString("accessType", "0")
+	accessValue := c.GetString("accessValue", "(=@*&%^!)")
+	currentTime := time.Now().UnixNano() / 1e6
 
-	var replyUser user.User
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "User", "FindByCond", action.FindByCond{
-		CondList: []action.CondValue{
-			action.CondValue{Type: "And", Key: "access_ticket", Val: accessTicket },
-		},
-		Fileds: []string{"id", "expire_in"},
-	}, &replyUser)
-	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常[验证访问票据失败]"}
-		c.ServeJSON()
-		return
-	}
-	if replyUser.Id == 0 {
-		c.Data["json"] = data{Code: ErrorLogic, Message: "访问票据无效"}
-		c.ServeJSON()
-		return
+	var err error
+	var replyUserId int64
+	if accessType == "1" {
+		var replyUserPosition user.UserPosition
+		err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", action.FindByCond{
+			CondList: []action.CondValue{
+				action.CondValue{Type: "And", Key: "access_token", Val: accessValue },
+				action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTime },
+			},
+			Fileds: []string{"user_id"},
+		}, &replyUserPosition)
+
+		if err != nil {
+			c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常[验证访问令牌失败]"}
+			c.ServeJSON()
+			return
+		}
+		if replyUserPosition.UserId == 0 {
+			c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌失败"}
+			c.ServeJSON()
+			return
+		}
+		replyUserId = replyUserPosition.UserId
+	} else {
+		var replyUser user.User
+		err := client.Call(beego.AppConfig.String("EtcdURL"), "User", "FindByCond", action.FindByCond{
+			CondList: []action.CondValue{
+				action.CondValue{Type: "And", Key: "access_ticket", Val: accessTicket },
+			},
+			Fileds: []string{"id", "expire_in"},
+		}, &replyUser)
+		if err != nil {
+			c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常[验证访问票据失败]"}
+			c.ServeJSON()
+			return
+		}
+		if replyUser.Id == 0 {
+			c.Data["json"] = data{Code: ErrorLogic, Message: "访问票据无效"}
+			c.ServeJSON()
+			return
+		}
+		replyUserId = replyUser.Id
 	}
 
 	var replyUserPosition []user.UserPosition
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "ListByCond", &action.ListByCond{
 		CondList: []action.CondValue{
-			action.CondValue{Type: "And", Key: "user_id", Val: replyUser.Id },
+			action.CondValue{Type: "And", Key: "user_id", Val: replyUserId },
 			action.CondValue{Type: "And", Key: "status__gt", Val: -1 },
 		},
 		OrderBy:  []string{"id"},
@@ -140,7 +169,6 @@ func (c *UserPositionController) GetAccessToken() {
 			return
 		}
 		replyUserId = replyUserPosition.UserId
-
 	} else {
 		var replyUser user.User
 		err = client.Call(beego.AppConfig.String("EtcdURL"), "User", "FindByCond", action.FindByCond{
