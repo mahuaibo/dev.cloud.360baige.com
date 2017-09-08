@@ -470,13 +470,6 @@ func (c *OrderController) PayResult() {
 			c.ServeJSON()
 			return
 		}
-		if replyApplication.Id > 0 {
-			c.Data["json"] = data{Code: Normal, Message: Message(20000), Data: OrderPayResult{
-				TradeState: "SUCCESS",
-			}}
-			c.ServeJSON()
-			return
-		}
 
 		var replyApplicationTpl application.ApplicationTpl
 		err = client.Call(beego.AppConfig.String("EtcdURL"), "ApplicationTpl", "FindById", &application.ApplicationTpl{
@@ -519,35 +512,46 @@ func (c *OrderController) PayResult() {
 		tradeState = orderQuery.TradeState
 		if orderQuery.ReturnCode == "SUCCESS" && orderQuery.ResultCode == "SUCCESS" && orderQuery.TradeState == "SUCCESS" {
 			var replyApplication application.Application
-			err = client.Call(beego.AppConfig.String("EtcdURL"), "Application", "Add", &application.Application{
-				CreateTime:       currentTimestamp,
-				UpdateTime:       currentTimestamp,
-				CompanyId:        replyUserPosition.CompanyId,
-				UserId:           replyUserPosition.UserId,
-				ApplicationTplId: replyOrder.ProductId,
-				UserPositionType: replyUserPosition.Type,
-				UserPositionId:   replyUserPosition.Id,
-				Name:             replyOrder.Brief,
-				Image:            replyOrder.Image,
-				Status:           0,
-				StartTime:        currentTimestamp,
-				EndTime:          endTime,
-			}, &replyApplication)
+
+			// have application
+			if replyApplication.Id > 0 {
+				var replyNum *action.Num
+				err = client.Call(beego.AppConfig.String("EtcdURL"), "Application", "UpdateById", &action.UpdateByIdCond{
+					Id: []int64{replyApplication.Id},
+					UpdateList: []action.UpdateValue{
+						action.UpdateValue{"update_time", currentTimestamp},
+						action.UpdateValue{"end_time", endTime},
+						action.UpdateValue{"status", 0},
+					},
+				}, &replyNum)
+			} else {
+				err = client.Call(beego.AppConfig.String("EtcdURL"), "Application", "Add", &application.Application{
+					CreateTime:       currentTimestamp,
+					UpdateTime:       currentTimestamp,
+					CompanyId:        replyUserPosition.CompanyId,
+					UserId:           replyUserPosition.UserId,
+					ApplicationTplId: replyOrder.ProductId,
+					UserPositionType: replyUserPosition.Type,
+					UserPositionId:   replyUserPosition.Id,
+					Name:             replyOrder.Brief,
+					Image:            replyOrder.Image,
+					Status:           0,
+					StartTime:        currentTimestamp,
+					EndTime:          endTime,
+				}, &replyApplication)
+			}
+
 			if err != nil {
 				c.Data["json"] = data{Code: ErrorSystem, Message: Message(50001, "Application.Add")}
 				c.ServeJSON()
 				return
 			}
 
-			if replyApplication.Id == 0 {
-				log.Println("应用中心订购失败")
-			}
-
 			var replyNum *action.Num
 			err = client.Call(beego.AppConfig.String("EtcdURL"), "Order", "UpdateById", &action.UpdateByIdCond{
 				Id: []int64{replyOrder.Id},
 				UpdateList: []action.UpdateValue{
-					action.UpdateValue{"UpdateTime", currentTimestamp},
+					action.UpdateValue{"update_time", currentTimestamp},
 					action.UpdateValue{"Status", 4},
 				},
 			}, &replyNum)
@@ -564,7 +568,7 @@ func (c *OrderController) PayResult() {
 			err = client.Call(beego.AppConfig.String("EtcdURL"), "ApplicationTpl", "UpdateById", &action.UpdateByIdCond{
 				Id: []int64{replyApplicationTpl.Id},
 				UpdateList: []action.UpdateValue{
-					action.UpdateValue{"UpdateTime", currentTimestamp},
+					action.UpdateValue{"update_time", currentTimestamp},
 					action.UpdateValue{"subscription", replyApplicationTpl.Subscription + 1},
 				},
 			}, &replyNum)
