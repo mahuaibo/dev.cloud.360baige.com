@@ -57,7 +57,7 @@ func (c *UserController) Login() {
 	if currentTimestamp > replyUser.ExpireIn {
 		createAccessTicket := utils.CreateAccessValue(replyUser.Username + "#" + strconv.FormatInt(currentTimestamp, 10))
 		var updateReply action.Num
-		expireIn := currentTimestamp + 60 * 1000
+		expireIn := currentTimestamp + 60*1000
 		err = client.Call(beego.AppConfig.String("EtcdURL"), "User", "UpdateById", action.UpdateByIdCond{
 			Id: []int64{replyUser.Id},
 			UpdateList: []action.UpdateValue{
@@ -76,7 +76,7 @@ func (c *UserController) Login() {
 	}
 
 	c.Data["json"] = data{Code: Normal, Message: "登录成功", Data: UserLogin{
-		Head:         replyUser.Head,
+		Head:         utils.SignURLSample(replyUser.Head),
 		AccessTicket: replyUser.AccessTicket,
 		ExpireIn:     replyUser.ExpireIn,
 	}}
@@ -488,7 +488,6 @@ func (c *UserController) Register() {
 	c.ServeJSON()
 	return
 }
-
 
 // @Title 用户注册
 // @Description 用户注册

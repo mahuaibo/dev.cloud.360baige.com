@@ -7,7 +7,6 @@ import (
 	. "dev.model.360baige.com/http/window/center"
 	"dev.model.360baige.com/models/user"
 	"dev.model.360baige.com/action"
-	"time"
 	"dev.cloud.360baige.com/utils"
 )
 
@@ -24,29 +23,26 @@ type CompanyController struct {
 // @router /detail [post]
 func (c *CompanyController) Detail() {
 	type data CompanyDetailResponse
+	currentTimestamp := utils.CurrentTimestamp()
 	accessToken := c.GetString("accessToken")
-	if accessToken == "" {
-		c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌不能为空"}
-		c.ServeJSON()
-		return
-	}
 
-	//检测 accessToken
-	var replyUserPosition user.UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", action.FindByCond{
-		CondList: [] action.CondValue{
-			action.CondValue{Type: "And", Key: "accessToken", Val: accessToken },
-		},
-		Fileds: []string{"id", "user_id", "company_id", "type"},
-	}, &replyUserPosition)
-
+	err := utils.Unable(map[string]string{"accessToken": "string:true"}, c.Ctx.Input)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常[访问令牌失效]"}
+		c.Data["json"] = data{Code: ErrorLogic, Message: Message(40000, err.Error())}
 		c.ServeJSON()
 		return
 	}
-	if replyUserPosition.Id == 0 {
-		c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌失效"}
+
+	var replyUserPosition user.UserPosition
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{CondList: []action.CondValue{action.CondValue{Type: "And", Key: "access_token", Val: accessToken }, action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTimestamp }, }, Fileds: []string{"id", "user_id", "company_id", "type"}, }, &replyUserPosition)
+	if err != nil {
+		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
+		c.ServeJSON()
+		return
+	}
+
+	if replyUserPosition.UserId == 0 {
+		c.Data["json"] = data{Code: ErrorLogic, Message: Message(30000)}
 		c.ServeJSON()
 		return
 	}
@@ -90,7 +86,7 @@ func (c *CompanyController) Detail() {
 // @router /modify [post]
 func (c *CompanyController) Modify() {
 	type data CompanyModifyResponse
-	//logo := c.GetString("logo")
+	currentTimestamp := utils.CurrentTimestamp()
 	name := c.GetString("name")
 	short_name := c.GetString("short_name")
 	provinceId, _ := c.GetInt64("province_id")
@@ -102,27 +98,24 @@ func (c *CompanyController) Modify() {
 	remark := c.GetString("remark")
 	brief := c.GetString("brief")
 	accessToken := c.GetString("accessToken")
-	if accessToken == "" {
-		c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌不能为空"}
-		c.ServeJSON()
-		return
-	}
-	//检测 accessToken
-	var replyUserPosition user.UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", action.FindByCond{
-		CondList: [] action.CondValue{
-			action.CondValue{Type: "And", Key: "accessToken", Val: accessToken },
-		},
-		Fileds: []string{"id", "user_id", "company_id", "type"},
-	}, &replyUserPosition)
 
+	err := utils.Unable(map[string]string{"accessToken": "string:true"}, c.Ctx.Input)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌失效"}
+		c.Data["json"] = data{Code: ErrorLogic, Message: Message(40000, err.Error())}
 		c.ServeJSON()
 		return
 	}
-	if replyUserPosition.Id == 0 {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "获取公司信息失败"}
+
+	var replyUserPosition user.UserPosition
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{CondList: []action.CondValue{action.CondValue{Type: "And", Key: "access_token", Val: accessToken }, action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTimestamp }, }, Fileds: []string{"id", "user_id", "company_id", "type"}, }, &replyUserPosition)
+	if err != nil {
+		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
+		c.ServeJSON()
+		return
+	}
+
+	if replyUserPosition.UserId == 0 {
+		c.Data["json"] = data{Code: ErrorLogic, Message: Message(30000)}
 		c.ServeJSON()
 		return
 	}
@@ -130,7 +123,7 @@ func (c *CompanyController) Modify() {
 	var replyNum action.Num
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Company", "UpdateById", action.UpdateByIdCond{
 		UpdateList: []action.UpdateValue{
-			action.UpdateValue{Key: "update_time", Val: time.Now().UnixNano() / 1e6 },
+			action.UpdateValue{Key: "update_time", Val: currentTimestamp },
 			//action.UpdateValue{Key: "logo", Val: logo},
 			action.UpdateValue{Key: "name", Val: name},
 			action.UpdateValue{Key: "short_name", Val: short_name},
@@ -147,17 +140,17 @@ func (c *CompanyController) Modify() {
 	}, &replyNum)
 
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "企业信息修改失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
 		c.ServeJSON()
 		return
 	}
 	if replyNum.Value == 0 {
-		c.Data["json"] = data{Code: ErrorLogic, Message: "企业信息修改失败"}
+		c.Data["json"] = data{Code: ErrorLogic, Message: Message(40000)}
 		c.ServeJSON()
 		return
 	}
 
-	c.Data["json"] = data{Code: Normal, Message: "企业信息修改成功"}
+	c.Data["json"] = data{Code: Normal, Message: Message(20000)}
 	c.ServeJSON()
 	return
 }
@@ -171,33 +164,38 @@ func (c *CompanyController) Modify() {
 // @Failure 400 {"code":400,"message":"企业logo上传成功"}
 // @router /uploadLogo [options,post]
 func (c *CompanyController) UploadLogo() {
+	currentTimestamp := utils.CurrentTimestamp()
 	requestType := c.Ctx.Request.Method
 	if requestType == "POST" {
 		type data UploadLogoResponse
 		accessToken := c.GetString("accessToken")
 		companyId, _ := c.GetInt64("id")
 		_, handle, _ := c.Ctx.Request.FormFile("uploadFile")
-		if accessToken == "" {
-			c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌无效"}
+
+		err := utils.Unable(map[string]string{"accessToken": "string:true"}, c.Ctx.Input)
+		if err != nil {
+			c.Data["json"] = data{Code: ErrorLogic, Message: Message(40000, err.Error())}
 			c.ServeJSON()
 			return
 		}
 
 		var replyUserPosition user.UserPosition
-		err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", action.FindByCond{
-			CondList: []action.CondValue{
-				action.CondValue{Type: "And", Key: "access_token", Val: accessToken },
-			},
-		}, &replyUserPosition)
+		err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{CondList: []action.CondValue{action.CondValue{Type: "And", Key: "access_token", Val: accessToken }, action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTimestamp }, }, Fileds: []string{"id", "user_id", "company_id", "type"}, }, &replyUserPosition)
 		if err != nil {
-			c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌无效"}
+			c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
+			c.ServeJSON()
+			return
+		}
+
+		if replyUserPosition.UserId == 0 {
+			c.Data["json"] = data{Code: ErrorLogic, Message: Message(30000)}
 			c.ServeJSON()
 			return
 		}
 
 		objectKey, err := utils.UploadImage(handle, "Company/logoImages/")
 		if err != nil {
-			c.Data["json"] = data{Code: ErrorLogic, Message: "用户头像上传失败"}
+			c.Data["json"] = data{Code: ErrorLogic, Message: Message(50000)}
 			c.ServeJSON()
 			return
 		}
@@ -209,7 +207,7 @@ func (c *CompanyController) UploadLogo() {
 			Fileds: []string{"id"},
 		}, &replyCompany)
 		if err != nil {
-			c.Data["json"] = data{Code: ErrorSystem, Message: "用户信息错误"}
+			c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
 			c.ServeJSON()
 			return
 		}
@@ -218,17 +216,17 @@ func (c *CompanyController) UploadLogo() {
 		err = client.Call(beego.AppConfig.String("EtcdURL"), "Company", "UpdateById", action.UpdateByIdCond{
 			Id: []int64{replyCompany.Id},
 			UpdateList: []action.UpdateValue{
-				action.UpdateValue{Key: "update_time", Val: time.Now().UnixNano() / 1e6 },
+				action.UpdateValue{Key: "update_time", Val: currentTimestamp},
 				action.UpdateValue{Key: "logo", Val: objectKey},
 			},
 		}, &replyNum)
 		if err != nil {
-			c.Data["json"] = data{Code: ErrorSystem, Message: "企业logo上传失败"}
+			c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
 			c.ServeJSON()
 			return
 		}
 		logoUrl := utils.SignURLSample(objectKey)
-		c.Data["json"] = data{Code: Normal, Data: logoUrl, Message: "企业logo上传成功"}
+		c.Data["json"] = data{Code: Normal, Data: logoUrl, Message: Message(20000)}
 		c.ServeJSON()
 		return
 	}

@@ -6,9 +6,9 @@ import (
 	. "dev.model.360baige.com/http/window/center"
 	"dev.model.360baige.com/models/user"
 	"dev.model.360baige.com/models/application"
-	"time"
 	"dev.model.360baige.com/action"
 	"encoding/json"
+	"dev.cloud.360baige.com/utils"
 )
 
 // APPLICATION API
@@ -27,30 +27,29 @@ type ApplicationController struct {
 // @router /list [post]
 func (c *ApplicationController) List() {
 	type data ApplicationListResponse
+	currentTimestamp := utils.CurrentTimestamp()
 	accessToken := c.GetString("accessToken")
-	appName := c.GetString("name")
+	appName := c.GetString("name", "")
 	pageSize, _ := c.GetInt64("pageSize", 50)
 	current, _ := c.GetInt64("current", 1)
 
-	if accessToken == "" {
-		c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌无效"}
-		c.ServeJSON()
-		return
-	}
-	var replyUserPosition user.UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", action.FindByCond{
-		CondList: []action.CondValue{
-			action.CondValue{Type: "And", Key: "access_token", Val: accessToken },
-		},
-		Fileds: []string{"id", "user_id", "company_id", "type"},
-	}, &replyUserPosition)
+	err := utils.Unable(map[string]string{"accessToken": "string:true"}, c.Ctx.Input)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌失效"}
+		c.Data["json"] = data{Code: ErrorLogic, Message: Message(40000, err.Error())}
 		c.ServeJSON()
 		return
 	}
+
+	var replyUserPosition user.UserPosition
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{CondList: []action.CondValue{action.CondValue{Type: "And", Key: "access_token", Val: accessToken }, action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTimestamp }, }, Fileds: []string{"id", "user_id", "company_id", "type"}, }, &replyUserPosition)
+	if err != nil {
+		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
+		c.ServeJSON()
+		return
+	}
+
 	if replyUserPosition.UserId == 0 {
-		c.Data["json"] = data{Code: ErrorLogic, Message: "获取信息失败"}
+		c.Data["json"] = data{Code: ErrorLogic, Message: Message(30000)}
 		c.ServeJSON()
 		return
 	}
@@ -156,25 +155,28 @@ func (c *ApplicationController) List() {
 // @router /modifyStatus [post]
 func (c *ApplicationController) ModifyStatus() {
 	type data ModifyApplicationStatusResponse
+	currentTimestamp := utils.CurrentTimestamp()
 	accessToken := c.GetString("accessToken")
 	ap_id, _ := c.GetInt64("id")
 	status, _ := c.GetInt("status")
-	if accessToken == "" {
-		c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌不能为空"}
+
+	err := utils.Unable(map[string]string{"accessToken": "string:true", "id": "int:true", "status": "int:true"}, c.Ctx.Input)
+	if err != nil {
+		c.Data["json"] = data{Code: ErrorLogic, Message: Message(40000, err.Error())}
 		c.ServeJSON()
 		return
 	}
 
 	var replyUserPosition user.UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", action.FindByCond{
-		CondList: []action.CondValue{
-			action.CondValue{Type: "And", Key: "access_token", Val: accessToken },
-		},
-		Fileds: []string{"user_id"},
-	}, &replyUserPosition)
-
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{CondList: []action.CondValue{action.CondValue{Type: "And", Key: "access_token", Val: accessToken }, action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTimestamp }, }, Fileds: []string{"id", "user_id", "company_id", "type"}, }, &replyUserPosition)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌失效"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
+		c.ServeJSON()
+		return
+	}
+
+	if replyUserPosition.UserId == 0 {
+		c.Data["json"] = data{Code: ErrorLogic, Message: Message(30000)}
 		c.ServeJSON()
 		return
 	}
@@ -184,7 +186,7 @@ func (c *ApplicationController) ModifyStatus() {
 		Id: ap_id,
 	}, &reply)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "获取应用信息失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
 		c.ServeJSON()
 		return
 	}
@@ -192,7 +194,7 @@ func (c *ApplicationController) ModifyStatus() {
 	var updateArgs []action.UpdateValue
 	updateArgs = append(updateArgs, action.UpdateValue{
 		Key: "update_time",
-		Val: time.Now().UnixNano() / 1e6,
+		Val: currentTimestamp,
 	}, action.UpdateValue{
 		Key: "status",
 		Val: status,
@@ -202,11 +204,11 @@ func (c *ApplicationController) ModifyStatus() {
 		UpdateList: updateArgs,
 	}, nil)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "应用信息修改失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
 		c.ServeJSON()
 		return
 	}
-	c.Data["json"] = data{Code: Normal, Message: "应用信息修改成功"}
+	c.Data["json"] = data{Code: Normal, Message: Message(20000)}
 	c.ServeJSON()
 	return
 }

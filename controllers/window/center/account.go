@@ -25,29 +25,22 @@ func (c *AccountController) Statistics() {
 	type data AccountStatisticsResponse
 	accessToken := c.GetString("accessToken")
 	currentTimestamp := utils.CurrentTimestamp()
-	if accessToken == "" {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌无效"}
+	err := utils.Unable(map[string]string{"accessToken": "string:true"}, c.Ctx.Input)
+	if err != nil {
+		c.Data["json"] = data{Code: ErrorLogic, Message: Message(40000, err.Error())}
 		c.ServeJSON()
 		return
 	}
 
 	var replyUserPosition user.UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{
-		CondList: []action.CondValue{
-			action.CondValue{Type: "And", Key: "access_token", Val: accessToken },
-			action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTimestamp },
-		},
-		Fileds: []string{"id", "user_id", "company_id", "type"},
-	}, &replyUserPosition)
-
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{CondList: []action.CondValue{action.CondValue{Type: "And", Key: "access_token", Val: accessToken }, action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTimestamp }, }, Fileds: []string{"id", "user_id", "company_id", "type"}, }, &replyUserPosition)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "验证访问令牌失效"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
 		c.ServeJSON()
 		return
 	}
-
 	if replyUserPosition.Id == 0 {
-		c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌失效"}
+		c.Data["json"] = data{Code: ErrorPower, Message: Message(30000)}
 		c.ServeJSON()
 		return
 	}
@@ -64,7 +57,7 @@ func (c *AccountController) Statistics() {
 	}, &replyAccount)
 
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "获取账务统计信息失败1"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
 		c.ServeJSON()
 		return
 	}
@@ -79,7 +72,7 @@ func (c *AccountController) Statistics() {
 	}, &replyAccountItemList)
 
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "获取账务统计信息失败2"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
 		c.ServeJSON()
 		return
 	}
@@ -93,7 +86,7 @@ func (c *AccountController) Statistics() {
 		}
 	}
 
-	c.Data["json"] = data{Code: Normal, Message: "获取账务统计信息成功", Data: AccountStatistics{
+	c.Data["json"] = data{Code: Normal, Message: Message(20000), Data: AccountStatistics{
 		Balance:    replyAccount.Balance,
 		InAccount:  inAccount,
 		OutAccount: outAccount,
@@ -101,5 +94,3 @@ func (c *AccountController) Statistics() {
 	c.ServeJSON()
 	return
 }
-
-

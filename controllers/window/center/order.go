@@ -93,7 +93,7 @@ func (c *OrderController) List() {
 	for _, value := range orderList {
 		resData = append(resData, OrderValue{
 			Id:          value.Id,
-			CreateTime:  utils.Datetime(value.CreateTime, "2006-01-02 15:04:05"),
+			CreateTime:  value.CreateTime,
 			Image:       value.Image,
 			Code:        value.Code,
 			Price:       value.Price,
@@ -221,73 +221,11 @@ func (c *OrderController) Detail() {
 		Price:  replyOrder.Price,
 		Num:    replyOrder.Num,
 		Status: replyOrder.Status,
+		CodeUrl: replyOrder.CodeUrl,
 	}}
 	c.ServeJSON()
 	return
 }
-
-// @Title 订单详情接口
-// @Description 账务详情接口
-// @Success 200 {"code":200,"message":"获取账务详情成功"}
-// @Param   accessToken     query   string true       "访问令牌"
-// @Param   code     query   string true       "code"
-// @Failure 400 {"code":400,"message":"获取账务统计信息失败"}
-// @router /detailByCode [post]
-//func (c *OrderController) DetailByCode() {
-//	type data OrderDetailResponse
-//	accessToken := c.GetString("accessToken")
-//	code := c.GetString("code")
-//	if accessToken == "" {
-//		c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌无效"}
-//		c.ServeJSON()
-//		return
-//	}
-//
-//	var replyUserPosition user.UserPosition
-//	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", action.FindByCond{
-//		CondList: []action.CondValue{
-//			action.CondValue{Type: "And", Key: "accessToken", Val: accessToken },
-//		},
-//		Fileds: []string{"id", "user_id", "company_id", "type"},
-//	}, &replyUserPosition)
-//
-//	if err != nil {
-//		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌失效"}
-//		c.ServeJSON()
-//		return
-//	}
-//	if code == "" {
-//		c.Data["json"] = data{Code: ErrorLogic, Message: "获取信息失败"}
-//		c.ServeJSON()
-//		return
-//	}
-//
-//	var replyOrder order.Order
-//	err = client.Call(beego.AppConfig.String("EtcdURL"), "Order", "FindByCond", action.FindByCond{
-//		CondList: []action.CondValue{
-//			action.CondValue{Type: "And", Key: "code", Val: code },
-//		},
-//		Fileds: []string{"id", "create_time", "code", "price", "type", "pay_type", "brief", "status"},
-//	}, &replyOrder)
-//
-//	if err != nil {
-//		c.Data["json"] = data{Code: ErrorSystem, Message: "获取信息失败"}
-//		c.ServeJSON()
-//		return
-//	}
-//
-//	c.Data["json"] = data{Code: Normal, Message: "获取信息成功", Data: OrderDetail{
-//		CreateTime:  time.Unix(replyOrder.CreateTime / 1000, 0).Format("2006-01-02"),
-//		Code:        replyOrder.Code,
-//		Price:       replyOrder.Price,
-//		ProductType: replyOrder.ProductType,
-//		PayType:     replyOrder.PayType,
-//		Brief:       replyOrder.Brief,
-//		Status:      replyOrder.Status,
-//	}}
-//	c.ServeJSON()
-//	return
-//}
 
 // @Title 订单新增
 // @Description 订单新增
@@ -311,7 +249,6 @@ func (c *OrderController) Add() {
 		c.ServeJSON()
 		return
 	}
-
 	var replyUserPosition user.UserPosition
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", action.FindByCond{
 		CondList: []action.CondValue{
@@ -339,7 +276,7 @@ func (c *OrderController) Add() {
 		c.ServeJSON()
 		return
 	}
-	orderCode := utils.Datetime(utils.CurrentTimestamp(), "20060102150405") + utils.RandomNum(6)
+	orderCode := utils.Datetime(currentTimestamp, "20060102150405") + utils.RandomNum(6)
 	var replyOrder order.Order
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Order", "Add", &order.Order{
 		CreateTime:       currentTimestamp,
@@ -487,44 +424,32 @@ func (c *OrderController) PayResult() {
 			c.ServeJSON()
 			return
 		}
-		// replyApplicationTpl.PayCycle
-		// PayType:0:限免 1:永久免费 2:1次性收费 3:周期收费
-		// pay_cycle:0无1月2季3半年4年
-		var endTime int64
-		if replyApplicationTpl.PayType == 0 {
-			endTime = currentTimestamp + 3600000*24*30*replyOrder.Num
-		} else if replyApplicationTpl.PayType == 1 {
-			endTime = currentTimestamp + 3600000*24*30*12*100*replyOrder.Num
-		} else if replyApplicationTpl.PayType == 2 {
-			endTime = currentTimestamp + 3600000*24*30*12*100*replyOrder.Num
-		} else if replyApplicationTpl.PayType == 3 {
-			if replyApplicationTpl.PayCycle == 1 {
-				endTime = currentTimestamp + 3600000*24*30*replyOrder.Num
-			} else if replyApplicationTpl.PayCycle == 2 {
-				endTime = currentTimestamp + 3600000*24*30*3*replyOrder.Num
-			} else if replyApplicationTpl.PayCycle == 3 {
-				endTime = currentTimestamp + 3600000*24*30*6*replyOrder.Num
-			} else if replyApplicationTpl.PayCycle == 4 {
-				endTime = currentTimestamp + 3600000*24*30*12*replyOrder.Num
-			}
-		}
 
 		tradeState = orderQuery.TradeState
 		if orderQuery.ReturnCode == "SUCCESS" && orderQuery.ResultCode == "SUCCESS" && orderQuery.TradeState == "SUCCESS" {
-			var replyApplication application.Application
-
 			// have application
 			if replyApplication.Id > 0 {
+				// 修改时间
+				endTime := replyApplication.EndTime
+				if currentTimestamp > endTime {
+					endTime = currentTimestamp
+				}
+				endTime = utils.ServiceTime(replyApplicationTpl.PayType, replyApplicationTpl.PayCycle, replyOrder.Num, endTime)
 				var replyNum *action.Num
 				err = client.Call(beego.AppConfig.String("EtcdURL"), "Application", "UpdateById", &action.UpdateByIdCond{
 					Id: []int64{replyApplication.Id},
 					UpdateList: []action.UpdateValue{
 						action.UpdateValue{"update_time", currentTimestamp},
+						action.UpdateValue{"StartTime", replyApplication.EndTime},
 						action.UpdateValue{"end_time", endTime},
 						action.UpdateValue{"status", 0},
 					},
 				}, &replyNum)
+
 			} else {
+				var replyApplication application.Application
+				endTime := utils.ServiceTime(replyApplicationTpl.PayType, replyApplicationTpl.PayCycle, replyOrder.Num, currentTimestamp)
+				// 新增时间
 				err = client.Call(beego.AppConfig.String("EtcdURL"), "Application", "Add", &application.Application{
 					CreateTime:       currentTimestamp,
 					UpdateTime:       currentTimestamp,
@@ -610,6 +535,8 @@ func (c *OrderController) PayResult() {
 					action.CondValue{"And", "Type", account.AccountTypeMoney},
 				},
 			}, replyOrder.TotalPrice, replyOrder.Code, replyOrder.Brief)
+
+		} else if orderQuery.ReturnCode == "SUCCESS" && orderQuery.ResultCode == "SUCCESS" && orderQuery.TradeState == "SUCCESS" {
 
 		}
 	}

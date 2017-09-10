@@ -6,7 +6,6 @@ import (
 	. "dev.model.360baige.com/http/window/center"
 	"dev.model.360baige.com/models/user"
 	"dev.model.360baige.com/models/application"
-	"time"
 	"dev.model.360baige.com/action"
 	"encoding/json"
 	"dev.cloud.360baige.com/utils"
@@ -74,7 +73,7 @@ func (c *ApplicationTplController) List() {
 	}, &reply)
 
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "获取应用信息失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
 		c.ServeJSON()
 		return
 	}
@@ -119,7 +118,7 @@ func (c *ApplicationTplController) List() {
 		})
 	}
 
-	c.Data["json"] = data{Code: Normal, Message: "获取应用成功", Data: ApplicationTplList{
+	c.Data["json"] = data{Code: Normal, Message: Message(20000), Data: ApplicationTplList{
 		Total:       reply.Total,
 		Current:     currentPage,
 		CurrentSize: reply.CurrentSize,
@@ -145,22 +144,22 @@ func (c *ApplicationTplController) Detail() {
 	accessToken := c.GetString("accessToken")
 	applicationTplId, _ := c.GetInt64("applicationTplId")
 
-	if accessToken == "" {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌无效"}
+	err := utils.Unable(map[string]string{"accessToken": "string:true"}, c.Ctx.Input)
+	if err != nil {
+		c.Data["json"] = data{Code: ErrorLogic, Message: Message(40000, err.Error())}
 		c.ServeJSON()
 		return
 	}
 
 	var replyUserPosition user.UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{CondList: []action.CondValue{action.CondValue{Type: "And", Key: "access_token", Val: accessToken }, action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTimestamp }, }, Fileds: []string{"id", "user_id", "company_id", "type"}, }, &replyUserPosition)
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{CondList: []action.CondValue{action.CondValue{Type: "And", Key: "access_token", Val: accessToken }, action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTimestamp }, }, Fileds: []string{"id", "user_id", "company_id", "type"}, }, &replyUserPosition)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌无效"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
 		c.ServeJSON()
 		return
 	}
-
 	if replyUserPosition.UserId == 0 {
-		c.Data["json"] = data{Code: Normal, Message: "获取用户信息失败"}
+		c.Data["json"] = data{Code: ErrorPower, Message: Message(30000)}
 		c.ServeJSON()
 		return
 	}
@@ -170,7 +169,7 @@ func (c *ApplicationTplController) Detail() {
 		Id: applicationTplId,
 	}, &replyApplicationTpl)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "获取应用信息失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
 		c.ServeJSON()
 		return
 	}
@@ -185,7 +184,7 @@ func (c *ApplicationTplController) Detail() {
 		},
 	}, &replyApplication)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "获取应用信息失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
 		c.ServeJSON()
 		return
 	}
@@ -194,12 +193,11 @@ func (c *ApplicationTplController) Detail() {
 		subscriptionStatus = replyApplication.Status
 	}
 
-	c.Data["json"] = data{Code: Normal, Message: "获取应用成功", Data: ApplicationTalDetail{
+	c.Data["json"] = data{Code: Normal, Message: Message(20000), Data: ApplicationTalDetail{
 		Id:                 replyApplicationTpl.Id,
 		Name:               replyApplicationTpl.Name,
 		Image:              replyApplicationTpl.Image,
 		Desc:               replyApplicationTpl.Desc,
-		PriceDesc:          "该应用功能￥8.00，您可以根据自己的需求选择是否订购使用。",
 		Price:              replyApplicationTpl.Price,
 		PayType:            replyApplicationTpl.PayType,
 		PayCycle:           GetPayCycleName(replyApplicationTpl.PayCycle),
@@ -219,28 +217,26 @@ func (c *ApplicationTplController) Detail() {
 // @router /subscribe [post]
 func (c *ApplicationTplController) Subscribe() {
 	type data SubscribeResponse
+	currentTimestamp := utils.CurrentTimestamp()
 	accessToken := c.GetString("accessToken")
 	applicationTplId, _ := c.GetInt64("id")
-	if accessToken == "" {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌无效"}
-		c.ServeJSON()
-		return
-	}
-	var replyUserPosition user.UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", action.FindByCond{
-		CondList: []action.CondValue{
-			action.CondValue{Type: "And", Key: "accessToken", Val: accessToken },
-		},
-		Fileds: []string{"id", "user_id", "company_id", "type"},
-	}, &replyUserPosition)
+
+	err := utils.Unable(map[string]string{"accessToken": "string:true"}, c.Ctx.Input)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌失效"}
+		c.Data["json"] = data{Code: ErrorLogic, Message: Message(40000, err.Error())}
 		c.ServeJSON()
 		return
 	}
 
+	var replyUserPosition user.UserPosition
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{CondList: []action.CondValue{action.CondValue{Type: "And", Key: "access_token", Val: accessToken }, action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTimestamp }, }, Fileds: []string{"id", "user_id", "company_id", "type"}, }, &replyUserPosition)
+	if err != nil {
+		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
+		c.ServeJSON()
+		return
+	}
 	if replyUserPosition.UserId == 0 {
-		c.Data["json"] = data{Code: ErrorLogic, Message: "获取应用信息失败"}
+		c.Data["json"] = data{Code: ErrorPower, Message: Message(30000)}
 		c.ServeJSON()
 		return
 	}
@@ -257,7 +253,7 @@ func (c *ApplicationTplController) Subscribe() {
 		Fileds: []string{"id", "application_tpl_id", "status" },
 	}, &replyApplication)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "获取应用信息失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
 		c.ServeJSON()
 		return
 	}
@@ -269,12 +265,12 @@ func (c *ApplicationTplController) Subscribe() {
 		err = client.Call(beego.AppConfig.String("EtcdURL"), "Application", "UpdateById", action.UpdateByIdCond{
 			Id: []int64{replyApplication.Id},
 			UpdateList: []action.UpdateValue{
-				action.UpdateValue{Key: "update_time", Val: time.Now().UnixNano() / 1e6 },
+				action.UpdateValue{Key: "update_time", Val: currentTimestamp},
 				action.UpdateValue{Key: "status", Val: 0},
 			},
 		}, &replyNum)
 		if err != nil {
-			c.Data["json"] = data{Code: ErrorSystem, Message: "应用订阅失败"}
+			c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
 			c.ServeJSON()
 			return
 		}
@@ -285,12 +281,10 @@ func (c *ApplicationTplController) Subscribe() {
 			Id: applicationTplId,
 		}, &reply)
 		if err != nil {
-			c.Data["json"] = data{Code: ErrorSystem, Message: "应用订阅失败"}
+			c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
 			c.ServeJSON()
 			return
 		}
-
-		currentTimestamp := time.Now().UnixNano() / 1e6
 		err = client.Call(beego.AppConfig.String("EtcdURL"), "Application", "Add", application.Application{
 			CreateTime:       currentTimestamp,
 			UpdateTime:       currentTimestamp,
@@ -306,12 +300,12 @@ func (c *ApplicationTplController) Subscribe() {
 			EndTime:          currentTimestamp,
 		}, &replyApplication2)
 		if err != nil {
-			c.Data["json"] = data{Code: ErrorSystem, Message: "应用订阅失败"}
+			c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
 			c.ServeJSON()
 			return
 		}
 	}
-	c.Data["json"] = data{Code: Normal, Message: "应用订阅成功", Data: ApplicationTplStatus{
+	c.Data["json"] = data{Code: Normal, Message: Message(20000), Data: ApplicationTplStatus{
 		ApplicationTplId: reply.Id,
 		AppId:            replyApplication2.Id,
 	}}
@@ -328,28 +322,26 @@ func (c *ApplicationTplController) Subscribe() {
 // @router /unSubscribe [post]
 func (c *ApplicationTplController) UnSubscribe() {
 	type data UnSubscribeResponse
+	currentTimestamp := utils.CurrentTimestamp()
 	accessToken := c.GetString("accessToken")
 	applicationTplId, _ := c.GetInt64("id")
-	if accessToken == "" {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌无效"}
-		c.ServeJSON()
-		return
-	}
-	var replyUserPosition user.UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", action.FindByCond{
-		CondList: []action.CondValue{
-			action.CondValue{Type: "And", Key: "accessToken", Val: accessToken },
-		},
-		Fileds: []string{"id", "user_id", "company_id", "type"},
-	}, &replyUserPosition)
+
+	err := utils.Unable(map[string]string{"accessToken": "string:true"}, c.Ctx.Input)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌失效"}
+		c.Data["json"] = data{Code: ErrorLogic, Message: Message(40000, err.Error())}
 		c.ServeJSON()
 		return
 	}
 
+	var replyUserPosition user.UserPosition
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{CondList: []action.CondValue{action.CondValue{Type: "And", Key: "access_token", Val: accessToken }, action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTimestamp }, }, Fileds: []string{"id", "user_id", "company_id", "type"}, }, &replyUserPosition)
+	if err != nil {
+		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
+		c.ServeJSON()
+		return
+	}
 	if replyUserPosition.UserId == 0 {
-		c.Data["json"] = data{Code: ErrorLogic, Message: "获取应用信息失败"}
+		c.Data["json"] = data{Code: ErrorPower, Message: Message(30000)}
 		c.ServeJSON()
 		return
 	}
@@ -366,7 +358,7 @@ func (c *ApplicationTplController) UnSubscribe() {
 		Fileds: []string{"id", "application_tpl_id", "status" },
 	}, &replyApplication)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "获取应用信息失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
 		c.ServeJSON()
 		return
 	}
@@ -375,17 +367,17 @@ func (c *ApplicationTplController) UnSubscribe() {
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Application", "UpdateById", action.UpdateByIdCond{
 		Id: []int64{replyApplication.Id},
 		UpdateList: []action.UpdateValue{
-			action.UpdateValue{Key: "update_time", Val: time.Now().UnixNano() / 1e6 },
+			action.UpdateValue{Key: "update_time", Val: currentTimestamp},
 			action.UpdateValue{Key: "status", Val: -1},
 		},
 	}, &replyNum)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "应用退订失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
 		c.ServeJSON()
 		return
 	}
 
-	c.Data["json"] = data{Code: Normal, Message: "应用退订成功"}
+	c.Data["json"] = data{Code: Normal, Message: Message(20000)}
 	c.ServeJSON()
 	return
 }
@@ -400,22 +392,27 @@ func (c *ApplicationTplController) UnSubscribe() {
 // @router /modifystatus [get]
 func (c *ApplicationTplController) ModifyStatus() {
 	type data ModifyApplicationStatusResponse
+	currentTimestamp := utils.CurrentTimestamp()
 	accessToken := c.GetString("accessToken")
 	status, _ := c.GetInt("status")
 	applicationTplId, _ := c.GetInt64("id")
-	if accessToken == "" {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌无效"}
+
+	err := utils.Unable(map[string]string{"accessToken": "string:true"}, c.Ctx.Input)
+	if err != nil {
+		c.Data["json"] = data{Code: ErrorLogic, Message: Message(40000, err.Error())}
 		c.ServeJSON()
 		return
 	}
 
 	var replyUserPosition user.UserPosition
-	var err error
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByAccessToken", &user.UserPosition{
-		AccessToken: accessToken,
-	}, &replyUserPosition)
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{CondList: []action.CondValue{action.CondValue{Type: "And", Key: "access_token", Val: accessToken }, action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTimestamp }, }, Fileds: []string{"id", "user_id", "company_id", "type"}, }, &replyUserPosition)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌无效"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
+		c.ServeJSON()
+		return
+	}
+	if replyUserPosition.UserId == 0 {
+		c.Data["json"] = data{Code: ErrorPower, Message: Message(30000)}
 		c.ServeJSON()
 		return
 	}
@@ -425,20 +422,20 @@ func (c *ApplicationTplController) ModifyStatus() {
 		Id: applicationTplId,
 	}, &replyApplicationTpl)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "获取应用信息失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
 		c.ServeJSON()
 		return
 	}
 
-	replyApplicationTpl.UpdateTime = time.Now().UnixNano() / 1e6
+	replyApplicationTpl.UpdateTime = currentTimestamp
 	replyApplicationTpl.Status = status
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "ApplicationTpl", "UpdateById", replyApplicationTpl, nil)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "应用信息修改失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
 		c.ServeJSON()
 		return
 	}
 
-	c.Data["json"] = data{Code: Normal, Message: "应用信息修改成功"}
+	c.Data["json"] = data{Code: Normal, Message: Message(20000)}
 	c.ServeJSON()
 }
