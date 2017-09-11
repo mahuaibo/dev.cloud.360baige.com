@@ -426,6 +426,7 @@ func (c *UserController) Register() {
 		Username:     username,
 		Password:     password,
 		Phone:        phone,
+		Head:         user.HEAD,
 		AccessTicket: utils.CreateAccessValue(username),
 	}, &replyUser)
 	if err != nil {
