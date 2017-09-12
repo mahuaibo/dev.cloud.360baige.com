@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"dev.model.360baige.com/models/account"
 	"time"
+	"dev.cloud.360baige.com/utils/login/wechat"
 )
 
 // USER API
@@ -76,6 +77,229 @@ func (c *UserController) Login() {
 	}
 
 	c.Data["json"] = data{Code: Normal, Message: "登录成功", Data: UserLogin{
+		Username:     replyUser.Username,
+		Head:         replyUser.Head,
+		AccessTicket: replyUser.AccessTicket,
+		ExpireIn:     replyUser.ExpireIn,
+	}}
+	c.ServeJSON()
+	return
+}
+
+// @Title 微信登录接口
+// @Description 微信登录接口
+// @Success 200 {"code":200,"message":"登录成功"}
+// @Param   code     query   string true       ""
+// @Failure 400 {"code":400,"message":"登录失败"}
+// @router /weChatLogin [post]
+func (c *UserController) WeChatLogin() {
+	type data UserLoginResponse
+	code := c.GetString("code")
+	if code == "" {
+		c.Data["json"] = data{Code: ErrorSystem, Message: "登录失败"}
+		c.ServeJSON()
+		return
+	}
+
+	userInfo, err := wechat.GetUserInfo(code)
+	if err != nil || userInfo.Openid == "" {
+		c.Data["json"] = data{Code: ErrorSystem, Message: "登录失败"}
+		c.ServeJSON()
+		return
+	}
+
+	var replyUser user.User
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "User", "FindByCond", action.FindByCond{
+		CondList: []action.CondValue{
+			action.CondValue{Type: "And", Key:"wx_open_id", Val: userInfo.Openid},
+			action.CondValue{Type: "And", Key: "status", Val: user.UserStatusNormal},
+		},
+	}, &replyUser)
+	if err != nil {
+		c.Data["json"] = data{Code: ErrorSystem, Message: "登陆失败"}
+		c.ServeJSON()
+		return
+	}
+
+	if replyUser.Id != 0 && replyUser.Status == 0 {
+		c.Data["json"] = data{Code: Normal, Message: "登陆成功", Data:UserLogin{
+			Username:     replyUser.Username,
+			Head:         replyUser.Head,
+			AccessTicket: replyUser.AccessTicket,
+			ExpireIn:     replyUser.ExpireIn,
+		}}
+		c.ServeJSON()
+		return
+	}
+	type bindData  UserBindResponse
+	c.Data["json"] = bindData{Code: ErrorUnBind, Message: "账号未绑定", Data:UserBind{
+		OpenId:userInfo.Openid,
+	}}
+	c.ServeJSON()
+	return
+}
+
+// @Title 微信账号绑定
+// @Description 微信账号绑定
+// @Success 200 {"code":200,"message":"登录成功"}
+// @Param   openId     query   string true       ""
+// @Failure 400 {"code":400,"message":"登录失败"}
+// @router /bindAccount [post]
+func (c *UserController) WeChatBindAccount() {
+	type data UserLoginResponse
+	Type, _ := c.GetInt64("type")
+	username := c.GetString("username")
+	password := c.GetString("password")
+	phone := c.GetString("phone")
+	verifyCode := c.GetString("verifyCode")
+	openId := c.GetString("openId")
+
+	currentTimestamp := utils.CurrentTimestamp()
+	var replyUser user.User
+	if Type == 1 {
+		usernameType, _ := utils.DetermineStringType(username) // 2 判断username 类型 属于 百鸽账号、邮箱、手机号码中的哪一种？
+		fmt.Print("usernameType", usernameType)
+		err := client.Call(beego.AppConfig.String("EtcdURL"), "User", "FindByCond", action.FindByCond{
+			CondList: []action.CondValue{
+				action.CondValue{Type: "And", Key: usernameType, Val: username},
+				action.CondValue{Type: "And", Key: "status", Val: "0"},
+				action.CondValue{Type: "And", Key: "password", Val: password},
+			},
+		}, &replyUser)
+		if err != nil || replyUser.Id == 0 {
+			c.Data["json"] = data{Code: ErrorSystem, Message: "登录失败"}
+			c.ServeJSON()
+			return
+		}
+
+		var replyNum action.Num
+		err = client.Call(beego.AppConfig.String("EtcdURL"), "User", "UpdateById", action.UpdateByIdCond{
+			Id: []int64{replyUser.Id},
+			UpdateList: []action.UpdateValue{
+				action.UpdateValue{Key: "update_time", Val: currentTimestamp},
+				action.UpdateValue{Key: "wx_open_id", Val: openId},
+			},
+		}, &replyNum)
+		if err != nil || replyNum.Value == 0 {
+			c.Data["json"] = data{Code: ErrorSystem, Message: "绑定失败"}
+			c.ServeJSON()
+			return
+		}
+
+		if currentTimestamp > replyUser.ExpireIn {
+			createAccessTicket := utils.CreateAccessValue(replyUser.Username + "#" + strconv.FormatInt(currentTimestamp, 10))
+			var updateReply action.Num
+			expireIn := currentTimestamp + 60 * 1000
+			err = client.Call(beego.AppConfig.String("EtcdURL"), "User", "UpdateById", action.UpdateByIdCond{
+				Id: []int64{replyUser.Id},
+				UpdateList: []action.UpdateValue{
+					action.UpdateValue{Key: "expire_in", Val: expireIn },
+					action.UpdateValue{Key: "access_ticket", Val: createAccessTicket },
+				},
+			}, &updateReply)
+			if err != nil {
+				c.Data["json"] = data{Code: ErrorSystem, Message: "登录失败"}
+				c.ServeJSON()
+				return
+			} else {
+				replyUser.AccessTicket = createAccessTicket
+				replyUser.ExpireIn = expireIn
+			}
+		}
+	} else {
+		// 验证码
+		if verifyCode != "95888" {
+			c.Data["json"] = data{Code: ErrorLogic, Message: "验证码错误"}
+			c.ServeJSON()
+			return
+		}
+		var replyNum action.Num
+		err := client.Call(beego.AppConfig.String("EtcdURL"), "User", "CountByCond", &action.CountByCond{
+			CondList: []action.CondValue{
+				action.CondValue{Type: "And", Key: "phone", Val: phone},
+				action.CondValue{Type: "Or", Key: "username", Val: username},
+				action.CondValue{Type: "And", Key: "status", Val: 0},
+			},
+		}, &replyNum)
+		if err != nil {
+			c.Data["json"] = data{Code: ErrorSystem, Message: Message(50001)}
+			c.ServeJSON()
+			return
+		}
+		if replyNum.Value > 0 {
+			c.Data["json"] = data{Code: ErrorLogic, Message: Message(40001)}
+			c.ServeJSON()
+			return
+		}
+		// 注册
+		err = client.Call(beego.AppConfig.String("EtcdURL"), "User", "Add", &user.User{
+			CreateTime:   currentTimestamp,
+			UpdateTime:   currentTimestamp,
+			Username:     username,
+			Password:     password,
+			Phone:        phone,
+			WxOpenId:     openId,
+			AccessTicket: utils.CreateAccessValue(username),
+		}, &replyUser)
+		if err != nil {
+			c.Data["json"] = data{Code: ErrorSystem, Message: Message(50001)}
+			c.ServeJSON()
+			return
+		}
+		if replyUser.Id == 0 {
+			c.Data["json"] = data{Code: ErrorLogic, Message: Message(40001)}
+			c.ServeJSON()
+			return
+		}
+
+		// 初始化身份
+		var replyUserPosition user.UserPosition
+		err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "Add", &user.UserPosition{
+			CreateTime:  currentTimestamp,
+			UpdateTime:  currentTimestamp,
+			UserId:      replyUser.Id,
+			CompanyId:   user.UserPositionCompanyIdInit,
+			Type:        user.UserPositionTypeVisitor,
+			AccessToken: utils.CreateAccessValue(username),
+		}, &replyUserPosition)
+		if err != nil {
+			c.Data["json"] = data{Code: ErrorSystem, Message: Message(50001)}
+			c.ServeJSON()
+			return
+		}
+		if replyUserPosition.Id == 0 {
+			c.Data["json"] = data{Code: ErrorSystem, Message: Message(40001)}
+			c.ServeJSON()
+			return
+		}
+		// 初始化现金账户
+		var replyAccount account.Account
+		err = client.Call(beego.AppConfig.String("EtcdURL"), "Account", "Add", &account.Account{
+			CreateTime:       currentTimestamp,
+			UpdateTime:       currentTimestamp,
+			CompanyId:        user.UserPositionCompanyIdInit,
+			UserId:           replyUser.Id,
+			UserPositionType: user.UserPositionTypeVisitor,
+			UserPositionId:   replyUserPosition.Id,
+			Type:             account.AccountTypeMoney,
+			Balance:          account.AccountBalanceInit,
+			Status:           account.AccountStatusNormal,
+		}, &replyAccount)
+		if err != nil {
+			c.Data["json"] = data{Code: ErrorSystem, Message: Message(50001)}
+			c.ServeJSON()
+			return
+		}
+		if replyAccount.Id == 0 {
+			c.Data["json"] = data{Code: ErrorSystem, Message: Message(40001)}
+			c.ServeJSON()
+			return
+		}
+		replyUser.Username=username
+		replyUser.AccessTicket=utils.CreateAccessValue(username)
+	}
+	c.Data["json"] = data{Code: Normal, Message: "登录成功", Data: UserLogin{
+		Username:     replyUser.Username,
 		Head:         replyUser.Head,
 		AccessTicket: replyUser.AccessTicket,
 		ExpireIn:     replyUser.ExpireIn,
@@ -385,6 +609,7 @@ func (c *UserController) Register() {
 	password := c.GetString("password")
 	phone := c.GetString("phone")
 	verifyCode := c.GetString("verifyCode")
+	//weChatId, _ := c.GetInt64("weChatId")
 
 	err := utils.Unable(map[string]string{"username": "string:true", "password": "string:true", "phone": "int:true", "verifyCode": "string:true"}, c.Ctx.Input)
 	if err != nil {
