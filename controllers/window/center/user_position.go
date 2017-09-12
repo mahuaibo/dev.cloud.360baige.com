@@ -10,7 +10,6 @@ import (
 	"dev.cloud.360baige.com/log"
 	"dev.cloud.360baige.com/utils"
 	"strconv"
-	"time"
 )
 
 //  UserPosition API
@@ -29,7 +28,7 @@ func (c *UserPositionController) PositionList() {
 	accessTicket := c.GetString("accessTicket")
 	accessType := c.GetString("accessType", "0")
 	accessValue := c.GetString("accessValue", "(=@*&%^!)")
-	currentTime := time.Now().UnixNano() / 1e6
+	currentTime := utils.CurrentTimestamp()
 
 	var err error
 	var replyUserId int64
@@ -120,12 +119,13 @@ func (c *UserPositionController) PositionList() {
 			logoUrl := utils.SignURLSample(listOfCompany[value.CompanyId].Logo)
 			resData = append(resData, UserPositionListItem{
 				UserPositionId:   value.Id,
-				UserPositionName: UserPositionName(value.Type),
+				UserPositionName: user.UserPositionName(value.Type),
 				CompanyLogo:      logoUrl,
 				CompanyName:      listOfCompany[value.CompanyId].Name,
 			})
 		}
 	}
+
 	c.Data["json"] = data{Code: Normal, Message: "获取用户身份成功", Data: resData}
 	c.ServeJSON()
 	return
@@ -144,7 +144,7 @@ func (c *UserPositionController) GetAccessToken() {
 	userPositionId, _ := c.GetInt64("userPositionId", 0)
 	accessType := c.GetString("accessType", "0")
 	accessValue := c.GetString("accessValue", "(=@*&%^!)")
-	currentTime := time.Now().UnixNano() / 1e6
+	currentTime := utils.CurrentTimestamp()
 
 	var err error
 	var replyUserId int64
@@ -217,7 +217,7 @@ func (c *UserPositionController) GetAccessToken() {
 
 	if currentTime > replyUserPosition.ExpireIn {
 		createAccessToken := utils.CreateAccessValue(strconv.FormatInt(replyUserPosition.Id, 10) + "#" + strconv.FormatInt(replyUserPosition.UserId, 10) + "#" + strconv.FormatInt(currentTime, 10))
-		expireIn := currentTime + 3600 * 1000 * 24 * 30
+		expireIn := currentTime + 3600*1000*24*30
 		err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "UpdateById", &action.UpdateByIdCond{
 			Id: []int64{userPositionId},
 			UpdateList: [] action.UpdateValue{

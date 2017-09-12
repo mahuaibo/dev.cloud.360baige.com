@@ -6,9 +6,9 @@ import (
 	"dev.model.360baige.com/models/logger"
 	"dev.model.360baige.com/models/user"
 	. "dev.model.360baige.com/http/window/center"
-	"time"
 	"dev.model.360baige.com/action"
 	"encoding/json"
+	"dev.cloud.360baige.com/utils"
 )
 
 type LoggerController struct {
@@ -28,39 +28,35 @@ type LoggerController struct {
 // @router /add [post]
 func (c *LoggerController) Add() {
 	type data LoggerAddResponse
+	currentTimestamp := utils.CurrentTimestamp()
 	accessToken := c.GetString("accessToken")
 	content := c.GetString("content")
 	remark := c.GetString("remark")
 	Type, _ := c.GetInt("type")
-	cTime := time.Now().Unix() / 1e6
-	if accessToken == "" {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌无效"}
-		c.ServeJSON()
-		return
-	}
-	var replyUserPosition user.UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", action.FindByCond{
-		CondList: []action.CondValue{
-			action.CondValue{Type: "And", Key: "accessToken", Val: accessToken },
-		},
-		Fileds: []string{"id", "user_id", "company_id", "type"},
-	}, &replyUserPosition)
 
+	err := utils.Unable(map[string]string{"accessToken": "string:true"}, c.Ctx.Input)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌失效"}
+		c.Data["json"] = data{Code: ErrorLogic, Message: Message(40000, err.Error())}
 		c.ServeJSON()
 		return
 	}
 
+	var replyUserPosition user.UserPosition
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{CondList: []action.CondValue{action.CondValue{Type: "And", Key: "access_token", Val: accessToken }, action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTimestamp }, }, Fileds: []string{"id", "user_id", "company_id", "type"}, }, &replyUserPosition)
+	if err != nil {
+		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
+		c.ServeJSON()
+		return
+	}
 	if replyUserPosition.UserId == 0 {
-		c.Data["json"] = data{Code: ErrorLogic, Message: "获取应用信息失败"}
+		c.Data["json"] = data{Code: ErrorPower, Message: Message(30000)}
 		c.ServeJSON()
 		return
 	}
 
 	var replyLogger logger.Logger
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Logger", "Add", logger.Logger{
-		CreateTime:       cTime,
+		CreateTime:       currentTimestamp,
 		Content:          content,
 		Remark:           remark,
 		Type:             Type,
@@ -70,12 +66,12 @@ func (c *LoggerController) Add() {
 		UserPositionType: replyUserPosition.Type,
 	}, &replyLogger)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "新增失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
 		c.ServeJSON()
 		return
 	}
 
-	c.Data["json"] = data{Code: Normal, Message: "新增成功", Data: LoggerAdd{
+	c.Data["json"] = data{Code: Normal, Message: Message(20000), Data: LoggerAdd{
 		Id: replyLogger.Id,
 	}}
 	c.ServeJSON()
@@ -92,30 +88,27 @@ func (c *LoggerController) Add() {
 // @router /list [post]
 func (c *LoggerController) List() {
 	type data LoggerListResponse
+	currentTimestamp := utils.CurrentTimestamp()
 	accessToken := c.GetString("accessToken")
 	currentPage, _ := c.GetInt64("current")
 	pageSize, _ := c.GetInt64("pageSize")
-	if accessToken == "" {
-		c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌无效"}
+
+	err := utils.Unable(map[string]string{"accessToken": "string:true"}, c.Ctx.Input)
+	if err != nil {
+		c.Data["json"] = data{Code: ErrorLogic, Message: Message(40000, err.Error())}
 		c.ServeJSON()
 		return
 	}
 
 	var replyUserPosition user.UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", action.FindByCond{
-		CondList: []action.CondValue{
-			action.CondValue{Type: "And", Key: "accessToken", Val: accessToken},
-		},
-		Fileds: []string{"id", "user_id", "company_id", "type"},
-	}, &replyUserPosition)
-
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{CondList: []action.CondValue{action.CondValue{Type: "And", Key: "access_token", Val: accessToken }, action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTimestamp }, }, Fileds: []string{"id", "user_id", "company_id", "type"}, }, &replyUserPosition)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌失效"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
 		c.ServeJSON()
 		return
 	}
 	if replyUserPosition.UserId == 0 {
-		c.Data["json"] = data{Code: ErrorLogic, Message: "获取信息失败"}
+		c.Data["json"] = data{Code: ErrorPower, Message: Message(30000)}
 		c.ServeJSON()
 		return
 	}
@@ -135,7 +128,7 @@ func (c *LoggerController) List() {
 	}, &replyPageByCond)
 
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "获取信息失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
 		c.ServeJSON()
 		return
 	}
@@ -155,14 +148,14 @@ func (c *LoggerController) List() {
 			retype = "查"
 		}
 		resData = append(resData, LoggerValue{
-			CreateTime: time.Unix(value.CreateTime/1000, 0).Format("2006-01-02"),
+			CreateTime: utils.Datetime(value.CreateTime, "2006-01-02 15:04:05"),
 			Content:    value.Content,
 			Remark:     value.Remark,
 			Type:       retype,
 		})
 	}
 
-	c.Data["json"] = data{Code: Normal, Message: "获取成功", Data: LoggerList{
+	c.Data["json"] = data{Code: Normal, Message: Message(20000), Data: LoggerList{
 		Total:       replyPageByCond.Total,
 		Current:     currentPage,
 		CurrentSize: replyPageByCond.CurrentSize,

@@ -58,7 +58,7 @@ func (c *UserController) Login() {
 	if currentTimestamp > replyUser.ExpireIn {
 		createAccessTicket := utils.CreateAccessValue(replyUser.Username + "#" + strconv.FormatInt(currentTimestamp, 10))
 		var updateReply action.Num
-		expireIn := currentTimestamp + 60 * 1000
+		expireIn := currentTimestamp + 60*1000
 		err = client.Call(beego.AppConfig.String("EtcdURL"), "User", "UpdateById", action.UpdateByIdCond{
 			Id: []int64{replyUser.Id},
 			UpdateList: []action.UpdateValue{
@@ -298,6 +298,7 @@ func (c *UserController) WeChatBindAccount() {
 		replyUser.Username=username
 		replyUser.AccessTicket=utils.CreateAccessValue(username)
 	}
+
 	c.Data["json"] = data{Code: Normal, Message: "登录成功", Data: UserLogin{
 		Username:     replyUser.Username,
 		Head:         replyUser.Head,
@@ -651,6 +652,7 @@ func (c *UserController) Register() {
 		Username:     username,
 		Password:     password,
 		Phone:        phone,
+		Head:         user.HEAD,
 		AccessTicket: utils.CreateAccessValue(username),
 	}, &replyUser)
 	if err != nil {
@@ -713,7 +715,6 @@ func (c *UserController) Register() {
 	c.ServeJSON()
 	return
 }
-
 
 // @Title 用户注册
 // @Description 用户注册

@@ -10,7 +10,6 @@ import (
 	"time"
 	"dev.model.360baige.com/action"
 	"encoding/json"
-	"fmt"
 	"dev.cloud.360baige.com/utils"
 )
 
@@ -29,12 +28,27 @@ type AccountItemController struct {
 // @router /list [post]
 func (c *AccountItemController) List() {
 	type data AccountItemListResponse
+	currentTimestamp := utils.CurrentTimestamp()
 	accessToken := c.GetString("accessToken")
 	cycleType := c.GetString("cycleType", "4")
 	currentPage, _ := c.GetInt64("current", 1)
 	pageSize, _ := c.GetInt64("pageSize", 50)
-	if accessToken == "" {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌无效"}
+	err := utils.Unable(map[string]string{"accessToken": "string:true"}, c.Ctx.Input)
+	if err != nil {
+		c.Data["json"] = data{Code: ErrorLogic, Message: Message(40000, err.Error())}
+		c.ServeJSON()
+		return
+	}
+
+	var replyUserPosition user.UserPosition
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{CondList: []action.CondValue{action.CondValue{Type: "And", Key: "access_token", Val: accessToken }, action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTimestamp }, }, Fileds: []string{"id", "user_id", "company_id", "type"}, }, &replyUserPosition)
+	if err != nil {
+		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
+		c.ServeJSON()
+		return
+	}
+	if replyUserPosition.Id == 0 {
+		c.Data["json"] = data{Code: ErrorPower, Message: Message(30000)}
 		c.ServeJSON()
 		return
 	}
@@ -55,25 +69,6 @@ func (c *AccountItemController) List() {
 	}
 	create_time := thisMonthFirstDay.UnixNano() / 1e6
 
-	var replyUserPosition user.UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", action.FindByCond{
-		CondList: []action.CondValue{
-			action.CondValue{Type: "And", Key: "access_token", Val: accessToken },
-		},
-		Fileds: []string{"id", "user_id", "company_id", "type"},
-	}, &replyUserPosition)
-
-	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌失效"}
-		c.ServeJSON()
-		return
-	}
-	if replyUserPosition.UserId == 0 {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌失效"}
-		c.ServeJSON()
-		return
-	}
-
 	var replyAccount account.Account
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Account", "FindByCond", action.FindByCond{
 		CondList: []action.CondValue{
@@ -86,7 +81,7 @@ func (c *AccountItemController) List() {
 	}, &replyAccount)
 
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "获取失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
 		c.ServeJSON()
 		return
 	}
@@ -104,7 +99,7 @@ func (c *AccountItemController) List() {
 		Current:  currentPage,
 	}, &replyPageByCond)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "获取失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
 		c.ServeJSON()
 		return
 	}
@@ -120,7 +115,7 @@ func (c *AccountItemController) List() {
 	}, &replyAccountItemList)
 
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "获取账务统计信息失败2"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
 		c.ServeJSON()
 		return
 	}
@@ -147,7 +142,7 @@ func (c *AccountItemController) List() {
 			Remark:     value.Remark,
 		})
 	}
-	c.Data["json"] = data{Code: Normal, Message: "获取信息成功", Data: AccountItemList{
+	c.Data["json"] = data{Code: Normal, Message: Message(20000), Data: AccountItemList{
 		Total:       replyPageByCond.Total,
 		Current:     currentPage,
 		CurrentSize: replyPageByCond.CurrentSize,
@@ -178,22 +173,24 @@ func (c *AccountItemController) TradingList() {
 	endDate := c.GetString("endDate")
 	currentPage, _ := c.GetInt64("current", 1)
 	pageSize, _ := c.GetInt64("pageSize", 50)
-	if accessToken == "" {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌无效"}
+
+	err := utils.Unable(map[string]string{"accessToken": "string:true"}, c.Ctx.Input)
+	if err != nil {
+		c.Data["json"] = data{Code: ErrorLogic, Message: Message(40000, err.Error())}
 		c.ServeJSON()
 		return
 	}
 
 	var replyUserPosition user.UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{CondList: []action.CondValue{action.CondValue{Type: "And", Key: "access_token", Val: accessToken }, action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTimestamp }, }, Fileds: []string{"id", "user_id", "company_id", "type"}, }, &replyUserPosition)
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{CondList: []action.CondValue{action.CondValue{Type: "And", Key: "access_token", Val: accessToken }, action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTimestamp }, }, Fileds: []string{"id", "user_id", "company_id", "type"}, }, &replyUserPosition)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌无效"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
 		c.ServeJSON()
 		return
 	}
 
 	if replyUserPosition.UserId == 0 {
-		c.Data["json"] = data{Code: ErrorLogic, Message: "获取用户信息失败"}
+		c.Data["json"] = data{Code: ErrorLogic, Message: Message(30000)}
 		c.ServeJSON()
 		return
 	}
@@ -210,7 +207,7 @@ func (c *AccountItemController) TradingList() {
 	}, &replyAccount)
 
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "获取失败3"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
 		c.ServeJSON()
 		return
 	}
@@ -230,7 +227,7 @@ func (c *AccountItemController) TradingList() {
 		Current:  currentPage,
 	}, &replyPageByCond)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "获取失败4"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
 		c.ServeJSON()
 		return
 	}
@@ -250,7 +247,7 @@ func (c *AccountItemController) TradingList() {
 		})
 	}
 
-	c.Data["json"] = data{Code: Normal, Message: "获取信息成功", Data: AccountItemList{
+	c.Data["json"] = data{Code: Normal, Message: Message(20000), Data: AccountItemList{
 		Total:       replyPageByCond.Total,
 		Current:     currentPage,
 		CurrentSize: replyPageByCond.CurrentSize,
@@ -270,30 +267,27 @@ func (c *AccountItemController) TradingList() {
 // @router /detail [post]
 func (c *AccountItemController) Detail() {
 	type data AccountItemDetailResponse
+	currentTimestamp := utils.CurrentTimestamp()
 	accessToken := c.GetString("accessToken")
 	accountItemId, _ := c.GetInt64("id")
 
 	err := utils.Unable(map[string]string{"accessToken": "string:true", "id": "int:true"}, c.Ctx.Input)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: Message(40000, err.Error())}
+		c.Data["json"] = data{Code: ErrorLogic, Message: Message(40000, err.Error())}
 		c.ServeJSON()
 		return
 	}
 
 	var replyUserPosition user.UserPosition
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", action.FindByCond{
-		CondList: []action.CondValue{
-			action.CondValue{Type: "And", Key: "accessToken", Val: accessToken },
-		},
-		Fileds: []string{"id", "user_id", "company_id", "type"},
-	}, &replyUserPosition)
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{CondList: []action.CondValue{action.CondValue{Type: "And", Key: "access_token", Val: accessToken }, action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTimestamp }, }, Fileds: []string{"id", "user_id", "company_id", "type"}, }, &replyUserPosition)
 	if err != nil {
 		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
 		c.ServeJSON()
 		return
 	}
+
 	if replyUserPosition.UserId == 0 {
-		c.Data["json"] = data{Code: ErrorSystem, Message: Message(30000)}
+		c.Data["json"] = data{Code: ErrorLogic, Message: Message(30000)}
 		c.ServeJSON()
 		return
 	}
@@ -303,7 +297,7 @@ func (c *AccountItemController) Detail() {
 		Id: accountItemId,
 	}, &replyAccountItem)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "获取失败3"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
 		c.ServeJSON()
 		return
 	}
@@ -314,16 +308,14 @@ func (c *AccountItemController) Detail() {
 		err = client.Call(beego.AppConfig.String("EtcdURL"), "Transaction", "FindById", account.Transaction{
 			Id: replyAccountItem.TransactionId,
 		}, &transactionReply)
-		fmt.Println("transactionReply", transactionReply)
-		fmt.Println("err", err)
 		if err != nil {
-			c.Data["json"] = data{Code: ErrorSystem, Message: "获取失败4"}
+			c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
 			c.ServeJSON()
 			return
 		}
 		OrderCode = transactionReply.OrderCode
 		if transactionReply.ToAccountId == 0 {
-			c.Data["json"] = data{Code: ErrorSystem, Message: "获取失败5"}
+			c.Data["json"] = data{Code: ErrorLogic, Message: Message(40000)}
 			c.ServeJSON()
 			return
 		}
@@ -332,16 +324,14 @@ func (c *AccountItemController) Detail() {
 		var accountReply account.Account
 		err = client.Call(beego.AppConfig.String("EtcdURL"), "Account", "FindById", accountArgs, &accountReply)
 		if err == nil && accountReply.CompanyId > 0 {
-			c.Data["json"] = data{Code: ErrorSystem, Message: "获取失败6"}
+			c.Data["json"] = data{Code: ErrorSystem, Message: Message(40000)}
 
 			var accountReply account.Account
 			err = client.Call(beego.AppConfig.String("EtcdURL"), "Account", "FindById", account.Account{
 				Id: transactionReply.ToAccountId,
 			}, &accountReply)
-			fmt.Println("accountReply", accountReply)
-			fmt.Println("err", err)
 			if err != nil {
-				c.Data["json"] = data{Code: ErrorSystem, Message: "获取失败7"}
+				c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
 				c.ServeJSON()
 				return
 			}
@@ -354,8 +344,8 @@ func (c *AccountItemController) Detail() {
 			}
 		}
 
-		c.Data["json"] = data{Code: Normal, Message: "获取信息成功", Data: AccountItemDetail{
-			CreateTime: utils.Datetime(replyAccountItem.CreateTime, "2006-01-02 03:04:05"),
+		c.Data["json"] = data{Code: Normal, Message: Message(20000), Data: AccountItemDetail{
+			CreateTime: utils.Datetime(replyAccountItem.CreateTime, "2006-01-02 15:04:05"),
 			Amount:     replyAccountItem.Amount,
 			Balance:    replyAccountItem.Balance,
 			Remark:     replyAccountItem.Remark,
