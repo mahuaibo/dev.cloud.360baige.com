@@ -58,7 +58,7 @@ func (c *UserController) Login() {
 	if currentTimestamp > replyUser.ExpireIn {
 		createAccessTicket := utils.CreateAccessValue(replyUser.Username + "#" + strconv.FormatInt(currentTimestamp, 10))
 		var updateReply action.Num
-		expireIn := currentTimestamp + 60*1000
+		expireIn := currentTimestamp + 60 * 1000
 		err = client.Call(beego.AppConfig.String("EtcdURL"), "User", "UpdateById", action.UpdateByIdCond{
 			Id: []int64{replyUser.Id},
 			UpdateList: []action.UpdateValue{
@@ -78,7 +78,7 @@ func (c *UserController) Login() {
 
 	c.Data["json"] = data{Code: Normal, Message: "登录成功", Data: UserLogin{
 		Username:     replyUser.Username,
-		Head:         replyUser.Head,
+		Head:         utils.SignURLSample(replyUser.Head),
 		AccessTicket: replyUser.AccessTicket,
 		ExpireIn:     replyUser.ExpireIn,
 	}}
@@ -124,7 +124,7 @@ func (c *UserController) WeChatLogin() {
 	if replyUser.Id != 0 && replyUser.Status == 0 {
 		c.Data["json"] = data{Code: Normal, Message: "登陆成功", Data:UserLogin{
 			Username:     replyUser.Username,
-			Head:         replyUser.Head,
+			Head:         utils.SignURLSample(replyUser.Head),
 			AccessTicket: replyUser.AccessTicket,
 			ExpireIn:     replyUser.ExpireIn,
 		}}
@@ -158,7 +158,7 @@ func (c *UserController) WeChatBindAccount() {
 	var replyUser user.User
 	if Type == 1 {
 		usernameType, _ := utils.DetermineStringType(username) // 2 判断username 类型 属于 百鸽账号、邮箱、手机号码中的哪一种？
-		fmt.Print("usernameType", usernameType)
+		fmt.Println("usernameType", usernameType)
 		err := client.Call(beego.AppConfig.String("EtcdURL"), "User", "FindByCond", action.FindByCond{
 			CondList: []action.CondValue{
 				action.CondValue{Type: "And", Key: usernameType, Val: username},
@@ -166,8 +166,30 @@ func (c *UserController) WeChatBindAccount() {
 				action.CondValue{Type: "And", Key: "password", Val: password},
 			},
 		}, &replyUser)
-		if err != nil || replyUser.Id == 0 {
-			c.Data["json"] = data{Code: ErrorSystem, Message: "登录失败"}
+		fmt.Println("replyUser", replyUser)
+		fmt.Println("err", err)
+		if err != nil {
+			c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000, "2")}
+			c.ServeJSON()
+			return
+		}
+
+		if replyUser.Id == 0 {
+			c.Data["json"] = data{Code: ErrorSystem, Message: Message(40000, "1")}
+			c.ServeJSON()
+			return
+		}
+
+		var replyWxUser user.User
+		err = client.Call(beego.AppConfig.String("EtcdURL"), "User", "FindByCond", action.FindByCond{
+			CondList: []action.CondValue{
+				action.CondValue{Type: "And", Key: "wx_open_id", Val: openId},
+			},
+		}, &replyWxUser)
+		fmt.Println("replyWxUser", replyWxUser)
+		fmt.Println("err", err)
+		if err != nil || replyWxUser.Id != 0 {
+			c.Data["json"] = data{Code: ErrorSystem, Message: "账号重复绑定"}
 			c.ServeJSON()
 			return
 		}
@@ -180,6 +202,8 @@ func (c *UserController) WeChatBindAccount() {
 				action.UpdateValue{Key: "wx_open_id", Val: openId},
 			},
 		}, &replyNum)
+		fmt.Println("replyNum", replyNum)
+		fmt.Println("err", err)
 		if err != nil || replyNum.Value == 0 {
 			c.Data["json"] = data{Code: ErrorSystem, Message: "绑定失败"}
 			c.ServeJSON()
@@ -197,14 +221,15 @@ func (c *UserController) WeChatBindAccount() {
 					action.UpdateValue{Key: "access_ticket", Val: createAccessTicket },
 				},
 			}, &updateReply)
+			fmt.Println("updateReply", updateReply)
+			fmt.Println("err", err)
 			if err != nil {
 				c.Data["json"] = data{Code: ErrorSystem, Message: "登录失败"}
 				c.ServeJSON()
 				return
-			} else {
-				replyUser.AccessTicket = createAccessTicket
-				replyUser.ExpireIn = expireIn
 			}
+			replyUser.AccessTicket = createAccessTicket
+			replyUser.ExpireIn = expireIn
 		}
 	} else {
 		// 验证码
@@ -295,13 +320,13 @@ func (c *UserController) WeChatBindAccount() {
 			c.ServeJSON()
 			return
 		}
-		replyUser.Username=username
-		replyUser.AccessTicket=utils.CreateAccessValue(username)
+		replyUser.Username = username
+		replyUser.AccessTicket = utils.CreateAccessValue(username)
 	}
 
 	c.Data["json"] = data{Code: Normal, Message: "登录成功", Data: UserLogin{
 		Username:     replyUser.Username,
-		Head:         replyUser.Head,
+		Head:         utils.SignURLSample(replyUser.Head),
 		AccessTicket: replyUser.AccessTicket,
 		ExpireIn:     replyUser.ExpireIn,
 	}}
