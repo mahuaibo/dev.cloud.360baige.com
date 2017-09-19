@@ -9,9 +9,7 @@ import (
 	"dev.model.360baige.com/action"
 	"sms.sdk.360baige.com/send"
 	"strconv"
-	"fmt"
 	"dev.model.360baige.com/models/account"
-	"time"
 	"dev.cloud.360baige.com/utils/login/wechat"
 )
 
@@ -29,36 +27,40 @@ type UserController struct {
 // @router /login [post]
 func (c *UserController) Login() {
 	type data UserLoginResponse
+	currentTimestamp := utils.CurrentTimestamp()
 	username := c.GetString("username")
 	password := c.GetString("password")
-	if username == "" || password == "" {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "用户名或密码不能为空"}
+	err := utils.Unable(map[string]string{"username": "string:true", "password": "string:true"}, c.Ctx.Input)
+	if err != nil {
+		c.Data["json"] = data{Code: ErrorLogic, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
 
-	usernameType, _ := utils.DetermineStringType(username) // 2 判断username 类型 属于 百鸽账号、邮箱、手机号码中的哪一种？
-	fmt.Print("usernameType", usernameType)
+	usernameType, _ := utils.DetermineStringType(username)
 	var replyUser user.User
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "User", "FindByCond", action.FindByCond{
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "User", "FindByCond", action.FindByCond{
 		CondList: []action.CondValue{
 			action.CondValue{Type: "And", Key: usernameType, Val: username},
 			action.CondValue{Type: "And", Key: "status", Val: "0"},
 			action.CondValue{Type: "And", Key: "password", Val: password},
 		},
 	}, &replyUser)
-	fmt.Print("replyUser", replyUser)
-	if err != nil || replyUser.Id == 0 {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "登录失败"}
+	if err != nil {
+		c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
+		c.ServeJSON()
+		return
+	}
+	if replyUser.Id == 0 {
+		c.Data["json"] = data{Code: ErrorLogic, Message: "FAIL"}
 		c.ServeJSON()
 		return
 	}
 
-	currentTimestamp := utils.CurrentTimestamp()
 	if currentTimestamp > replyUser.ExpireIn {
 		createAccessTicket := utils.CreateAccessValue(replyUser.Username + "#" + strconv.FormatInt(currentTimestamp, 10))
 		var updateReply action.Num
-		expireIn := currentTimestamp + 60 * 1000
+		expireIn := currentTimestamp + user.UserExpireIn
 		err = client.Call(beego.AppConfig.String("EtcdURL"), "User", "UpdateById", action.UpdateByIdCond{
 			Id: []int64{replyUser.Id},
 			UpdateList: []action.UpdateValue{
@@ -67,7 +69,7 @@ func (c *UserController) Login() {
 			},
 		}, &updateReply)
 		if err != nil {
-			c.Data["json"] = data{Code: ErrorSystem, Message: "登录失败"}
+			c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
 			c.ServeJSON()
 			return
 		} else {
@@ -76,7 +78,7 @@ func (c *UserController) Login() {
 		}
 	}
 
-	c.Data["json"] = data{Code: Normal, Message: "登录成功", Data: UserLogin{
+	c.Data["json"] = data{Code: Normal, Message: "SUCCESS", Data: UserLogin{
 		Username:     replyUser.Username,
 		Head:         utils.SignURLSample(replyUser.Head),
 		AccessTicket: replyUser.AccessTicket,
@@ -95,15 +97,21 @@ func (c *UserController) Login() {
 func (c *UserController) WeChatLogin() {
 	type data UserLoginResponse
 	code := c.GetString("code")
-	if code == "" {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "登录失败"}
+	err := utils.Unable(map[string]string{"code": "string:true"}, c.Ctx.Input)
+	if err != nil {
+		c.Data["json"] = data{Code: ErrorLogic, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
 
 	userInfo, err := wechat.GetUserInfo(code)
-	if err != nil || userInfo.Openid == "" {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "登录失败"}
+	if err != nil {
+		c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
+		c.ServeJSON()
+		return
+	}
+	if userInfo.Openid == "" {
+		c.Data["json"] = data{Code: ErrorLogic, Message: "FAIL"}
 		c.ServeJSON()
 		return
 	}
@@ -111,18 +119,18 @@ func (c *UserController) WeChatLogin() {
 	var replyUser user.User
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "User", "FindByCond", action.FindByCond{
 		CondList: []action.CondValue{
-			action.CondValue{Type: "And", Key:"wx_open_id", Val: userInfo.Openid},
+			action.CondValue{Type: "And", Key: "wx_open_id", Val: userInfo.Openid},
 			action.CondValue{Type: "And", Key: "status", Val: user.UserStatusNormal},
 		},
 	}, &replyUser)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "登陆失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
 		c.ServeJSON()
 		return
 	}
 
 	if replyUser.Id != 0 && replyUser.Status == 0 {
-		c.Data["json"] = data{Code: Normal, Message: "登陆成功", Data:UserLogin{
+		c.Data["json"] = data{Code: Normal, Message: "SUCCESS", Data: UserLogin{
 			Username:     replyUser.Username,
 			Head:         utils.SignURLSample(replyUser.Head),
 			AccessTicket: replyUser.AccessTicket,
@@ -131,9 +139,9 @@ func (c *UserController) WeChatLogin() {
 		c.ServeJSON()
 		return
 	}
-	type bindData  UserBindResponse
-	c.Data["json"] = bindData{Code: ErrorUnBind, Message: "账号未绑定", Data:UserBind{
-		OpenId:userInfo.Openid,
+	type bindData UserBindResponse
+	c.Data["json"] = bindData{Code: ErrorUnBind, Message: "", Data: UserBind{
+		OpenId: userInfo.Openid,
 	}}
 	c.ServeJSON()
 	return
@@ -147,18 +155,23 @@ func (c *UserController) WeChatLogin() {
 // @router /bindAccount [post]
 func (c *UserController) WeChatBindAccount() {
 	type data UserLoginResponse
+	currentTimestamp := utils.CurrentTimestamp()
 	Type, _ := c.GetInt64("type")
 	username := c.GetString("username")
 	password := c.GetString("password")
 	phone := c.GetString("phone")
 	verifyCode := c.GetString("verifyCode")
 	openId := c.GetString("openId")
+	err := utils.Unable(map[string]string{"username": "string:true", "password": "string:true", "phone": "string:true", "verifyCode": "string:true", "openId": "string:true"}, c.Ctx.Input)
+	if err != nil {
+		c.Data["json"] = data{Code: ErrorLogic, Message: err.Error()}
+		c.ServeJSON()
+		return
+	}
 
-	currentTimestamp := utils.CurrentTimestamp()
 	var replyUser user.User
 	if Type == 1 {
-		usernameType, _ := utils.DetermineStringType(username) // 2 判断username 类型 属于 百鸽账号、邮箱、手机号码中的哪一种？
-		fmt.Println("usernameType", usernameType)
+		usernameType, _ := utils.DetermineStringType(username)
 		err := client.Call(beego.AppConfig.String("EtcdURL"), "User", "FindByCond", action.FindByCond{
 			CondList: []action.CondValue{
 				action.CondValue{Type: "And", Key: usernameType, Val: username},
@@ -166,16 +179,13 @@ func (c *UserController) WeChatBindAccount() {
 				action.CondValue{Type: "And", Key: "password", Val: password},
 			},
 		}, &replyUser)
-		fmt.Println("replyUser", replyUser)
-		fmt.Println("err", err)
 		if err != nil {
-			c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000, "2")}
+			c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
 			c.ServeJSON()
 			return
 		}
-
 		if replyUser.Id == 0 {
-			c.Data["json"] = data{Code: ErrorSystem, Message: Message(40000, "1")}
+			c.Data["json"] = data{Code: ErrorLogic, Message: "FAIL"}
 			c.ServeJSON()
 			return
 		}
@@ -186,10 +196,13 @@ func (c *UserController) WeChatBindAccount() {
 				action.CondValue{Type: "And", Key: "wx_open_id", Val: openId},
 			},
 		}, &replyWxUser)
-		fmt.Println("replyWxUser", replyWxUser)
-		fmt.Println("err", err)
-		if err != nil || replyWxUser.Id != 0 {
-			c.Data["json"] = data{Code: ErrorSystem, Message: "账号重复绑定"}
+		if err != nil {
+			c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
+			c.ServeJSON()
+			return
+		}
+		if replyWxUser.Id != 0 {
+			c.Data["json"] = data{Code: ErrorLogic, Message: "FAIL"}
 			c.ServeJSON()
 			return
 		}
@@ -202,10 +215,13 @@ func (c *UserController) WeChatBindAccount() {
 				action.UpdateValue{Key: "wx_open_id", Val: openId},
 			},
 		}, &replyNum)
-		fmt.Println("replyNum", replyNum)
-		fmt.Println("err", err)
-		if err != nil || replyNum.Value == 0 {
-			c.Data["json"] = data{Code: ErrorSystem, Message: "绑定失败"}
+		if err != nil {
+			c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
+			c.ServeJSON()
+			return
+		}
+		if replyNum.Value == 0 {
+			c.Data["json"] = data{Code: ErrorLogic, Message: "FAIL"}
 			c.ServeJSON()
 			return
 		}
@@ -213,7 +229,7 @@ func (c *UserController) WeChatBindAccount() {
 		if currentTimestamp > replyUser.ExpireIn {
 			createAccessTicket := utils.CreateAccessValue(replyUser.Username + "#" + strconv.FormatInt(currentTimestamp, 10))
 			var updateReply action.Num
-			expireIn := currentTimestamp + 60 * 1000
+			expireIn := currentTimestamp + 60*1000
 			err = client.Call(beego.AppConfig.String("EtcdURL"), "User", "UpdateById", action.UpdateByIdCond{
 				Id: []int64{replyUser.Id},
 				UpdateList: []action.UpdateValue{
@@ -221,10 +237,8 @@ func (c *UserController) WeChatBindAccount() {
 					action.UpdateValue{Key: "access_ticket", Val: createAccessTicket },
 				},
 			}, &updateReply)
-			fmt.Println("updateReply", updateReply)
-			fmt.Println("err", err)
 			if err != nil {
-				c.Data["json"] = data{Code: ErrorSystem, Message: "登录失败"}
+				c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
 				c.ServeJSON()
 				return
 			}
@@ -234,7 +248,7 @@ func (c *UserController) WeChatBindAccount() {
 	} else {
 		// 验证码
 		if verifyCode != "95888" {
-			c.Data["json"] = data{Code: ErrorLogic, Message: "验证码错误"}
+			c.Data["json"] = data{Code: ErrorLogic, Message: "FAIL"}
 			c.ServeJSON()
 			return
 		}
@@ -247,12 +261,12 @@ func (c *UserController) WeChatBindAccount() {
 			},
 		}, &replyNum)
 		if err != nil {
-			c.Data["json"] = data{Code: ErrorSystem, Message: Message(50001)}
+			c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
 			c.ServeJSON()
 			return
 		}
 		if replyNum.Value > 0 {
-			c.Data["json"] = data{Code: ErrorLogic, Message: Message(40001)}
+			c.Data["json"] = data{Code: ErrorLogic, Message: "FAIL"}
 			c.ServeJSON()
 			return
 		}
@@ -267,12 +281,12 @@ func (c *UserController) WeChatBindAccount() {
 			AccessTicket: utils.CreateAccessValue(username),
 		}, &replyUser)
 		if err != nil {
-			c.Data["json"] = data{Code: ErrorSystem, Message: Message(50001)}
+			c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
 			c.ServeJSON()
 			return
 		}
 		if replyUser.Id == 0 {
-			c.Data["json"] = data{Code: ErrorLogic, Message: Message(40001)}
+			c.Data["json"] = data{Code: ErrorLogic, Message: "FAIL"}
 			c.ServeJSON()
 			return
 		}
@@ -288,12 +302,12 @@ func (c *UserController) WeChatBindAccount() {
 			AccessToken: utils.CreateAccessValue(username),
 		}, &replyUserPosition)
 		if err != nil {
-			c.Data["json"] = data{Code: ErrorSystem, Message: Message(50001)}
+			c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
 			c.ServeJSON()
 			return
 		}
 		if replyUserPosition.Id == 0 {
-			c.Data["json"] = data{Code: ErrorSystem, Message: Message(40001)}
+			c.Data["json"] = data{Code: ErrorLogic, Message: "FAIL"}
 			c.ServeJSON()
 			return
 		}
@@ -311,12 +325,12 @@ func (c *UserController) WeChatBindAccount() {
 			Status:           account.AccountStatusNormal,
 		}, &replyAccount)
 		if err != nil {
-			c.Data["json"] = data{Code: ErrorSystem, Message: Message(50001)}
+			c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
 			c.ServeJSON()
 			return
 		}
 		if replyAccount.Id == 0 {
-			c.Data["json"] = data{Code: ErrorSystem, Message: Message(40001)}
+			c.Data["json"] = data{Code: ErrorLogic, Message: "FAIL"}
 			c.ServeJSON()
 			return
 		}
@@ -324,7 +338,7 @@ func (c *UserController) WeChatBindAccount() {
 		replyUser.AccessTicket = utils.CreateAccessValue(username)
 	}
 
-	c.Data["json"] = data{Code: Normal, Message: "登录成功", Data: UserLogin{
+	c.Data["json"] = data{Code: Normal, Message: "SUCCESS", Data: UserLogin{
 		Username:     replyUser.Username,
 		Head:         utils.SignURLSample(replyUser.Head),
 		AccessTicket: replyUser.AccessTicket,
@@ -342,29 +356,18 @@ func (c *UserController) WeChatBindAccount() {
 // @router /detail [post]
 func (c *UserController) Detail() {
 	type data UserDetailResponse
+	currentTimestamp := utils.CurrentTimestamp()
 	accessToken := c.GetString("accessToken")
-	if accessToken == "" {
-		c.Data["json"] = data{Code: Normal, Message: "访问令牌不能为空"}
-		c.ServeJSON()
-		return
-	}
-
-	var replyUserPosition user.UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", action.FindByCond{
-		CondList: []action.CondValue{
-			action.CondValue{Type: "And", Key: "access_token", Val: accessToken },
-		},
-		Fileds: []string{"user_id"},
-	}, &replyUserPosition)
-
+	err := utils.Unable(map[string]string{"accessToken": "string:true"}, c.Ctx.Input)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌失效"}
+		c.Data["json"] = data{Code: ErrorLogic, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
 
-	if replyUserPosition.UserId == 0 {
-		c.Data["json"] = data{Code: Normal, Message: "获取用户信息失败"}
+	replyUserPosition, err := utils.UserPosition(accessToken, currentTimestamp)
+	if err != nil {
+		c.Data["json"] = data{Code: ErrorPower, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
@@ -375,7 +378,7 @@ func (c *UserController) Detail() {
 	}, &reply)
 
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "获取用户信息失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
 		c.ServeJSON()
 		return
 	}
@@ -406,7 +409,7 @@ func (c *UserController) Logout() {
 
 // @Title 用户修改密码接口
 // @Description 用户修改密码接口
-// @Success 200 {"code":200,"message":"用户修改密码成功","data":{"access_ticket":"xxxx","expire_in":0}}
+// @Success 200 {"code":200,"message":"用户修改密码成功"}
 // @Param   accessToken query   string true       "访问令牌"
 // @Failure 400 {"code":400,"message":"用户修改密码失败"}
 // @router /modifyPassword [post]
@@ -416,21 +419,16 @@ func (c *UserController) ModifyPassword() {
 	accessToken := c.GetString("accessToken")
 	password := c.GetString("password")
 	newPassword := c.GetString("newPassword")
-	if accessToken == "" {
-		c.Data["json"] = data{Code: Normal, Message: "访问令牌不能为空"}
+	err := utils.Unable(map[string]string{"accessToken": "string:true", "password": "string:true", "newPassword": "string:true"}, c.Ctx.Input)
+	if err != nil {
+		c.Data["json"] = data{Code: ErrorLogic, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
 
-	var replyUserPosition user.UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", action.FindByCond{
-		CondList: []action.CondValue{
-			action.CondValue{Type: "And", Key: "access_token", Val: accessToken},
-		},
-	}, &replyUserPosition)
-
+	replyUserPosition, err := utils.UserPosition(accessToken, currentTimestamp)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌失效"}
+		c.Data["json"] = data{Code: ErrorPower, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
@@ -445,7 +443,7 @@ func (c *UserController) ModifyPassword() {
 	}, &replyUser)
 
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "用户密码错误"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
 		c.ServeJSON()
 		return
 	}
@@ -460,7 +458,7 @@ func (c *UserController) ModifyPassword() {
 	}, &replyNum)
 
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "密码修改失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
 		c.ServeJSON()
 		return
 	}
@@ -472,7 +470,7 @@ func (c *UserController) ModifyPassword() {
 
 // @Title 用户信息修改接口
 // @Description 用户信息修改接口
-// @Success 200 {"code":200,"message":"用户修改密码成功","data":{"access_ticket":"xxxx","expire_in":0}}
+// @Success 200 {"code":200,"message":"用户修改密码成功"}}
 // @Param   accessToken query   string true       "访问令牌"
 // @Failure 400 {"code":400,"message":"用户修改密码失败"}
 // @router /modify [get]
@@ -480,41 +478,30 @@ func (c *UserController) Modify() {
 	type data ModifyPasswordResponse
 	currentTimestamp := utils.CurrentTimestamp()
 	accessToken := c.GetString("accessToken")
-	userId, _ := c.GetInt64("id")
 	phone := c.GetString("phone")
 	email := c.GetString("email")
 
-	if accessToken == "" {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌无效"}
-	}
-
 	err := utils.Unable(map[string]string{"accessToken": "string:true", "id": "int:true", "phone": "string:true", "email": "string:true"}, c.Ctx.Input)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorLogic, Message: Message(40001)}
+		c.Data["json"] = data{Code: ErrorLogic, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
 
-	var replyUserPosition user.UserPosition
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", action.FindByCond{
-		CondList: []action.CondValue{
-			action.CondValue{Type: "And", Key: "access_token", Val: accessToken },
-		},
-	}, &replyUserPosition)
+	replyUserPosition, err := utils.UserPosition(accessToken, currentTimestamp)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: Message(30000)}
+		c.Data["json"] = data{Code: ErrorPower, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
 
 	var replyNum action.Num
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "User", "UpdateById", action.UpdateByIdCond{
-		Id: []int64{userId},
+		Id: []int64{replyUserPosition.UserId},
 		UpdateList: []action.UpdateValue{
 			action.UpdateValue{Key: "update_time", Val: currentTimestamp},
 			action.UpdateValue{Key: "phone", Val: phone },
 			action.UpdateValue{Key: "email", Val: email },
-			//action.UpdateValue{Key: "head", Val: head },
 		},
 	}, &replyNum)
 	if err != nil {
@@ -541,7 +528,7 @@ func (c *UserController) SendMessageCode() {
 	phone := c.GetString("phone")
 	err := utils.Unable(map[string]string{"phone": "string:true"}, c.Ctx.Input)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorLogic, Message: Message(40001)}
+		c.Data["json"] = data{Code: ErrorLogic, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
@@ -592,7 +579,7 @@ func (c *UserController) ExistKey() {
 	val := c.GetString("val")
 	err := utils.Unable(map[string]string{"val": "string:true"}, c.Ctx.Input)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorLogic, Message: Message(40001)}
+		c.Data["json"] = data{Code: ErrorLogic, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
@@ -614,7 +601,7 @@ func (c *UserController) ExistKey() {
 		c.ServeJSON()
 		return
 	}
-	c.Data["json"] = data{Code: Normal, Message: Message(20000)}
+	c.Data["json"] = data{Code: Normal, Message: "SUCCESS"}
 	c.ServeJSON()
 	return
 }
@@ -635,11 +622,10 @@ func (c *UserController) Register() {
 	password := c.GetString("password")
 	phone := c.GetString("phone")
 	verifyCode := c.GetString("verifyCode")
-	//weChatId, _ := c.GetInt64("weChatId")
 
 	err := utils.Unable(map[string]string{"username": "string:true", "password": "string:true", "phone": "int:true", "verifyCode": "string:true"}, c.Ctx.Input)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorLogic, Message: Message(40001)}
+		c.Data["json"] = data{Code: ErrorLogic, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
@@ -659,12 +645,12 @@ func (c *UserController) Register() {
 		},
 	}, &replyNum)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50001)}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
 		c.ServeJSON()
 		return
 	}
 	if replyNum.Value > 0 {
-		c.Data["json"] = data{Code: ErrorLogic, Message: Message(40001)}
+		c.Data["json"] = data{Code: ErrorLogic, Message: "FAIL"}
 		c.ServeJSON()
 		return
 	}
@@ -681,12 +667,12 @@ func (c *UserController) Register() {
 		AccessTicket: utils.CreateAccessValue(username),
 	}, &replyUser)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50001)}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
 		c.ServeJSON()
 		return
 	}
 	if replyUser.Id == 0 {
-		c.Data["json"] = data{Code: ErrorLogic, Message: Message(40001)}
+		c.Data["json"] = data{Code: ErrorLogic, Message: "FAIL"}
 		c.ServeJSON()
 		return
 	}
@@ -702,12 +688,12 @@ func (c *UserController) Register() {
 		AccessToken: utils.CreateAccessValue(username),
 	}, &replyUserPosition)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50001)}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
 		c.ServeJSON()
 		return
 	}
 	if replyUserPosition.Id == 0 {
-		c.Data["json"] = data{Code: ErrorSystem, Message: Message(40001)}
+		c.Data["json"] = data{Code: ErrorLogic, Message: "FAIL"}
 		c.ServeJSON()
 		return
 	}
@@ -726,17 +712,17 @@ func (c *UserController) Register() {
 		Status:           account.AccountStatusNormal,
 	}, &replyAccount)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50001)}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
 		c.ServeJSON()
 		return
 	}
 	if replyAccount.Id == 0 {
-		c.Data["json"] = data{Code: ErrorSystem, Message: Message(40001)}
+		c.Data["json"] = data{Code: ErrorLogic, Message: "FAIL"}
 		c.ServeJSON()
 		return
 	}
 
-	c.Data["json"] = data{Code: Normal, Message: Message(20000)}
+	c.Data["json"] = data{Code: Normal, Message: "SUCCESS"}
 	c.ServeJSON()
 	return
 }
@@ -750,27 +736,23 @@ func (c *UserController) Register() {
 // @Failure 400 {"code":400,"message":"用户头像上传成功"}
 // @router /uploadHead [options,post]
 func (c *UserController) UploadHead() {
+	currentTimestamp := utils.CurrentTimestamp()
 	requestType := c.Ctx.Request.Method
-	fmt.Println("requestType", requestType)
 	if requestType == "POST" {
 		type data UploadHeadResponse
 		accessToken := c.GetString("accessToken")
-		userId, _ := c.GetInt64("id")
 		_, handle, _ := c.Ctx.Request.FormFile("uploadFile")
-		if accessToken == "" {
-			c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌无效"}
+
+		err := utils.Unable(map[string]string{"accessToken": "string:true"}, c.Ctx.Input)
+		if err != nil {
+			c.Data["json"] = data{Code: ErrorLogic, Message: err.Error()}
 			c.ServeJSON()
 			return
 		}
 
-		var replyUserPosition user.UserPosition
-		err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", action.FindByCond{
-			CondList: []action.CondValue{
-				action.CondValue{Type: "And", Key: "access_token", Val: accessToken },
-			},
-		}, &replyUserPosition)
+		replyUserPosition, err := utils.UserPosition(accessToken, currentTimestamp)
 		if err != nil {
-			c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌无效"}
+			c.Data["json"] = data{Code: ErrorPower, Message: err.Error()}
 			c.ServeJSON()
 			return
 		}
@@ -784,7 +766,7 @@ func (c *UserController) UploadHead() {
 
 		var replyUser user.User
 		err = client.Call(beego.AppConfig.String("EtcdURL"), "User", "FindByCond", action.FindByCond{
-			CondList: []action.CondValue{action.CondValue{Type: "And", Key: "id", Val: userId },
+			CondList: []action.CondValue{action.CondValue{Type: "And", Key: "id", Val: replyUserPosition.UserId },
 			},
 			Fileds: []string{"id"},
 		}, &replyUser)
@@ -798,7 +780,7 @@ func (c *UserController) UploadHead() {
 		err = client.Call(beego.AppConfig.String("EtcdURL"), "User", "UpdateById", action.UpdateByIdCond{
 			Id: []int64{replyUser.Id},
 			UpdateList: []action.UpdateValue{
-				action.UpdateValue{Key: "update_time", Val: time.Now().UnixNano() / 1e6 },
+				action.UpdateValue{Key: "update_time", Val: currentTimestamp },
 				action.UpdateValue{Key: "head", Val: objectKey},
 			},
 		}, &replyNum)

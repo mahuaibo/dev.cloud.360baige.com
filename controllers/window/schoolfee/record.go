@@ -4,7 +4,6 @@ import (
 	"github.com/astaxie/beego"
 	"dev.cloud.360baige.com/rpc/client"
 	. "dev.model.360baige.com/http/window/schoolfee"
-	"dev.model.360baige.com/models/user"
 	"dev.model.360baige.com/models/schoolfee"
 	"dev.model.360baige.com/action"
 	"dev.cloud.360baige.com/utils"
@@ -34,7 +33,6 @@ type RecordController struct {
 // @Failure 400 {"code":400,"message":"获取缴费项目记录失败"}
 // @router /list [post]
 func (c *RecordController) ListOfRecord() {
-
 	type data ListOfRecordResponse
 	currentTimestamp := utils.CurrentTimestamp()
 	accessToken := c.GetString("accessToken")
@@ -43,15 +41,14 @@ func (c *RecordController) ListOfRecord() {
 	currentPage, _ := c.GetInt64("current", 1)
 	err := utils.Unable(map[string]string{"accessToken": "string:true", "projectId": "int:true"}, c.Ctx.Input)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorLogic, Message: Message(40000, err.Error())}
+		c.Data["json"] = data{Code: ErrorLogic, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
 
-	var replyUserPosition user.UserPosition
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{CondList: []action.CondValue{action.CondValue{Type: "And", Key: "access_token", Val: accessToken }, action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTimestamp }, }, Fileds: []string{"id", "user_id", "company_id", "type"}, }, &replyUserPosition)
+	replyUserPosition, err := utils.UserPosition(accessToken, currentTimestamp)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌无效"}
+		c.Data["json"] = data{Code: ErrorPower, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
@@ -70,7 +67,7 @@ func (c *RecordController) ListOfRecord() {
 	}, &replyPageByCond)
 
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorLogic, Message: "获取缴费项目记录失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "获取缴费项目记录失败"}
 		c.ServeJSON()
 		return
 	}
@@ -136,16 +133,15 @@ func (c *RecordController) AddRecord() {
 	isFee, _ := c.GetInt("isFee")
 	feeTime, _ := c.GetInt64("feeTime")
 	desc := c.GetString("desc")
-	if accessToken == "" {
-		c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌无效"}
+	err := utils.Unable(map[string]string{"accessToken": "string:true", "projectId": "int:true"}, c.Ctx.Input)
+	if err != nil {
+		c.Data["json"] = data{Code: ErrorLogic, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
-
-	var replyUserPosition user.UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{CondList: []action.CondValue{action.CondValue{Type: "And", Key: "access_token", Val: accessToken }, action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTimestamp }, }, Fileds: []string{"id", "user_id", "company_id", "type"}, }, &replyUserPosition)
+	replyUserPosition, err := utils.UserPosition(accessToken, currentTimestamp)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌失效"}
+		c.Data["json"] = data{Code: ErrorPower, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
@@ -168,7 +164,7 @@ func (c *RecordController) AddRecord() {
 		Status:     0,
 	}, &replyRecord)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorLogic, Message: "添加收费名单失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "添加收费名单失败"}
 		c.ServeJSON()
 		return
 	}
@@ -191,19 +187,19 @@ func (c *RecordController) DetailRecord() {
 	currentTimestamp := utils.CurrentTimestamp()
 	accessToken := c.GetString("accessToken")
 	recordId, _ := c.GetInt64("recordId", 0)
-	if accessToken == "" {
-		c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌无效"}
-		c.ServeJSON()
-		return
-	}
-
-	var replyUserPosition user.UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{CondList: []action.CondValue{action.CondValue{Type: "And", Key: "access_token", Val: accessToken }, action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTimestamp }, }, Fileds: []string{"id", "user_id", "company_id", "type"}, }, &replyUserPosition)
+	err := utils.Unable(map[string]string{"accessToken": "string:true", "projectId": "int:true"}, c.Ctx.Input)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌失效"}
+		c.Data["json"] = data{Code: ErrorLogic, Message: "err.Error()"}
 		c.ServeJSON()
 		return
 	}
+	replyUserPosition, err := utils.UserPosition(accessToken, currentTimestamp)
+	if err != nil {
+		c.Data["json"] = data{Code: ErrorPower, Message: err.Error()}
+		c.ServeJSON()
+		return
+	}
+	log.Println(replyUserPosition)
 
 	var replyRecord schoolfee.Record
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Record", "FindById", &schoolfee.Record{
@@ -211,7 +207,7 @@ func (c *RecordController) DetailRecord() {
 	}, &replyRecord)
 
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorLogic, Message: "修改缴费项目失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "修改缴费项目失败"}
 		c.ServeJSON()
 		return
 	}
@@ -268,16 +264,15 @@ func (c *RecordController) ModifyRecord() {
 	isFee, _ := c.GetInt("isFee")
 	feeTime, _ := c.GetInt64("feeTime")
 	desc := c.GetString("desc")
-	if accessToken == "" {
-		c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌无效"}
+	err := utils.Unable(map[string]string{"accessToken": "string:true", "projectId": "int:true"}, c.Ctx.Input)
+	if err != nil {
+		c.Data["json"] = data{Code: ErrorLogic, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
-
-	var replyUserPosition user.UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{CondList: []action.CondValue{action.CondValue{Type: "And", Key: "access_token", Val: accessToken }, action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTimestamp }, }, Fileds: []string{"id", "user_id", "company_id", "type"}, }, &replyUserPosition)
+	replyUserPosition, err := utils.UserPosition(accessToken, currentTimestamp)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌失效"}
+		c.Data["json"] = data{Code: ErrorPower, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
@@ -288,7 +283,7 @@ func (c *RecordController) ModifyRecord() {
 	}, &replyRecord)
 
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorLogic, Message: "修改缴费项目失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "修改缴费项目失败"}
 		c.ServeJSON()
 		return
 	}
@@ -316,7 +311,7 @@ func (c *RecordController) ModifyRecord() {
 		},
 	}, &replyNum)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorLogic, Message: "修改缴费记录失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "修改缴费记录失败"}
 		c.ServeJSON()
 		return
 	}
@@ -340,28 +335,26 @@ func (c *RecordController) DeleteRecord() {
 	accessToken := c.GetString("accessToken")
 	recordIds := c.GetString("recordIds")
 	log.Println("recordIds:", recordIds)
-
-	if accessToken == "" {
-		c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌无效"}
-		c.ServeJSON()
-		return
-	}
-
-	var replyUserPosition user.UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{CondList: []action.CondValue{action.CondValue{Type: "And", Key: "access_token", Val: accessToken }, action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTimestamp }, }, Fileds: []string{"id", "user_id", "company_id", "type"}, }, &replyUserPosition)
-
+	err := utils.Unable(map[string]string{"accessToken": "string:true", "projectId": "int:true"}, c.Ctx.Input)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌无效"}
+		c.Data["json"] = data{Code: ErrorLogic, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
+	replyUserPosition, err := utils.UserPosition(accessToken, currentTimestamp)
+	if err != nil {
+		c.Data["json"] = data{Code: ErrorPower, Message: err.Error()}
+		c.ServeJSON()
+		return
+	}
+	log.Println(replyUserPosition)
 
 	var replyRecord action.Num
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Record", "DeleteById", &action.DeleteByIdCond{
 		Value: utils.StrArrToInt64Arr(strings.Split(recordIds, ",")),
 	}, &replyRecord)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorLogic, Message: "删除缴费项目记录失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "删除缴费项目记录失败"}
 		c.ServeJSON()
 		return
 	}
@@ -384,16 +377,15 @@ func (c *RecordController) UploadRecord() {
 	currentTimestamp := utils.CurrentTimestamp()
 	accessToken := c.GetString("accessToken")
 	projectId, _ := c.GetInt64("projectId")
-	if accessToken == "" {
-		c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌无效"}
+	err := utils.Unable(map[string]string{"accessToken": "string:true", "projectId": "int:true"}, c.Ctx.Input)
+	if err != nil {
+		c.Data["json"] = data{Code: ErrorLogic, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
-
-	var replyUserPosition user.UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{CondList: []action.CondValue{action.CondValue{Type: "And", Key: "access_token", Val: accessToken }, action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTimestamp }, }, Fileds: []string{"id", "user_id", "company_id", "type"}, }, &replyUserPosition)
+	replyUserPosition, err := utils.UserPosition(accessToken, currentTimestamp)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌失效"}
+		c.Data["json"] = data{Code: ErrorPower, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
@@ -402,7 +394,7 @@ func (c *RecordController) UploadRecord() {
 	if c.Ctx.Request.Method == "POST" {
 		formFile, header, err := c.Ctx.Request.FormFile("uploadFile")
 		if err != nil {
-			c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌无效"}
+			c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌无效"}
 			return
 		}
 		defer formFile.Close()
@@ -410,14 +402,14 @@ func (c *RecordController) UploadRecord() {
 		// 创建保存文件
 		destFile, err := os.Create(objectKey)
 		if err != nil {
-			c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌无效"}
+			c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌无效"}
 			return
 		}
 		defer destFile.Close()
 		// 读取表单文件，写入保存文件
 		_, err = io.Copy(destFile, formFile)
 		if err != nil {
-			c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌无效"}
+			c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌无效"}
 			return
 		}
 		xlsx, err := excelize.OpenFile(objectKey)
@@ -432,7 +424,7 @@ func (c *RecordController) UploadRecord() {
 			if key > 0 {
 				Price, err := strconv.ParseInt(row[5], 10, 64)
 				if err != nil {
-					c.Data["json"] = data{Code: ErrorLogic, Message: "上传缴费名单失败"}
+					c.Data["json"] = data{Code: ErrorSystem, Message: "上传缴费名单失败"}
 					c.ServeJSON()
 					return
 				}
@@ -457,7 +449,7 @@ func (c *RecordController) UploadRecord() {
 
 		err = client.Call(beego.AppConfig.String("EtcdURL"), "Record", "AddMultiple", &argsRecordList, &replyRecord)
 		if err != nil {
-			c.Data["json"] = data{Code: ErrorLogic, Message: "上传缴费名单失败"}
+			c.Data["json"] = data{Code: ErrorSystem, Message: "上传缴费名单失败"}
 			c.ServeJSON()
 			return
 		}
@@ -485,14 +477,19 @@ func (c *RecordController) DownloadRecord() {
 	accessToken := c.GetString("accessToken")
 	classNames := c.GetString("classNames")
 	isFees := c.GetString("isFees")
-	if accessToken == "" {
-		c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌无效"}
+	err := utils.Unable(map[string]string{"accessToken": "string:true", "projectId": "int:true"}, c.Ctx.Input)
+	if err != nil {
+		c.Data["json"] = data{Code: ErrorLogic, Message: err.Error()}
+		c.ServeJSON()
+		return
+	}
+	replyUserPosition, err := utils.UserPosition(accessToken, currentTimestamp)
+	if err != nil {
+		c.Data["json"] = data{Code: ErrorPower, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
 
-	var replyUserPosition user.UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{CondList: []action.CondValue{action.CondValue{Type: "And", Key: "access_token", Val: accessToken }, action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTimestamp }, }, Fileds: []string{"id", "user_id", "company_id", "type"}, }, &replyUserPosition)
 	var replyRecord []schoolfee.Record
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Record", "ListByCond", &action.ListByCond{
 		CondList: []action.CondValue{
@@ -502,7 +499,7 @@ func (c *RecordController) DownloadRecord() {
 		},
 	}, &replyRecord)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorLogic, Message: "下载缴费记录失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "下载缴费记录失败"}
 		c.ServeJSON()
 		return
 	}
@@ -573,16 +570,15 @@ func (c *RecordController) ClassList() {
 	currentTimestamp := utils.CurrentTimestamp()
 	accessToken := c.GetString("accessToken")
 	projectId := c.GetString("projectId")
-	if accessToken == "" {
-		c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌无效"}
+	err := utils.Unable(map[string]string{"accessToken": "string:true", "projectId": "int:true"}, c.Ctx.Input)
+	if err != nil {
+		c.Data["json"] = data{Code: ErrorLogic, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
-
-	var replyUserPosition user.UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{CondList: []action.CondValue{action.CondValue{Type: "And", Key: "access_token", Val: accessToken }, action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTimestamp }, }, Fileds: []string{"id", "user_id", "company_id", "type"}, }, &replyUserPosition)
+	replyUserPosition, err := utils.UserPosition(accessToken, currentTimestamp)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌失效"}
+		c.Data["json"] = data{Code: ErrorPower, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
@@ -597,7 +593,7 @@ func (c *RecordController) ClassList() {
 	}, &replyRecord)
 
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorLogic, Message: "获取班级列表失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "获取班级列表失败"}
 		c.ServeJSON()
 		return
 	}

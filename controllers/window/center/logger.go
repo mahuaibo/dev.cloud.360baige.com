@@ -4,7 +4,6 @@ import (
 	"github.com/astaxie/beego"
 	"dev.cloud.360baige.com/rpc/client"
 	"dev.model.360baige.com/models/logger"
-	"dev.model.360baige.com/models/user"
 	. "dev.model.360baige.com/http/window/center"
 	"dev.model.360baige.com/action"
 	"encoding/json"
@@ -36,20 +35,14 @@ func (c *LoggerController) Add() {
 
 	err := utils.Unable(map[string]string{"accessToken": "string:true"}, c.Ctx.Input)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorLogic, Message: Message(40000, err.Error())}
+		c.Data["json"] = data{Code: ErrorLogic, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
 
-	var replyUserPosition user.UserPosition
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{CondList: []action.CondValue{action.CondValue{Type: "And", Key: "access_token", Val: accessToken }, action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTimestamp }, }, Fileds: []string{"id", "user_id", "company_id", "type"}, }, &replyUserPosition)
+	replyUserPosition, err := utils.UserPosition(accessToken, currentTimestamp)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
-		c.ServeJSON()
-		return
-	}
-	if replyUserPosition.UserId == 0 {
-		c.Data["json"] = data{Code: ErrorPower, Message: Message(30000)}
+		c.Data["json"] = data{Code: ErrorPower, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
@@ -66,12 +59,12 @@ func (c *LoggerController) Add() {
 		UserPositionType: replyUserPosition.Type,
 	}, &replyLogger)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
 		c.ServeJSON()
 		return
 	}
 
-	c.Data["json"] = data{Code: Normal, Message: Message(20000), Data: LoggerAdd{
+	c.Data["json"] = data{Code: Normal, Message: "SUCCESS", Data: LoggerAdd{
 		Id: replyLogger.Id,
 	}}
 	c.ServeJSON()
@@ -95,20 +88,14 @@ func (c *LoggerController) List() {
 
 	err := utils.Unable(map[string]string{"accessToken": "string:true"}, c.Ctx.Input)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorLogic, Message: Message(40000, err.Error())}
+		c.Data["json"] = data{Code: ErrorLogic, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
 
-	var replyUserPosition user.UserPosition
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{CondList: []action.CondValue{action.CondValue{Type: "And", Key: "access_token", Val: accessToken }, action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTimestamp }, }, Fileds: []string{"id", "user_id", "company_id", "type"}, }, &replyUserPosition)
+	replyUserPosition, err := utils.UserPosition(accessToken, currentTimestamp)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
-		c.ServeJSON()
-		return
-	}
-	if replyUserPosition.UserId == 0 {
-		c.Data["json"] = data{Code: ErrorPower, Message: Message(30000)}
+		c.Data["json"] = data{Code: ErrorPower, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
@@ -128,7 +115,7 @@ func (c *LoggerController) List() {
 	}, &replyPageByCond)
 
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
 		c.ServeJSON()
 		return
 	}
@@ -155,7 +142,7 @@ func (c *LoggerController) List() {
 		})
 	}
 
-	c.Data["json"] = data{Code: Normal, Message: Message(20000), Data: LoggerList{
+	c.Data["json"] = data{Code: Normal, Message: "SUCCESS", Data: LoggerList{
 		Total:       replyPageByCond.Total,
 		Current:     currentPage,
 		CurrentSize: replyPageByCond.CurrentSize,

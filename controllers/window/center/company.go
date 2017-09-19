@@ -5,9 +5,9 @@ import (
 	"dev.cloud.360baige.com/rpc/client"
 	"dev.model.360baige.com/models/company"
 	. "dev.model.360baige.com/http/window/center"
-	"dev.model.360baige.com/models/user"
 	"dev.model.360baige.com/action"
 	"dev.cloud.360baige.com/utils"
+	"dev.cloud.360baige.com/log"
 )
 
 // Company API
@@ -28,21 +28,14 @@ func (c *CompanyController) Detail() {
 
 	err := utils.Unable(map[string]string{"accessToken": "string:true"}, c.Ctx.Input)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorLogic, Message: Message(40000, err.Error())}
+		c.Data["json"] = data{Code: ErrorLogic, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
 
-	var replyUserPosition user.UserPosition
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{CondList: []action.CondValue{action.CondValue{Type: "And", Key: "access_token", Val: accessToken }, action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTimestamp }, }, Fileds: []string{"id", "user_id", "company_id", "type"}, }, &replyUserPosition)
+	replyUserPosition, err := utils.UserPosition(accessToken, currentTimestamp)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
-		c.ServeJSON()
-		return
-	}
-
-	if replyUserPosition.UserId == 0 {
-		c.Data["json"] = data{Code: ErrorLogic, Message: Message(30000)}
+		c.Data["json"] = data{Code: ErrorPower, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
@@ -101,21 +94,14 @@ func (c *CompanyController) Modify() {
 
 	err := utils.Unable(map[string]string{"accessToken": "string:true"}, c.Ctx.Input)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorLogic, Message: Message(40000, err.Error())}
+		c.Data["json"] = data{Code: ErrorLogic, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
 
-	var replyUserPosition user.UserPosition
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{CondList: []action.CondValue{action.CondValue{Type: "And", Key: "access_token", Val: accessToken }, action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTimestamp }, }, Fileds: []string{"id", "user_id", "company_id", "type"}, }, &replyUserPosition)
+	replyUserPosition, err := utils.UserPosition(accessToken, currentTimestamp)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
-		c.ServeJSON()
-		return
-	}
-
-	if replyUserPosition.UserId == 0 {
-		c.Data["json"] = data{Code: ErrorLogic, Message: Message(30000)}
+		c.Data["json"] = data{Code: ErrorPower, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
@@ -140,17 +126,17 @@ func (c *CompanyController) Modify() {
 	}, &replyNum)
 
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
 		c.ServeJSON()
 		return
 	}
 	if replyNum.Value == 0 {
-		c.Data["json"] = data{Code: ErrorLogic, Message: Message(40000)}
+		c.Data["json"] = data{Code: ErrorLogic, Message: "企业信息修改失败"}
 		c.ServeJSON()
 		return
 	}
 
-	c.Data["json"] = data{Code: Normal, Message: Message(20000)}
+	c.Data["json"] = data{Code: Normal, Message: "企业信息修改成功"}
 	c.ServeJSON()
 	return
 }
@@ -174,28 +160,22 @@ func (c *CompanyController) UploadLogo() {
 
 		err := utils.Unable(map[string]string{"accessToken": "string:true"}, c.Ctx.Input)
 		if err != nil {
-			c.Data["json"] = data{Code: ErrorLogic, Message: Message(40000, err.Error())}
+			c.Data["json"] = data{Code: ErrorLogic, Message: err.Error()}
 			c.ServeJSON()
 			return
 		}
 
-		var replyUserPosition user.UserPosition
-		err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{CondList: []action.CondValue{action.CondValue{Type: "And", Key: "access_token", Val: accessToken }, action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTimestamp }, }, Fileds: []string{"id", "user_id", "company_id", "type"}, }, &replyUserPosition)
+		replyUserPosition, err := utils.UserPosition(accessToken, currentTimestamp)
 		if err != nil {
-			c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
+			c.Data["json"] = data{Code: ErrorPower, Message: err.Error()}
 			c.ServeJSON()
 			return
 		}
-
-		if replyUserPosition.UserId == 0 {
-			c.Data["json"] = data{Code: ErrorLogic, Message: Message(30000)}
-			c.ServeJSON()
-			return
-		}
+		log.Println("replyUserPosition:", replyUserPosition)
 
 		objectKey, err := utils.UploadImage(handle, "Company/logoImages/")
 		if err != nil {
-			c.Data["json"] = data{Code: ErrorLogic, Message: Message(50000)}
+			c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
 			c.ServeJSON()
 			return
 		}
@@ -207,7 +187,7 @@ func (c *CompanyController) UploadLogo() {
 			Fileds: []string{"id"},
 		}, &replyCompany)
 		if err != nil {
-			c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
+			c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
 			c.ServeJSON()
 			return
 		}
@@ -221,12 +201,12 @@ func (c *CompanyController) UploadLogo() {
 			},
 		}, &replyNum)
 		if err != nil {
-			c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
+			c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
 			c.ServeJSON()
 			return
 		}
 		logoUrl := utils.SignURLSample(objectKey)
-		c.Data["json"] = data{Code: Normal, Data: logoUrl, Message: Message(20000)}
+		c.Data["json"] = data{Code: Normal, Data: logoUrl, Message: "企业logo上传成功"}
 		c.ServeJSON()
 		return
 	}

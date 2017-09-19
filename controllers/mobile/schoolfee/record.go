@@ -4,7 +4,6 @@ import (
 	"github.com/astaxie/beego"
 	"dev.cloud.360baige.com/rpc/client"
 	. "dev.model.360baige.com/http/mobile/schoolfee"
-	"dev.model.360baige.com/models/user"
 	"dev.model.360baige.com/models/schoolfee"
 	"dev.model.360baige.com/action"
 	"encoding/json"
@@ -35,20 +34,14 @@ func (c *RecordController) ListOfRecord() {
 	currentPage, _ := c.GetInt64("current", 1)
 	err := utils.Unable(map[string]string{"accessToken": "string:true", "searchKey": "string:true"}, c.Ctx.Input)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorLogic, Message: Message(40000, err.Error())}
+		c.Data["json"] = data{Code: ErrorLogic, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
 
-	var replyUserPosition user.UserPosition
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{CondList: []action.CondValue{action.CondValue{Type: "And", Key: "access_token", Val: accessToken }, action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTimestamp }, }, Fileds: []string{"id", "user_id", "company_id", "type"}, }, &replyUserPosition)
+	replyUserPosition, err := utils.UserPosition(accessToken, currentTimestamp)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
-		c.ServeJSON()
-		return
-	}
-	if replyUserPosition.UserId == 0 {
-		c.Data["json"] = data{Code: ErrorPower, Message: Message(30000)}
+		c.Data["json"] = data{Code: ErrorPower, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
@@ -72,7 +65,7 @@ func (c *RecordController) ListOfRecord() {
 	jsonReplyRecord := []schoolfee.Record{}
 	err = json.Unmarshal([]byte(replyPageByCond.Json), &jsonReplyRecord)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50002, "Record")}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
 		c.ServeJSON()
 		return
 	}
@@ -127,7 +120,7 @@ func (c *RecordController) ListOfRecord() {
 		}
 	}
 
-	c.Data["json"] = data{Code: Normal, Message: Message(20003), Data: ListOfRecordProject{
+	c.Data["json"] = data{Code: Normal, Message: "SUCCESS", Data: ListOfRecordProject{
 		List:        recordProjectList,
 		Total:       replyPageByCond.Total,
 		Current:     currentPage,
@@ -174,20 +167,14 @@ func (c *RecordController) AddRecord() {
 
 	err := utils.Unable(map[string]string{"accessToken": "string:true", "searchKey": "string:true"}, c.Ctx.Input)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorLogic, Message: Message(40000, err.Error())}
+		c.Data["json"] = data{Code: ErrorLogic, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
 
-	var replyUserPosition user.UserPosition
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{CondList: []action.CondValue{action.CondValue{Type: "And", Key: "access_token", Val: accessToken }, action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTimestamp }, }, Fileds: []string{"id", "user_id", "company_id", "type"}, }, &replyUserPosition)
+	replyUserPosition, err := utils.UserPosition(accessToken, currentTimestamp)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
-		c.ServeJSON()
-		return
-	}
-	if replyUserPosition.UserId == 0 {
-		c.Data["json"] = data{Code: ErrorPower, Message: Message(30000)}
+		c.Data["json"] = data{Code: ErrorPower, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
@@ -209,11 +196,11 @@ func (c *RecordController) AddRecord() {
 		Status:     0,
 	}, &replyRecord)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorLogic, Message: Message(50001)}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
 		c.ServeJSON()
 		return
 	}
-	c.Data["json"] = data{Code: Normal, Message: Message(20004), Data: AddRecord{
+	c.Data["json"] = data{Code: Normal, Message: "SUCCESS", Data: AddRecord{
 		Id: replyRecord.Id,
 	}}
 	c.ServeJSON()
@@ -237,21 +224,14 @@ func (c *RecordController) AddMultiRecord() {
 
 	err := utils.Unable(map[string]string{"accessToken": "string:true", "recordIds": "string:true"}, c.Ctx.Input)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorLogic, Message: Message(40000, err.Error())}
+		c.Data["json"] = data{Code: ErrorLogic, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
 
-	recordIdsArr := strings.Split(recordIds, ",")
-	var replyUserPosition user.UserPosition
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{CondList: []action.CondValue{action.CondValue{Type: "And", Key: "access_token", Val: accessToken }, action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTimestamp }, }, Fileds: []string{"id", "user_id", "company_id", "type"}, }, &replyUserPosition)
+	replyUserPosition, err := utils.UserPosition(accessToken, currentTimestamp)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
-		c.ServeJSON()
-		return
-	}
-	if replyUserPosition.UserId == 0 {
-		c.Data["json"] = data{Code: ErrorPower, Message: Message(30000)}
+		c.Data["json"] = data{Code: ErrorPower, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
@@ -260,12 +240,12 @@ func (c *RecordController) AddMultiRecord() {
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Record", "ListByCond", action.FindByCond{
 		CondList: []action.CondValue{
 			action.CondValue{Type: "And", Key: "company_id", Val: replyUserPosition.CompanyId},
-			action.CondValue{Type: "And", Key: "id__in", Val: recordIdsArr},
+			action.CondValue{Type: "And", Key: "id__in", Val: strings.Split(recordIds, ",")},
 			action.CondValue{Type: "And", Key: "is_fee", Val: 0},
 		},
 	}, &replyRecords)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorLogic, Message: Message(50001)}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
 		c.ServeJSON()
 		return
 	}
@@ -291,11 +271,11 @@ func (c *RecordController) AddMultiRecord() {
 	var replyRecord action.Num
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Record", "AddMultiple", &listOfRecord, &replyRecord)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorLogic, Message: Message(50001)}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
 		c.ServeJSON()
 		return
 	}
-	c.Data["json"] = data{Code: Normal, Message: Message(20005), Data: AddMultipleRecord{
+	c.Data["json"] = data{Code: Normal, Message: "SUCCESS", Data: AddMultipleRecord{
 		Num: replyRecord.Value,
 	}}
 	c.ServeJSON()

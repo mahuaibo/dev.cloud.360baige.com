@@ -4,7 +4,6 @@ import (
 	"github.com/astaxie/beego"
 	"dev.cloud.360baige.com/rpc/client"
 	. "dev.model.360baige.com/http/window/center"
-	"dev.model.360baige.com/models/user"
 	"dev.model.360baige.com/models/account"
 	"dev.model.360baige.com/action"
 	"dev.cloud.360baige.com/utils"
@@ -15,32 +14,27 @@ type AccountController struct {
 	beego.Controller
 }
 
-// @Title 账户统计接口
-// @Description 账户统计接口
+// @Title 账户统计
+// @Description 账户统计
 // @Success 200 {"code":200,"message":"获取账务统计信息成功"}
-// @Param   accessToken     query   string true       "访问令牌"
 // @Failure 400 {"code":400,"message":"获取账务统计信息失败"}
+// @Param   accessToken     query   string true       "访问令牌"
 // @router /statistics [post]
 func (c *AccountController) Statistics() {
 	type data AccountStatisticsResponse
-	accessToken := c.GetString("accessToken")
 	currentTimestamp := utils.CurrentTimestamp()
+	accessToken := c.GetString("accessToken")
+
 	err := utils.Unable(map[string]string{"accessToken": "string:true"}, c.Ctx.Input)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorLogic, Message: Message(40000, err.Error())}
+		c.Data["json"] = data{Code: ErrorLogic, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
 
-	var replyUserPosition user.UserPosition
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{CondList: []action.CondValue{action.CondValue{Type: "And", Key: "access_token", Val: accessToken }, action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTimestamp }, }, Fileds: []string{"id", "user_id", "company_id", "type"}, }, &replyUserPosition)
+	replyUserPosition, err := utils.UserPosition(accessToken, currentTimestamp)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
-		c.ServeJSON()
-		return
-	}
-	if replyUserPosition.Id == 0 {
-		c.Data["json"] = data{Code: ErrorPower, Message: Message(30000)}
+		c.Data["json"] = data{Code: ErrorPower, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
@@ -57,7 +51,7 @@ func (c *AccountController) Statistics() {
 	}, &replyAccount)
 
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
 		c.ServeJSON()
 		return
 	}
@@ -72,7 +66,7 @@ func (c *AccountController) Statistics() {
 	}, &replyAccountItemList)
 
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
 		c.ServeJSON()
 		return
 	}
@@ -86,7 +80,7 @@ func (c *AccountController) Statistics() {
 		}
 	}
 
-	c.Data["json"] = data{Code: Normal, Message: Message(20000), Data: AccountStatistics{
+	c.Data["json"] = data{Code: Normal, Message: "SUCCESS", Data: AccountStatistics{
 		Balance:    replyAccount.Balance,
 		InAccount:  inAccount,
 		OutAccount: outAccount,

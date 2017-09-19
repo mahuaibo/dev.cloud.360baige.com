@@ -5,7 +5,6 @@ import (
 	"dev.cloud.360baige.com/rpc/client"
 	"dev.cloud.360baige.com/utils"
 	. "dev.model.360baige.com/http/window/schoolfee"
-	"dev.model.360baige.com/models/user"
 	"dev.model.360baige.com/models/schoolfee"
 	"dev.model.360baige.com/action"
 	"encoding/json"
@@ -34,20 +33,14 @@ func (c *ProjectController) ListOfProject() {
 
 	err := utils.Unable(map[string]string{"accessToken": "string:true"}, c.Ctx.Input)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorLogic, Message: Message(40000, err.Error())}
+		c.Data["json"] = data{Code: ErrorLogic, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
 
-	var replyUserPosition user.UserPosition
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{CondList: []action.CondValue{action.CondValue{Type: "And", Key: "access_token", Val: accessToken }, action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTimestamp }, }, Fileds: []string{"id", "user_id", "company_id", "type"}, }, &replyUserPosition)
+	replyUserPosition, err := utils.UserPosition(accessToken, currentTimestamp)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
-		c.ServeJSON()
-		return
-	}
-	if replyUserPosition.UserId == 0 {
-		c.Data["json"] = data{Code: ErrorPower, Message: Message(30000)}
+		c.Data["json"] = data{Code: ErrorPower, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
@@ -64,7 +57,7 @@ func (c *ProjectController) ListOfProject() {
 		Current:  currentPage,
 	}, &replyPageByCond)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50001, "Project")}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
 		c.ServeJSON()
 		return
 	}
@@ -72,7 +65,7 @@ func (c *ProjectController) ListOfProject() {
 	var jsonProjectList []schoolfee.Project
 	err = json.Unmarshal([]byte(replyPageByCond.Json), &jsonProjectList)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50002, "Project")}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
 		c.ServeJSON()
 		return
 	}
@@ -81,7 +74,7 @@ func (c *ProjectController) ListOfProject() {
 	for index, pro := range jsonProjectList {
 		projectList[index] = Project{
 			Id:         pro.Id,
-			CreateTime: utils.Datetime(pro.CreateTime, "2006-01-02 15:04"),
+			CreateTime: utils.Datetime(pro.CreateTime, "2006-01-02 15:04:05"),
 			CompanyId:  pro.CompanyId,
 			Name:       pro.Name,
 			IsLimit:    pro.IsLimit,
@@ -91,7 +84,7 @@ func (c *ProjectController) ListOfProject() {
 		}
 	}
 
-	c.Data["json"] = data{Code: Normal, Message: Message(20000), Data: ListOfProject{
+	c.Data["json"] = data{Code: Normal, Message: "获取列表信息成功", Data: ListOfProject{
 		List:     projectList,
 		Total:    replyPageByCond.Total,
 		PageSize: pageSize,
@@ -124,15 +117,14 @@ func (c *ProjectController) AddProject() {
 
 	err := utils.Unable(map[string]string{"accessToken": "string:true", "name": "string:true" }, c.Ctx.Input)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorLogic, Message: Message(40000, err.Error())}
+		c.Data["json"] = data{Code: ErrorLogic, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
 
-	var replyUserPosition user.UserPosition
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{CondList: []action.CondValue{action.CondValue{Type: "And", Key: "access_token", Val: accessToken }, action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTimestamp }, }, Fileds: []string{"id", "user_id", "company_id", "type"}, }, &replyUserPosition)
+	replyUserPosition, err := utils.UserPosition(accessToken, currentTimestamp)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌无效"}
+		c.Data["json"] = data{Code: ErrorPower, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
@@ -185,14 +177,14 @@ func (c *ProjectController) ModifyProject() {
 
 	err := utils.Unable(map[string]string{"accessToken": "string:true", "id": "int:true"}, c.Ctx.Input)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorLogic, Message: Message(40000, err.Error())}
+		c.Data["json"] = data{Code: ErrorLogic, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
-	var replyUserPosition user.UserPosition
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{CondList: []action.CondValue{action.CondValue{Type: "And", Key: "access_token", Val: accessToken }, action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTimestamp }, }, Fileds: []string{"id", "user_id", "company_id", "type"}, }, &replyUserPosition)
+
+	replyUserPosition, err := utils.UserPosition(accessToken, currentTimestamp)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌无效2"}
+		c.Data["json"] = data{Code: ErrorPower, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
@@ -204,12 +196,12 @@ func (c *ProjectController) ModifyProject() {
 	}, &replyProject)
 
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌无效3"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
 		c.ServeJSON()
 		return
 	}
 	if replyProject.Id == 0 {
-		c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌无效4"}
+		c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌无效"}
 		c.ServeJSON()
 		return
 	}
@@ -227,7 +219,7 @@ func (c *ProjectController) ModifyProject() {
 		},
 	}, &replyNum)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorLogic, Message: "修改缴费项目失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
 		c.ServeJSON()
 		return
 	}

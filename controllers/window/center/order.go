@@ -32,34 +32,25 @@ type OrderController struct {
 // @router /list [post]
 func (c *OrderController) List() {
 	type data OrderListResponse
+	currentTimestamp := utils.CurrentTimestamp()
 	accessToken := c.GetString("accessToken")
 	status, _ := c.GetInt("status", -100)
 	currentPage, _ := c.GetInt64("current", 1)
 	pageSize, _ := c.GetInt64("pageSize", 50)
-	if accessToken == "" {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌无效"}
-		c.ServeJSON()
-		return
-	}
-	var replyUserPosition user.UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", action.FindByCond{
-		CondList: []action.CondValue{
-			action.CondValue{Type: "And", Key: "accessToken", Val: accessToken },
-		},
-		Fileds: []string{"id", "user_id", "company_id", "type"},
-	}, &replyUserPosition)
-
+	err := utils.Unable(map[string]string{"accessToken": "string:true"}, c.Ctx.Input)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌失效"}
+		c.Data["json"] = data{Code: ErrorLogic, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
 
-	if replyUserPosition.UserId == 0 {
-		c.Data["json"] = data{Code: ErrorLogic, Message: "获取信息失败"}
+	replyUserPosition, err := utils.UserPosition(accessToken, currentTimestamp)
+	if err != nil {
+		c.Data["json"] = data{Code: ErrorPower, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
+
 	var condValue action.CondValue
 	if status != -100 {
 		condValue = action.CondValue{Type: "And", Key: "status", Val: status }
@@ -82,7 +73,7 @@ func (c *OrderController) List() {
 	}, &replyPageByCond)
 
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "获取订单信息失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
 		c.ServeJSON()
 		return
 	}
@@ -127,38 +118,30 @@ func (c *OrderController) List() {
 // @router /cancel [post]
 func (c *OrderController) Cancel() {
 	type data OrderCancelResponse
+	currentTimestamp := utils.CurrentTimestamp()
 	accessToken := c.GetString("accessToken")
 	orderId, _ := c.GetInt64("id")
-	if accessToken == "" {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌无效"}
+	err := utils.Unable(map[string]string{"accessToken": "string:true", "id": "int:true"}, c.Ctx.Input)
+	if err != nil {
+		c.Data["json"] = data{Code: ErrorLogic, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
 
-	var replyUserPosition user.UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", action.FindByCond{
-		CondList: []action.CondValue{
-			action.CondValue{Type: "And", Key: "accessToken", Val: accessToken },
-		},
-		Fileds: []string{"id", "user_id", "company_id", "type"},
-	}, &replyUserPosition)
+	replyUserPosition, err := utils.UserPosition(accessToken, currentTimestamp)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌失效"}
+		c.Data["json"] = data{Code: ErrorPower, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
-	if orderId == 0 {
-		c.Data["json"] = data{Code: ErrorLogic, Message: "订单关闭失败"}
-		c.ServeJSON()
-		return
-	}
+	log.Println("replyUserPosition:", replyUserPosition)
 
 	var replyNum action.Num
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Order", "DeleteById", &action.DeleteByIdCond{
 		Value: []int64{orderId},
 	}, &replyNum)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "订单关闭失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
 		c.ServeJSON()
 		return
 	}
@@ -181,46 +164,38 @@ func (c *OrderController) Cancel() {
 // @router /detail [post]
 func (c *OrderController) Detail() {
 	type data OrderDetailResponse
+	currentTimestamp := utils.CurrentTimestamp()
 	accessToken := c.GetString("accessToken")
 	orderId, _ := c.GetInt64("id")
-	if accessToken == "" {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌无效"}
+	err := utils.Unable(map[string]string{"accessToken": "string:true", "orderId": "int:true"}, c.Ctx.Input)
+	if err != nil {
+		c.Data["json"] = data{Code: ErrorLogic, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
 
-	var replyUserPosition user.UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", action.FindByCond{
-		CondList: []action.CondValue{
-			action.CondValue{Type: "And", Key: "accessToken", Val: accessToken },
-		},
-		Fileds: []string{"id", "user_id", "company_id", "type"},
-	}, &replyUserPosition)
+	replyUserPosition, err := utils.UserPosition(accessToken, currentTimestamp)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌失效"}
+		c.Data["json"] = data{Code: ErrorPower, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
-	if orderId == 0 {
-		c.Data["json"] = data{Code: ErrorLogic, Message: "获取订单信息失败"}
-		c.ServeJSON()
-		return
-	}
+	log.Println("replyUserPosition:", replyUserPosition)
 
 	var replyOrder order.Order
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Order", "FindById", order.Order{
 		Id: orderId,
 	}, &replyOrder)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "获取订单信息失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
 		c.ServeJSON()
 		return
 	}
 
 	c.Data["json"] = data{Code: Normal, Message: "获取订单详情成功", Data: OrderDetail{
-		Price:  replyOrder.Price,
-		Num:    replyOrder.Num,
-		Status: replyOrder.Status,
+		Price:   replyOrder.Price,
+		Num:     replyOrder.Num,
+		Status:  replyOrder.Status,
 		CodeUrl: replyOrder.CodeUrl,
 	}}
 	c.ServeJSON()
@@ -241,28 +216,19 @@ func (c *OrderController) Add() {
 	applicationTplId, _ := c.GetInt64("applicationTplId")
 	num, _ := c.GetInt64("num", 0)
 	payType, _ := c.GetInt("payType", 1)
+	tradeType := c.GetString("tradeType", "NATIVE")
 	remoteAddr := strings.Split(c.Ctx.Request.RemoteAddr, ":")
 
 	err := utils.Unable(map[string]string{"accessToken": "string:true", "payType": "int:true", "applicationTplId": "int:true", "num": "int:true"}, c.Ctx.Input)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: Message(40000, err.Error())}
+		c.Data["json"] = data{Code: ErrorLogic, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
-	var replyUserPosition user.UserPosition
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", action.FindByCond{
-		CondList: []action.CondValue{
-			action.CondValue{Type: "And", Key: "accessToken", Val: accessToken },
-		},
-		Fileds: []string{"id", "user_id", "company_id", "type"},
-	}, &replyUserPosition)
+
+	replyUserPosition, err := utils.UserPosition(accessToken, currentTimestamp)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50000)}
-		c.ServeJSON()
-		return
-	}
-	if replyUserPosition.UserId == 0 {
-		c.Data["json"] = data{Code: ErrorSystem, Message: Message(30000)}
+		c.Data["json"] = data{Code: ErrorPower, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
@@ -272,7 +238,7 @@ func (c *OrderController) Add() {
 		Id: applicationTplId,
 	}, &replyApplicationTpl)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50001)}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
 		c.ServeJSON()
 		return
 	}
@@ -298,17 +264,17 @@ func (c *OrderController) Add() {
 	}, &replyOrder)
 	log.Println("replyOrder:", replyOrder)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌失效"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
 		c.ServeJSON()
 		return
 	}
 	if replyOrder.Id == 0 {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "访问令牌失效"}
+		c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌失效"}
 		c.ServeJSON()
 		return
 	}
 	// NATIVE MWEB
-	unifyOrderResponse, err := wechat.UnifiedOrder(remoteAddr[0], replyApplicationTpl.Name, orderCode, "NATIVE", replyApplicationTpl.Price*num)
+	unifyOrderResponse, err := wechat.UnifiedOrder(remoteAddr[0], replyApplicationTpl.Name, orderCode, tradeType, replyApplicationTpl.Price*num)
 	if err != nil {
 		c.Data["json"] = data{Code: ErrorSystem, Message: "统一下单失败"}
 		c.ServeJSON()
@@ -330,7 +296,7 @@ func (c *OrderController) Add() {
 		},
 	}, &replyNum)
 	if err != nil {
-		c.Data["json"] = data{Code: Normal, Message: "修改订单信息失败"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
 		c.ServeJSON()
 		return
 	}
@@ -355,35 +321,30 @@ func (c *OrderController) PayResult() {
 
 	err := utils.Unable(map[string]string{"accessToken": "string:true", "id": "int:true"}, c.Ctx.Input)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: Message(40000, err.Error())}
+		c.Data["json"] = data{Code: ErrorLogic, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
 
-	var replyUserPosition user.UserPosition
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{
-		CondList: []action.CondValue{
-			action.CondValue{Type: "And", Key: "accessToken", Val: accessToken },
-		},
-		Fileds: []string{"id", "user_id", "company_id", "type"},
-	}, &replyUserPosition)
+	replyUserPosition, err := utils.UserPosition(accessToken, currentTimestamp)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50001, "UserPosition.Find")}
+		c.Data["json"] = data{Code: ErrorPower, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
+
 	var replyOrder order.Order
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Order", "FindById", &order.Order{
 		Id: orderId,
 	}, &replyOrder)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: Message(50001, "Order.Find")}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
 		c.ServeJSON()
 		return
 	}
 
 	if replyOrder.Status >= 4 {
-		c.Data["json"] = data{Code: Normal, Message: Message(20000), Data: OrderPayResult{
+		c.Data["json"] = data{Code: Normal, Message: "SUCCESS", Data: OrderPayResult{
 			TradeState: "SUCCESS",
 		}}
 		c.ServeJSON()
@@ -403,7 +364,7 @@ func (c *OrderController) PayResult() {
 			},
 		}, &replyApplication)
 		if err != nil {
-			c.Data["json"] = data{Code: ErrorSystem, Message: Message(50001, "Application.Find")}
+			c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
 			c.ServeJSON()
 			return
 		}
@@ -413,7 +374,7 @@ func (c *OrderController) PayResult() {
 			Id: replyOrder.ProductId,
 		}, &replyApplicationTpl)
 		if err != nil {
-			c.Data["json"] = data{Code: ErrorSystem, Message: Message(50001, "ApplicationTpl.Find")}
+			c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
 			c.ServeJSON()
 			return
 		}
@@ -467,7 +428,7 @@ func (c *OrderController) PayResult() {
 			}
 
 			if err != nil {
-				c.Data["json"] = data{Code: ErrorSystem, Message: Message(50001, "Application.Add")}
+				c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
 				c.ServeJSON()
 				return
 			}
@@ -481,12 +442,12 @@ func (c *OrderController) PayResult() {
 				},
 			}, &replyNum)
 			if err != nil {
-				c.Data["json"] = data{Code: ErrorSystem, Message: Message(50001, "Order.Update")}
+				c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
 				c.ServeJSON()
 				return
 			}
 			if replyNum.Value == 0 {
-				c.Data["json"] = data{Code: ErrorLogic, Message: Message(40001, "Order.Update")}
+				c.Data["json"] = data{Code: ErrorLogic, Message: "系统异常，请稍后重试"}
 				c.ServeJSON()
 				return
 			}
