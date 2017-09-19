@@ -272,15 +272,12 @@ func (c *AccountItemController) Detail() {
 		return
 	}
 	log.Println("replyUserPosition:", replyUserPosition)
-
 	var replyAccountItem account.AccountItem
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "AccountItem", "FindById", &action.FindByCond{
-		CondList: []action.CondValue{
-			action.CondValue{"And", "Id", accountItemId},
-		},
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "AccountItem", "FindById", &account.AccountItem{
+		Id: accountItemId,
 	}, &replyAccountItem)
 	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
+		c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试282"}
 		c.ServeJSON()
 		return
 	}
@@ -292,7 +289,7 @@ func (c *AccountItemController) Detail() {
 			Id: replyAccountItem.TransactionId,
 		}, &transactionReply)
 		if err != nil {
-			c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
+			c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试294"}
 			c.ServeJSON()
 			return
 		}
@@ -302,17 +299,15 @@ func (c *AccountItemController) Detail() {
 			c.ServeJSON()
 			return
 		}
-		var accountArgs account.Account
-		accountArgs.Id = transactionReply.ToAccountId
 		var accountReply account.Account
-		err = client.Call(beego.AppConfig.String("EtcdURL"), "Account", "FindById", accountArgs, &accountReply)
+		err = client.Call(beego.AppConfig.String("EtcdURL"), "Account", "FindById", &account.Account{Id: transactionReply.ToAccountId}, &accountReply)
 		if err == nil && accountReply.CompanyId > 0 {
 			var accountReply account.Account
 			err = client.Call(beego.AppConfig.String("EtcdURL"), "Account", "FindById", account.Account{
 				Id: transactionReply.ToAccountId,
 			}, &accountReply)
 			if err != nil {
-				c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
+				c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试312"}
 				c.ServeJSON()
 				return
 			}
