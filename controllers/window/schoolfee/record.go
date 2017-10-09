@@ -427,7 +427,7 @@ func (c *RecordController) UploadRecord() {
 		// Get sheet index.
 		index := xlsx.GetSheetIndex("Sheet1")
 		rows := xlsx.GetRows("sheet" + strconv.Itoa(index))
-		var argsRecordList []schoolfee.Record = make([]schoolfee.Record, len(rows)-1)
+		var argsRecordList []schoolfee.Record = make([]schoolfee.Record, len(rows) - 1)
 		for key, row := range rows {
 			if key > 0 {
 				Price, err := strconv.ParseInt(row[5], 10, 64)
@@ -436,7 +436,7 @@ func (c *RecordController) UploadRecord() {
 					c.ServeJSON()
 					return
 				}
-				argsRecordList[key-1] = schoolfee.Record{
+				argsRecordList[key - 1] = schoolfee.Record{
 					CreateTime: currentTimestamp,
 					UpdateTime: currentTimestamp,
 					CompanyId:  replyUserPosition.CompanyId,
@@ -483,6 +483,7 @@ func (c *RecordController) DownloadRecord() {
 	type data DownloadRecordResponse
 	currentTimestamp := utils.CurrentTimestamp()
 	accessToken := c.GetString("accessToken")
+	projectId, _ := c.GetInt64("projectId")
 	classNames := c.GetString("classNames")
 	isFees := c.GetString("isFees")
 	if accessToken == "" {
@@ -492,15 +493,27 @@ func (c *RecordController) DownloadRecord() {
 	}
 
 	var replyUserPosition user.UserPosition
-	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{CondList: []action.CondValue{action.CondValue{Type: "And", Key: "access_token", Val: accessToken }, action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTimestamp }, }, Fileds: []string{"id", "user_id", "company_id", "type"}, }, &replyUserPosition)
+	err := client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{
+		CondList:[]action.CondValue{action.CondValue{Type: "And", Key: "access_token", Val: accessToken },
+			action.CondValue{Type: "And", Key: "expire_in__gt", Val: currentTimestamp },
+		},
+		Fileds: []string{"id", "user_id", "company_id", "type"},
+	}, &replyUserPosition)
+	if err != nil {
+		c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌失效"}
+		c.ServeJSON()
+		return
+	}
 	var replyRecord []schoolfee.Record
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "Record", "ListByCond", &action.ListByCond{
 		CondList: []action.CondValue{
 			action.CondValue{Type: "And", Key: "company_id", Val: replyUserPosition.CompanyId},
 			action.CondValue{Type: "And", Key: "class_name__in", Val: strings.Split(classNames, ",")},
 			action.CondValue{Type: "And", Key: "is_fee__in", Val: strings.Split(isFees, ",")},
+			action.CondValue{Type: "And", Key: "project_id", Val: projectId},
 		},
 	}, &replyRecord)
+
 	if err != nil {
 		c.Data["json"] = data{Code: ErrorLogic, Message: "下载缴费记录失败"}
 		c.ServeJSON()
@@ -547,7 +560,7 @@ func (c *RecordController) DownloadRecord() {
 	}
 
 	c.Ctx.Output.Header("Accept-Ranges", "bytes")
-	c.Ctx.Output.Header("Content-Disposition", "attachment; filename="+fmt.Sprintf("%s", objectKey)) //文件名
+	c.Ctx.Output.Header("Content-Disposition", "attachment; filename=" + fmt.Sprintf("%s", objectKey)) //文件名
 	c.Ctx.Output.Header("Cache-Control", "must-revalidate, post-check=0, pre-check=0")
 	c.Ctx.Output.Header("Pragma", "no-cache")
 	c.Ctx.Output.Header("Expires", "0")
@@ -616,7 +629,7 @@ func (c *RecordController) ClassList() {
 func RemoveDuplicatesAndEmpty(a []string) (ret []map[string]string) {
 	a_len := len(a)
 	for i := 0; i < a_len; i++ {
-		if (i > 0 && a[i-1] == a[i]) || len(a[i]) == 0 {
+		if (i > 0 && a[i - 1] == a[i]) || len(a[i]) == 0 {
 			continue;
 		}
 		data := make(map[string]string)

@@ -167,7 +167,7 @@ func Reverse(s string) string {
 	return string(r)
 }
 
-func SignURLSample(objectKey string) string {
+func SignURLSample(objectKey string,validityTime int64) string {
 	client, err := oss.New("oss-cn-beijing.aliyuncs.com", "ZCPOvqJlByc96mZb", "8MV5VOzaClwYAlJh0eQuI8M1norVAK")
 	if err != nil {
 		sample.HandleError(err)
@@ -178,7 +178,7 @@ func SignURLSample(objectKey string) string {
 	}
 
 	// put object
-	signedURL, err := bucket.SignURL(objectKey, oss.HTTPGet, 60)
+	signedURL, err := bucket.SignURL(objectKey, oss.HTTPGet, validityTime)
 	if err != nil {
 		sample.HandleError(err)
 	}

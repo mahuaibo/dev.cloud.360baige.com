@@ -1,4 +1,4 @@
-package center
+package safe
 
 import (
 	. "dev.model.360baige.com/http/window/center"

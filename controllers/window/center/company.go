@@ -57,7 +57,7 @@ func (c *CompanyController) Detail() {
 		c.ServeJSON()
 		return
 	}
-	logoUrl := utils.SignURLSample(replyCompany.Logo)
+	logoUrl := utils.SignURLSample(replyCompany.Logo, 60)
 	c.Data["json"] = data{Code: Normal, Message: "获取公司信息成功",
 		Data: CompanyDetail{
 			Id:         replyCompany.Id,
@@ -225,7 +225,7 @@ func (c *CompanyController) UploadLogo() {
 			c.ServeJSON()
 			return
 		}
-		logoUrl := utils.SignURLSample(objectKey)
+		logoUrl := utils.SignURLSample(objectKey, 60)
 		c.Data["json"] = data{Code: Normal, Data: logoUrl, Message: Message(20000)}
 		c.ServeJSON()
 		return
