@@ -109,7 +109,7 @@ func (c *UserPositionController) PositionList() {
 	}
 	for _, value := range replyUserPosition {
 		if listOfCompany[value.CompanyId].Status != -1 {
-			logoUrl := utils.SignURLSample(listOfCompany[value.CompanyId].Logo)
+			logoUrl := utils.SignURLSample(listOfCompany[value.CompanyId].Logo, 3600)
 			resData = append(resData, UserPositionListItem{
 				UserPositionId:   value.Id,
 				UserPositionName: user.UserPositionName(value.Type),
@@ -255,7 +255,7 @@ func (c *UserPositionController) ChangeAccessToken() {
 		return
 	}
 
-	if accessToken == replyUserPosition.AccessToken && currentTimestamp >= replyUserPosition.ExpireIn-user.UserPositionTransitExpireIn {
+	if accessToken == replyUserPosition.AccessToken && currentTimestamp >= replyUserPosition.ExpireIn - user.UserPositionTransitExpireIn {
 		// 变更
 		createAccessToken := utils.CreateAccessValue(strconv.FormatInt(replyUserPosition.Id, 10) + "#" + strconv.FormatInt(replyUserPosition.UserId, 10) + "#" + strconv.FormatInt(currentTimestamp, 10))
 		var replyNum action.Num

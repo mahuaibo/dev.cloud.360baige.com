@@ -77,10 +77,10 @@ func (c *UserController) Login() {
 			replyUser.ExpireIn = expireIn
 		}
 	}
-
+	var userHead = utils.SignURLSample(replyUser.Head, 3600)
 	c.Data["json"] = data{Code: Normal, Message: "SUCCESS", Data: UserLogin{
 		Username:     replyUser.Username,
-		Head:         utils.SignURLSample(replyUser.Head),
+		Head:         userHead,
 		AccessTicket: replyUser.AccessTicket,
 		ExpireIn:     replyUser.ExpireIn,
 	}}
@@ -128,11 +128,11 @@ func (c *UserController) WeChatLogin() {
 		c.ServeJSON()
 		return
 	}
-
+	var userHead = utils.SignURLSample(replyUser.Head, 3600)
 	if replyUser.Id != 0 && replyUser.Status == 0 {
 		c.Data["json"] = data{Code: Normal, Message: "SUCCESS", Data: UserLogin{
 			Username:     replyUser.Username,
-			Head:         utils.SignURLSample(replyUser.Head),
+			Head:userHead,
 			AccessTicket: replyUser.AccessTicket,
 			ExpireIn:     replyUser.ExpireIn,
 		}}
@@ -229,7 +229,7 @@ func (c *UserController) WeChatBindAccount() {
 		if currentTimestamp > replyUser.ExpireIn {
 			createAccessTicket := utils.CreateAccessValue(replyUser.Username + "#" + strconv.FormatInt(currentTimestamp, 10))
 			var updateReply action.Num
-			expireIn := currentTimestamp + 60*1000
+			expireIn := currentTimestamp + 60 * 1000
 			err = client.Call(beego.AppConfig.String("EtcdURL"), "User", "UpdateById", action.UpdateByIdCond{
 				Id: []int64{replyUser.Id},
 				UpdateList: []action.UpdateValue{
@@ -338,9 +338,10 @@ func (c *UserController) WeChatBindAccount() {
 		replyUser.AccessTicket = utils.CreateAccessValue(username)
 	}
 
+	var userHead = utils.SignURLSample(replyUser.Head, 3600)
 	c.Data["json"] = data{Code: Normal, Message: "SUCCESS", Data: UserLogin{
 		Username:     replyUser.Username,
-		Head:         utils.SignURLSample(replyUser.Head),
+		Head:         userHead,
 		AccessTicket: replyUser.AccessTicket,
 		ExpireIn:     replyUser.ExpireIn,
 	}}
@@ -383,7 +384,7 @@ func (c *UserController) Detail() {
 		return
 	}
 
-	headUrl := utils.SignURLSample(reply.Head)
+	headUrl := utils.SignURLSample(reply.Head, 3600)
 	c.Data["json"] = data{Code: Normal, Message: "获取用户信息成功", Data: UserDetail{
 		Id:       reply.Id,
 		Username: reply.Username,
@@ -789,7 +790,7 @@ func (c *UserController) UploadHead() {
 			c.ServeJSON()
 			return
 		}
-		headUrl := utils.SignURLSample(objectKey)
+		headUrl := utils.SignURLSample(objectKey, 3600)
 		c.Data["json"] = data{Code: Normal, Data: headUrl, Message: "用户头像上传成功"}
 		c.ServeJSON()
 		return

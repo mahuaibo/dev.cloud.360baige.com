@@ -79,6 +79,7 @@ func (c *UserController) Login() {
 		}
 	}
 
+	headUrl := utils.SignURLSample(replyUser.Head, 3600)
 	c.Data["json"] = data{Code: Normal, Message: "SUCCESS", Data: UserLogin{
 		Username:     replyUser.Username,
 		Head:         headUrl,
@@ -180,8 +181,7 @@ func (c *UserController) QqLogin() {
 			action.CondValue{Type: "And", Key: "status", Val: user.UserStatusNormal},
 		},
 	}, &replyUser)
-	fmt.Println("replyUser", replyUser)
-	fmt.Println("err", err)
+
 	if err != nil {
 		c.Data["json"] = data{Code: ErrorSystem, Message: "登陆失败"}
 		c.ServeJSON()
@@ -224,7 +224,7 @@ func (c *UserController) BindAccount() {
 	verifyCode := c.GetString("verifyCode")
 	openType := c.GetString("openType")
 	openId := c.GetString("openId")
-	err := utils.Unable(map[string]string{"username": "string:true", "password": "string:true", "phone": "string:true", "verifyCode": "string:true", "openId": "string:true"}, c.Ctx.Input)
+	err := utils.Unable(map[string]string{"username": "string:true", "password": "string:true", "phone": "string:false", "verifyCode": "string:false", "openId": "string:true"}, c.Ctx.Input)
 	if err != nil {
 		c.Data["json"] = data{Code: ErrorLogic, Message: err.Error()}
 		c.ServeJSON()

@@ -11,7 +11,6 @@ import (
 	"encoding/json"
 	"dev.cloud.360baige.com/utils"
 	"dev.cloud.360baige.com/utils/pay/wechat"
-	"dev.cloud.360baige.com/utils/pay/alipay"
 	"strings"
 	"dev.cloud.360baige.com/log"
 	"dev.model.360baige.com/models/account"
@@ -19,21 +18,6 @@ import (
 
 type OrderController struct {
 	beego.Controller
-}
-
-// @Title 订单列表接口
-// @Description 订单列表接口
-// @Success 200 {"code":200,"message":"获取订单列表成功"}
-// @Param   accessToken     query   string true       "访问令牌"
-// @Param   date     query   string true       "账单日期：2017-07"
-// @Param   current     query   string true       "当前页"
-// @Param   pageSize     query   string true       "每页数量"
-// @Param   status     query   string true       "状态 -1销毁 0 待付款 1待发货 2 待收货 3待评价 4完成 5退货/售后"
-// @Failure 400 {"code":400,"message":"获取订单列表信息失败"}
-// @router /addd [get]
-func (c *OrderController) Addd() {
-	alipay.CreateUrl()
-	return
 }
 
 // @Title 订单列表接口
@@ -290,7 +274,7 @@ func (c *OrderController) Add() {
 		return
 	}
 	// NATIVE MWEB
-	unifyOrderResponse, err := wechat.UnifiedOrder(remoteAddr[0], replyApplicationTpl.Name, orderCode, tradeType, replyApplicationTpl.Price*num)
+	unifyOrderResponse, err := wechat.UnifiedOrder(remoteAddr[0], replyApplicationTpl.Name, orderCode, tradeType, replyApplicationTpl.Price * num)
 	if err != nil {
 		c.Data["json"] = data{Code: ErrorSystem, Message: "统一下单失败"}
 		c.ServeJSON()
