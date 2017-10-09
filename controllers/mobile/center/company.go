@@ -4,7 +4,7 @@ import (
 	"github.com/astaxie/beego"
 	"dev.cloud.360baige.com/rpc/client"
 	"dev.model.360baige.com/models/company"
-	. "dev.model.360baige.com/http/window/center"
+	. "dev.model.360baige.com/http/mobile/center"
 	"dev.model.360baige.com/action"
 	"dev.cloud.360baige.com/utils"
 	"dev.cloud.360baige.com/log"
@@ -50,7 +50,7 @@ func (c *CompanyController) Detail() {
 		c.ServeJSON()
 		return
 	}
-	logoUrl := utils.SignURLSample(replyCompany.Logo, 60)
+	logoUrl := utils.SignURLSample(replyCompany.Logo)
 	c.Data["json"] = data{Code: Normal, Message: "获取公司信息成功",
 		Data: CompanyDetail{
 			Id:         replyCompany.Id,

@@ -3,7 +3,7 @@ package center
 import (
 	"github.com/astaxie/beego"
 	"dev.cloud.360baige.com/rpc/client"
-	. "dev.model.360baige.com/http/window/center"
+	. "dev.model.360baige.com/http/mobile/center"
 	"dev.model.360baige.com/models/account"
 	"dev.model.360baige.com/action"
 	"dev.cloud.360baige.com/utils"

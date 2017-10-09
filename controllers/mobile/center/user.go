@@ -5,13 +5,12 @@ import (
 	"dev.cloud.360baige.com/rpc/client"
 	"dev.cloud.360baige.com/utils"
 	"dev.model.360baige.com/models/user"
-	. "dev.model.360baige.com/http/window/center"
+	. "dev.model.360baige.com/http/mobile/center"
 	"dev.model.360baige.com/action"
 	"sms.sdk.360baige.com/send"
 	"strconv"
 	"dev.model.360baige.com/models/account"
 	"dev.cloud.360baige.com/utils/login/wechat"
-	"dev.cloud.360baige.com/utils/login/qq"
 )
 
 // USER API
@@ -81,7 +80,7 @@ func (c *UserController) Login() {
 
 	c.Data["json"] = data{Code: Normal, Message: "SUCCESS", Data: UserLogin{
 		Username:     replyUser.Username,
-		Head:         headUrl,
+		Head:         utils.SignURLSample(replyUser.Head),
 		AccessTicket: replyUser.AccessTicket,
 		ExpireIn:     replyUser.ExpireIn,
 	}}
@@ -130,91 +129,31 @@ func (c *UserController) WeChatLogin() {
 		return
 	}
 
-	headUrl := utils.SignURLSample(replyUser.Head, 3600)
 	if replyUser.Id != 0 && replyUser.Status == 0 {
 		c.Data["json"] = data{Code: Normal, Message: "SUCCESS", Data: UserLogin{
 			Username:     replyUser.Username,
-			Head:         headUrl,
+			Head:         utils.SignURLSample(replyUser.Head),
 			AccessTicket: replyUser.AccessTicket,
 			ExpireIn:     replyUser.ExpireIn,
 		}}
 		c.ServeJSON()
 		return
 	}
-
-	type bindData  UserBindResponse
-	c.Data["json"] = bindData{Code: ErrorUnBind, Message: "账号未绑定", Data:UserBind{
-		OpenType:1,
-		OpenId:userInfo.Openid,
+	type bindData UserBindResponse
+	c.Data["json"] = bindData{Code: ErrorUnBind, Message: "", Data: UserBind{
+		OpenId: userInfo.Openid,
 	}}
 	c.ServeJSON()
 	return
 }
 
-// @Title qq登录接口
-// @Description qq登录接口
-// @Success 200 {"code":200,"message":"登录成功"}
-// @Param   code     query   string true       ""
-// @Failure 400 {"code":400,"message":"登录失败"}
-// @router /qqLogin [post]
-func (c *UserController) QqLogin() {
-	type data UserLoginResponse
-	code := c.GetString("code")
-	if code == "" {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "登录失败"}
-		c.ServeJSON()
-		return
-	}
-
-	userInfo, err := qq.GetUserInfo(code)
-	if err != nil || userInfo.Openid == "" {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "登录失败"}
-		c.ServeJSON()
-		return
-	}
-
-	var replyUser user.User
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "User", "FindByCond", action.FindByCond{
-		CondList: []action.CondValue{
-			action.CondValue{Type: "And", Key: "qq_open_id", Val: userInfo.Openid},
-			action.CondValue{Type: "And", Key: "status", Val: user.UserStatusNormal},
-		},
-	}, &replyUser)
-	fmt.Println("replyUser", replyUser)
-	fmt.Println("err", err)
-	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "登陆失败"}
-		c.ServeJSON()
-		return
-	}
-	// 判断数据真实有效
-	if replyUser.Id != 0 && replyUser.Status == 0 {
-		headUrl := utils.SignURLSample(replyUser.Head, 3600)
-		c.Data["json"] = data{Code: Normal, Message: "登陆成功", Data:UserLogin{
-			Username:     replyUser.Username,
-			Head:         headUrl,
-			AccessTicket: replyUser.AccessTicket,
-			ExpireIn:     replyUser.ExpireIn,
-		}}
-		c.ServeJSON()
-		return
-	}
-	type bindData  UserBindResponse
-	c.Data["json"] = bindData{Code: ErrorUnBind, Message: "账号未绑定", Data:UserBind{
-		OpenType:2,
-		OpenId:userInfo.Openid,
-	}}
-	c.ServeJSON()
-	return
-}
-
-// @Title 账号绑定
+// @Title 微信账号绑定
 // @Description 微信账号绑定
 // @Success 200 {"code":200,"message":"登录成功"}
 // @Param   openId     query   string true       ""
 // @Failure 400 {"code":400,"message":"登录失败"}
 // @router /bindAccount [post]
-func (c *UserController) BindAccount() {
+func (c *UserController) WeChatBindAccount() {
 	type data UserLoginResponse
 	currentTimestamp := utils.CurrentTimestamp()
 	Type, _ := c.GetInt64("type")
@@ -222,7 +161,6 @@ func (c *UserController) BindAccount() {
 	password := c.GetString("password")
 	phone := c.GetString("phone")
 	verifyCode := c.GetString("verifyCode")
-	openType := c.GetString("openType")
 	openId := c.GetString("openId")
 	err := utils.Unable(map[string]string{"username": "string:true", "password": "string:true", "phone": "string:true", "verifyCode": "string:true", "openId": "string:true"}, c.Ctx.Input)
 	if err != nil {
@@ -252,16 +190,10 @@ func (c *UserController) BindAccount() {
 			return
 		}
 
-		if openType == "1" {
-			openType = "wx_open_id"
-		} else {
-			openType = "qq_open_id"
-		}
-
 		var replyWxUser user.User
 		err = client.Call(beego.AppConfig.String("EtcdURL"), "User", "FindByCond", action.FindByCond{
 			CondList: []action.CondValue{
-				action.CondValue{Type: "And", Key: openType, Val: openId},
+				action.CondValue{Type: "And", Key: "wx_open_id", Val: openId},
 			},
 		}, &replyWxUser)
 		if err != nil {
@@ -280,7 +212,7 @@ func (c *UserController) BindAccount() {
 			Id: []int64{replyUser.Id},
 			UpdateList: []action.UpdateValue{
 				action.UpdateValue{Key: "update_time", Val: currentTimestamp},
-				action.UpdateValue{Key: openType, Val: openId},
+				action.UpdateValue{Key: "wx_open_id", Val: openId},
 			},
 		}, &replyNum)
 		if err != nil {
@@ -297,7 +229,7 @@ func (c *UserController) BindAccount() {
 		if currentTimestamp > replyUser.ExpireIn {
 			createAccessTicket := utils.CreateAccessValue(replyUser.Username + "#" + strconv.FormatInt(currentTimestamp, 10))
 			var updateReply action.Num
-			expireIn := currentTimestamp + 60 * 1000
+			expireIn := currentTimestamp + 60*1000
 			err = client.Call(beego.AppConfig.String("EtcdURL"), "User", "UpdateById", action.UpdateByIdCond{
 				Id: []int64{replyUser.Id},
 				UpdateList: []action.UpdateValue{
@@ -338,31 +270,16 @@ func (c *UserController) BindAccount() {
 			c.ServeJSON()
 			return
 		}
-
-		var addUserData user.User
-		if openType == "1" {
-			addUserData = user.User{
-				CreateTime:   currentTimestamp,
-				UpdateTime:   currentTimestamp,
-				Username:     username,
-				Password:     password,
-				Phone:        phone,
-				WxOpenId:     openId,
-				AccessTicket: utils.CreateAccessValue(username),
-			}
-		} else {
-			addUserData = user.User{
-				CreateTime:   currentTimestamp,
-				UpdateTime:   currentTimestamp,
-				Username:     username,
-				Password:     password,
-				Phone:        phone,
-				QqOpenId:     openId,
-				AccessTicket: utils.CreateAccessValue(username),
-			}
-		}
 		// 注册
-		err = client.Call(beego.AppConfig.String("EtcdURL"), "User", "Add", addUserData, &replyUser)
+		err = client.Call(beego.AppConfig.String("EtcdURL"), "User", "Add", &user.User{
+			CreateTime:   currentTimestamp,
+			UpdateTime:   currentTimestamp,
+			Username:     username,
+			Password:     password,
+			Phone:        phone,
+			WxOpenId:     openId,
+			AccessTicket: utils.CreateAccessValue(username),
+		}, &replyUser)
 		if err != nil {
 			c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
 			c.ServeJSON()
@@ -420,10 +337,10 @@ func (c *UserController) BindAccount() {
 		replyUser.Username = username
 		replyUser.AccessTicket = utils.CreateAccessValue(username)
 	}
-	headUrl := utils.SignURLSample(replyUser.Head, 3600)
-	c.Data["json"] = data{Code: Normal, Message: "登录成功", Data: UserLogin{
+
+	c.Data["json"] = data{Code: Normal, Message: "SUCCESS", Data: UserLogin{
 		Username:     replyUser.Username,
-		Head:headUrl,
+		Head:         utils.SignURLSample(replyUser.Head),
 		AccessTicket: replyUser.AccessTicket,
 		ExpireIn:     replyUser.ExpireIn,
 	}}
@@ -466,7 +383,7 @@ func (c *UserController) Detail() {
 		return
 	}
 
-	headUrl := utils.SignURLSample(reply.Head, 3600)
+	headUrl := utils.SignURLSample(reply.Head)
 	c.Data["json"] = data{Code: Normal, Message: "获取用户信息成功", Data: UserDetail{
 		Id:       reply.Id,
 		Username: reply.Username,
@@ -872,7 +789,7 @@ func (c *UserController) UploadHead() {
 			c.ServeJSON()
 			return
 		}
-		headUrl := utils.SignURLSample(objectKey, 60)
+		headUrl := utils.SignURLSample(objectKey)
 		c.Data["json"] = data{Code: Normal, Data: headUrl, Message: "用户头像上传成功"}
 		c.ServeJSON()
 		return

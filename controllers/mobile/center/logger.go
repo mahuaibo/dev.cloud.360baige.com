@@ -4,7 +4,7 @@ import (
 	"github.com/astaxie/beego"
 	"dev.cloud.360baige.com/rpc/client"
 	"dev.model.360baige.com/models/logger"
-	. "dev.model.360baige.com/http/window/center"
+	. "dev.model.360baige.com/http/mobile/center"
 	"dev.model.360baige.com/action"
 	"encoding/json"
 	"dev.cloud.360baige.com/utils"

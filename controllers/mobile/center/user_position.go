@@ -1,7 +1,7 @@
 package center
 
 import (
-	. "dev.model.360baige.com/http/window/center"
+	. "dev.model.360baige.com/http/mobile/center"
 	"github.com/astaxie/beego"
 	"dev.cloud.360baige.com/rpc/client"
 	"dev.model.360baige.com/models/user"
@@ -109,7 +109,7 @@ func (c *UserPositionController) PositionList() {
 	}
 	for _, value := range replyUserPosition {
 		if listOfCompany[value.CompanyId].Status != -1 {
-			logoUrl := utils.SignURLSample(listOfCompany[value.CompanyId].Logo, 60)
+			logoUrl := utils.SignURLSample(listOfCompany[value.CompanyId].Logo)
 			resData = append(resData, UserPositionListItem{
 				UserPositionId:   value.Id,
 				UserPositionName: user.UserPositionName(value.Type),
@@ -255,7 +255,7 @@ func (c *UserPositionController) ChangeAccessToken() {
 		return
 	}
 
-	if accessToken == replyUserPosition.AccessToken && currentTimestamp >= replyUserPosition.ExpireIn - user.UserPositionTransitExpireIn {
+	if accessToken == replyUserPosition.AccessToken && currentTimestamp >= replyUserPosition.ExpireIn-user.UserPositionTransitExpireIn {
 		// 变更
 		createAccessToken := utils.CreateAccessValue(strconv.FormatInt(replyUserPosition.Id, 10) + "#" + strconv.FormatInt(replyUserPosition.UserId, 10) + "#" + strconv.FormatInt(currentTimestamp, 10))
 		var replyNum action.Num
