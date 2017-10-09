@@ -1,35 +1,21 @@
 package alipay
 
 import (
-	"net/http"
+	"github.com/smartwalle/alipay"
+	"net/url"
 )
 
-type AlipayClient struct {
-	client *http.Client
-	//URL               string
-	//APPID             string
-	//APP_PRIVATE_KEY   string
-	//FORMAT            string
-	//CHARSET           string
-	//ALIPAY_PUBLIC_KEY string
-	//SIGN_TYPE         string
+var client = alipay.New(appID, partnerID, publicKey, privateKey, true)
 
-	//partnerId         string
-	//publicKey         string
-	//privateKey        string
-	//AliPayPublicKey   string
-	//SignType          string
-}
+func TradePagePay(Subject, OutTradeNo, TotalAmount, QRCodeWidth string) (*url.URL, error) {
 
-func DefaultAlipayClient() *AlipayClient {
-	return &AlipayClient{
-		client: http.DefaultClient,
-		//URL:               URL,
-		//APPID:             APPID,
-		//APP_PRIVATE_KEY:   APP_PRIVATE_KEY,
-		//FORMAT:            FORMAT,
-		//CHARSET:           CHARSET,
-		//ALIPAY_PUBLIC_KEY: ALIPAY_PUBLIC_KEY,
-		//SIGN_TYPE:         SIGN_TYPE,
-	}
+	res, err := client.TradePagePay(alipay.AliPayTradePagePay{
+		Subject:     Subject,
+		OutTradeNo:  OutTradeNo,
+		TotalAmount: TotalAmount,
+		ProductCode: "FAST_INSTANT_TRADE_PAY",
+		QRPayMode:   "4",
+		QRCodeWidth: QRCodeWidth,
+	})
+	return res, err
 }
