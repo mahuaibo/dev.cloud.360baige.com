@@ -379,7 +379,7 @@ func (c *UserController) BindAccount() {
 	headUrl := utils.SignURLSample(replyUser.Head, 3600)
 	c.Data["json"] = data{Code: Normal, Message: "登录成功", Data: UserLogin{
 		Username:     replyUser.Username,
-		Head:headUrl,
+		Head:         headUrl,
 		AccessTicket: replyUser.AccessTicket,
 		ExpireIn:     replyUser.ExpireIn,
 	}}

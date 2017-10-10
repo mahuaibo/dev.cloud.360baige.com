@@ -10,10 +10,13 @@ import (
 	"dev.model.360baige.com/action"
 	"encoding/json"
 	"dev.cloud.360baige.com/utils"
+	"dev.cloud.360baige.com/utils/money"
 	"dev.cloud.360baige.com/utils/pay/wechat"
+	"dev.cloud.360baige.com/utils/pay/alipay"
 	"strings"
 	"dev.cloud.360baige.com/log"
 	"dev.model.360baige.com/models/account"
+	"fmt"
 )
 
 type OrderController struct {
@@ -215,9 +218,13 @@ func (c *OrderController) Add() {
 	accessToken := c.GetString("accessToken")
 	applicationTplId, _ := c.GetInt64("applicationTplId")
 	num, _ := c.GetInt64("num", 0)
+	fmt.Println("商品数量", num)
 	payType, _ := c.GetInt("payType", 1)
+	fmt.Println("支付方式：1微信 2支付宝", payType)
 	tradeType := c.GetString("tradeType", "NATIVE")
+	orderId, _ := c.GetInt64("orderId", 0)
 	remoteAddr := strings.Split(c.Ctx.Request.RemoteAddr, ":")
+	fmt.Println("订单编号", orderId)
 
 	err := utils.Unable(map[string]string{"accessToken": "string:true", "payType": "int:true", "applicationTplId": "int:true", "num": "int:true"}, c.Ctx.Input)
 	if err != nil {
@@ -225,7 +232,6 @@ func (c *OrderController) Add() {
 		c.ServeJSON()
 		return
 	}
-
 	replyUserPosition, err := utils.UserPosition(accessToken, currentTimestamp)
 	if err != nil {
 		c.Data["json"] = data{Code: ErrorPower, Message: err.Error()}
@@ -242,68 +248,150 @@ func (c *OrderController) Add() {
 		c.ServeJSON()
 		return
 	}
-	orderCode := utils.Datetime(currentTimestamp, "20060102150405") + utils.RandomNum(6)
-	var replyOrder order.Order
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "Order", "Add", &order.Order{
-		CreateTime:       currentTimestamp,
-		UpdateTime:       currentTimestamp,
-		CompanyId:        replyUserPosition.CompanyId,
-		UserId:           replyUserPosition.UserId,
-		UserPositionType: replyUserPosition.Type,
-		UserPositionId:   replyUserPosition.Id,
-		Code:             orderCode,
-		Price:            replyApplicationTpl.Price,
-		Num:              num,
-		TotalPrice:       replyApplicationTpl.Price * num,
-		ProductType:      0,
-		Image:            replyApplicationTpl.Image,
-		ProductId:        replyApplicationTpl.Id,
-		PayType:          payType,
-		Brief:            replyApplicationTpl.Name,
-		Status:           0,
-	}, &replyOrder)
-	log.Println("replyOrder:", replyOrder)
-	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
-		c.ServeJSON()
-		return
-	}
-	if replyOrder.Id == 0 {
-		c.Data["json"] = data{Code: ErrorLogic, Message: "访问令牌失效"}
-		c.ServeJSON()
-		return
-	}
-	// NATIVE MWEB
-	unifyOrderResponse, err := wechat.UnifiedOrder(remoteAddr[0], replyApplicationTpl.Name, orderCode, tradeType, replyApplicationTpl.Price * num)
-	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "统一下单失败"}
-		c.ServeJSON()
-		return
-	}
-	url := unifyOrderResponse.Code_url
-	if url == "" {
-		url = unifyOrderResponse.Mweb_url
-	}
-	var replyNum *action.Num
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "Order", "UpdateById", &action.UpdateByIdCond{
-		Id: []int64{replyOrder.Id},
-		UpdateList: []action.UpdateValue{
-			action.UpdateValue{"UpdateTime", currentTimestamp},
-			action.UpdateValue{"TradeType", unifyOrderResponse.Trade_type},
-			action.UpdateValue{"PrepayId", unifyOrderResponse.Prepay_id},
-			action.UpdateValue{"CodeUrl", url},
-			action.UpdateValue{"Openid", unifyOrderResponse.Openid},
-		},
-	}, &replyNum)
-	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
-		c.ServeJSON()
-		return
-	}
 
-	c.Data["json"] = data{Code: Normal, Message: "订单新增成功", Data: OrderAdd{Id: replyOrder.Id, CodeUrl: unifyOrderResponse.Code_url}}
-	c.ServeJSON()
-	return
+	var code, subCode, codeUrl, prepayId, openid string
+	if orderId == 0 {
+		// 新增订单
+		// 1 生产订单编号 14 + 10 = 24
+		code = utils.Datetime(currentTimestamp, "20060102150405") + utils.RandomNum(10)
+		subCode = utils.RandomString(8)
+		orderCode := code + subCode
+		if payType == 1 {
+			//微信 NATIVE MWEB
+			unifyOrderResponse, err := wechat.UnifiedOrder(remoteAddr[0], replyApplicationTpl.Name, orderCode, tradeType, replyApplicationTpl.Price*num)
+			if err != nil {
+				c.Data["json"] = data{Code: ErrorSystem, Message: "统一下单失败"}
+				c.ServeJSON()
+				return
+			}
+			fmt.Println("unifyOrderResponse:", unifyOrderResponse)
+			codeUrl = unifyOrderResponse.Code_url
+			prepayId = unifyOrderResponse.Prepay_id
+			openid = unifyOrderResponse.Openid
+		} else if payType == 2 {
+			// 价格需要处理 replyApplicationTpl.Price*num
+			result, err := alipay.TradePagePay(replyApplicationTpl.Name, orderCode, money.CentToDollar(replyApplicationTpl.Price*num), "200")
+			if err != nil {
+				c.Data["json"] = data{Code: ErrorSystem, Message: "统一下单失败"}
+				c.ServeJSON()
+				return
+			}
+			codeUrl = result.String()
+		}
+		var replyOrder order.Order
+		err = client.Call(beego.AppConfig.String("EtcdURL"), "Order", "Add", &order.Order{
+			CreateTime:       currentTimestamp,
+			UpdateTime:       currentTimestamp,
+			CompanyId:        replyUserPosition.CompanyId,
+			UserId:           replyUserPosition.UserId,
+			UserPositionType: replyUserPosition.Type,
+			UserPositionId:   replyUserPosition.Id,
+			Code:             code,
+			SubCode:          subCode,
+			Price:            replyApplicationTpl.Price,
+			Num:              num,
+			TotalPrice:       replyApplicationTpl.Price * num,
+			ProductType:      0,
+			Image:            replyApplicationTpl.Image,
+			ProductId:        replyApplicationTpl.Id,
+			PayType:          payType,
+			Brief:            replyApplicationTpl.Name,
+			TradeType:        tradeType,
+			PrepayId:         prepayId,
+			CodeUrl:          codeUrl,
+			Openid:           openid,
+			Status:           0,
+		}, &replyOrder)
+		if err != nil {
+			c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
+			c.ServeJSON()
+			return
+		}
+
+		c.Data["json"] = data{Code: Normal, Message: "订单新增成功", Data: OrderAdd{Id: replyOrder.Id, PayType: payType, CodeUrl: codeUrl }}
+		c.ServeJSON()
+		return
+	} else {
+		// 查询原订单信息
+		var replyOrder order.Order
+		err = client.Call(beego.AppConfig.String("EtcdURL"), "Order", "FindById", &order.Order{
+			Id: orderId,
+		}, &replyOrder)
+		// 注销原订单
+		if replyOrder.PayType == 1 {
+			res, err := wechat.CloseOrder(replyOrder.Code + replyOrder.SubCode)
+			if err != nil {
+				c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
+				c.ServeJSON()
+				return
+			} else {
+				fmt.Println("res:", res)
+			}
+
+		} else if replyOrder.PayType == 2 {
+			res, err := alipay.TradeClose(replyOrder.Code + replyOrder.SubCode)
+			if err != nil {
+				c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
+				c.ServeJSON()
+				return
+			} else {
+				fmt.Println("res:", res)
+			}
+		}
+
+		code = replyOrder.Code
+		subCode = utils.RandomString(8)
+		orderCode := code + subCode
+		// 重新下单
+		if payType == 1 {
+			//微信 NATIVE MWEB
+			unifyOrderResponse, err := wechat.UnifiedOrder(remoteAddr[0], replyApplicationTpl.Name, orderCode, tradeType, replyApplicationTpl.Price*num)
+			if err != nil {
+				c.Data["json"] = data{Code: ErrorSystem, Message: "统一下单失败"}
+				c.ServeJSON()
+				return
+			}
+			fmt.Println("unifyOrderResponse:", unifyOrderResponse)
+			codeUrl = unifyOrderResponse.Code_url
+			prepayId = unifyOrderResponse.Prepay_id
+			openid = unifyOrderResponse.Openid
+		} else if payType == 2 {
+			// 价格需要处理 replyApplicationTpl.Price*num
+			result, err := alipay.TradePagePay(replyApplicationTpl.Name, orderCode, money.CentToDollar(replyApplicationTpl.Price*num), "200")
+			if err != nil {
+				c.Data["json"] = data{Code: ErrorSystem, Message: "统一下单失败"}
+				c.ServeJSON()
+				return
+			}
+			fmt.Println("result:", result)
+			codeUrl = result.String()
+		}
+		// 更新订单信息
+		var replyNum action.Num
+		err = client.Call(beego.AppConfig.String("EtcdURL"), "Order", "UpdateById", &action.UpdateByIdCond{
+			Id: []int64{orderId},
+			UpdateList: []action.UpdateValue{
+				action.UpdateValue{"update_time", currentTimestamp},
+				action.UpdateValue{"sub_code", subCode},
+				action.UpdateValue{"pay_type", payType},
+				action.UpdateValue{"num", num},
+				action.UpdateValue{"total_price", replyApplicationTpl.Price * num},
+				action.UpdateValue{"trade_type", tradeType},
+				action.UpdateValue{"prepay_id", prepayId},
+				action.UpdateValue{"code_url", codeUrl},
+				action.UpdateValue{"openid", openid},
+			},
+		}, &replyNum)
+		if err != nil {
+			c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
+			c.ServeJSON()
+			return
+		}
+		c.Data["json"] = data{Code: Normal, Message: "订单新增成功", Data: OrderAdd{Id: orderId, PayType: payType, CodeUrl: codeUrl }}
+		c.ServeJSON()
+		return
+
+	}
 }
 
 // @Title 订单支付结果
@@ -379,15 +467,43 @@ func (c *OrderController) PayResult() {
 			return
 		}
 
-		orderQuery, err := wechat.OrderQuery(replyOrder.Code)
-		if err != nil {
-			c.Data["json"] = data{Code: ErrorSystem, Message: err.Error()}
-			c.ServeJSON()
-			return
+		var flag bool = false
+		if replyOrder.PayType == 1 {
+			res, err := wechat.OrderQuery(replyOrder.Code + replyOrder.SubCode)
+			if err != nil {
+				c.Data["json"] = data{Code: ErrorSystem, Message: err.Error()}
+				c.ServeJSON()
+				return
+			}
+			fmt.Println("-==============================:", res, err)
+			if res.ReturnCode == "SUCCESS" && res.ResultCode == "SUCCESS" && res.TradeState == "SUCCESS" {
+				flag = true
+				tradeState = "SUCCESS"
+			} else if res.TradeState == "NOTPAY" || res.TradeState == "USERPAYING" {
+				tradeState = "WAIT"
+			} else {
+				tradeState = "FAIL"
+			}
+		} else if replyOrder.PayType == 2 {
+			res, err := alipay.TradeQuery(replyOrder.Code + replyOrder.SubCode)
+			if err != nil {
+				c.Data["json"] = data{Code: ErrorSystem, Message: err.Error()}
+				c.ServeJSON()
+				return
+			}
+			fmt.Println("-==============================:", res, err)
+			if res.IsSuccess() && res.AliPayTradeQuery.TradeStatus == "TRADE_SUCCESS" {
+				flag = true
+				tradeState = "SUCCESS"
+			} else if res.AliPayTradeQuery.TradeStatus == "WAIT_BUYER_PAY" {
+				tradeState = "WAIT"
+			} else {
+				//tradeState = "FAIL"
+				tradeState = "WAIT"
+			}
 		}
 
-		tradeState = orderQuery.TradeState
-		if orderQuery.ReturnCode == "SUCCESS" && orderQuery.ResultCode == "SUCCESS" && orderQuery.TradeState == "SUCCESS" {
+		if flag {
 			// have application
 			if replyApplication.Id > 0 {
 				// 修改时间
@@ -451,6 +567,8 @@ func (c *OrderController) PayResult() {
 				c.ServeJSON()
 				return
 			}
+
+			// 关注+
 			err = client.Call(beego.AppConfig.String("EtcdURL"), "ApplicationTpl", "UpdateById", &action.UpdateByIdCond{
 				Id: []int64{replyApplicationTpl.Id},
 				UpdateList: []action.UpdateValue{
@@ -496,8 +614,6 @@ func (c *OrderController) PayResult() {
 					action.CondValue{"And", "Type", account.AccountTypeMoney},
 				},
 			}, replyOrder.TotalPrice, replyOrder.Code, replyOrder.Brief)
-
-		} else if orderQuery.ReturnCode == "SUCCESS" && orderQuery.ResultCode == "SUCCESS" && orderQuery.TradeState == "SUCCESS" {
 
 		}
 	}

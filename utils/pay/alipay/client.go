@@ -1,35 +1,38 @@
 package alipay
 
 import (
-	"net/http"
+	"github.com/smartwalle/alipay"
+	"net/url"
+	"fmt"
 )
 
-type AlipayClient struct {
-	client *http.Client
-	//URL               string
-	//APPID             string
-	//APP_PRIVATE_KEY   string
-	//FORMAT            string
-	//CHARSET           string
-	//ALIPAY_PUBLIC_KEY string
-	//SIGN_TYPE         string
+var client = alipay.New(appID, partnerID, publicKey, privateKey, true)
 
-	//partnerId         string
-	//publicKey         string
-	//privateKey        string
-	//AliPayPublicKey   string
-	//SignType          string
+func TradePagePay(Subject, OutTradeNo, TotalAmount, QRCodeWidth string) (*url.URL, error) {
+	fmt.Println("TradePagePay=OutTradeNo", OutTradeNo)
+	res, err := client.TradePagePay(alipay.AliPayTradePagePay{
+		Subject:     Subject,
+		OutTradeNo:  OutTradeNo,
+		TotalAmount: TotalAmount,
+		ProductCode: "FAST_INSTANT_TRADE_PAY",
+		QRPayMode:   "4",
+		QRCodeWidth: QRCodeWidth,
+	})
+	return res, err
 }
 
-func DefaultAlipayClient() *AlipayClient {
-	return &AlipayClient{
-		client: http.DefaultClient,
-		//URL:               URL,
-		//APPID:             APPID,
-		//APP_PRIVATE_KEY:   APP_PRIVATE_KEY,
-		//FORMAT:            FORMAT,
-		//CHARSET:           CHARSET,
-		//ALIPAY_PUBLIC_KEY: ALIPAY_PUBLIC_KEY,
-		//SIGN_TYPE:         SIGN_TYPE,
-	}
+func TradeClose(OutTradeNo string) (*alipay.AliPayTradeCloseResponse, error) {
+	fmt.Println("TradeClose=OutTradeNo", OutTradeNo)
+	res, err := client.TradeClose(alipay.AliPayTradeClose{
+		OutTradeNo: OutTradeNo,
+	})
+	return res, err
+}
+
+func TradeQuery(OutTradeNo string) (*alipay.AliPayTradeQueryResponse, error) {
+	fmt.Println("TradeQuery=OutTradeNo", OutTradeNo)
+	res, err := client.TradeQuery(alipay.AliPayTradeQuery{
+		OutTradeNo: OutTradeNo,
+	})
+	return res, err
 }

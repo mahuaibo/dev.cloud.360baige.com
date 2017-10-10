@@ -20,6 +20,7 @@ var (
 	notify_url   = "http://wxpay.figool.cn/account"
 	unifiedorder = "https://api.mch.weixin.qq.com/pay/unifiedorder"
 	orderquery   = "https://api.mch.weixin.qq.com/pay/orderquery"
+	closeorder   = "https://api.mch.weixin.qq.com/pay/closeorder"
 	key          = "17DA9CAF1E16CF508609FEB6944CE97A"
 )
 
@@ -210,6 +211,75 @@ func OrderQuery(out_trade_no string) (OrderQueryResponse, error) {
 	log.Println("str_req:", str_req)
 	bytes_req = []byte(str_req)
 	req, err := http.NewRequest("POST", orderquery, bytes.NewReader(bytes_req))
+	if err != nil {
+		return xmlResp, err
+	}
+	req.Header.Set("Accept", "application/xml")
+	req.Header.Set("Content-Type", "application/xml;charset=utf-8")
+	client := http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return xmlResp, err
+	}
+	respBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return xmlResp, err
+	}
+	err = xml.Unmarshal(respBytes, &xmlResp)
+	if err != nil {
+		return xmlResp, err
+	}
+	return xmlResp, nil
+}
+
+type CloseOrderRequest struct {
+	Appid        string `xml:"appid"`
+	Mch_id       string `xml:"mch_id"`
+	Out_trade_no string `xml:"out_trade_no"`
+	Nonce_str    string `xml:"nonce_str"`
+	Sign         string `xml:"sign"`
+	Sign_type    string `xml:"sign_type"`
+}
+
+type CloseOrderResponse struct {
+	ReturnCode string `xml:"return_code"`
+	ReturnMsg  string `xml:"return_msg"`
+	Appid      string `xml:"appid"`
+	MchId      string `xml:"mch_id"`
+	NonceStr   string `xml:"nonce_str"`
+	Sign       string `xml:"sign"`
+	ResultCode string `xml:"result_code"`
+	ResultMsg  string `xml:"result_msg"`
+	ErrCode    string `xml:"err_code"`
+	ErrCodeDes string `xml:"err_code_des"`
+}
+
+func CloseOrder(out_trade_no string) (CloseOrderResponse, error) {
+	xmlResp := CloseOrderResponse{}
+	params := map[string]interface{}{
+		"appid":        appid,
+		"mch_id":       mch_id,
+		"nonce_str":    utils.RandomString(20),
+		"out_trade_no": out_trade_no,
+		//"sign_type":    "MD5",
+	}
+	closeOrder := CloseOrderRequest{
+		Appid:        fmt.Sprintf("%v", params["appid"]),
+		Mch_id:       fmt.Sprintf("%v", params["mch_id"]),
+		Nonce_str:    fmt.Sprintf("%v", params["nonce_str"]),
+		Out_trade_no: fmt.Sprintf("%v", params["out_trade_no"]),
+		Sign:         Sign(params, key),
+	}
+	bytes_req, err := xml.Marshal(closeOrder)
+	if err != nil {
+		return xmlResp, err
+	}
+	str_req := string(bytes_req)
+	log.Println("str_req:", str_req)
+	str_req = strings.Replace(str_req, "CloseOrderResponse", "xml", -1)
+	log.Println("str_req:", str_req)
+	bytes_req = []byte(str_req)
+	req, err := http.NewRequest("POST", closeorder, bytes.NewReader(bytes_req))
 	if err != nil {
 		return xmlResp, err
 	}
