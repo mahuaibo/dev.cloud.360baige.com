@@ -143,10 +143,10 @@ func (c *UserController) WeChatLogin() {
 		return
 	}
 
-	type bindData  UserBindResponse
-	c.Data["json"] = bindData{Code: ErrorUnBind, Message: "账号未绑定", Data:UserBind{
-		OpenType:1,
-		OpenId:userInfo.Openid,
+	type bindData UserBindResponse
+	c.Data["json"] = bindData{Code: ErrorUnBind, Message: "账号未绑定", Data: UserBind{
+		OpenType: 1,
+		OpenId:   userInfo.Openid,
 	}}
 	c.ServeJSON()
 	return
@@ -190,7 +190,7 @@ func (c *UserController) QqLogin() {
 	// 判断数据真实有效
 	if replyUser.Id != 0 && replyUser.Status == 0 {
 		headUrl := utils.SignURLSample(replyUser.Head, 3600)
-		c.Data["json"] = data{Code: Normal, Message: "登陆成功", Data:UserLogin{
+		c.Data["json"] = data{Code: Normal, Message: "登陆成功", Data: UserLogin{
 			Username:     replyUser.Username,
 			Head:         headUrl,
 			AccessTicket: replyUser.AccessTicket,
@@ -199,10 +199,10 @@ func (c *UserController) QqLogin() {
 		c.ServeJSON()
 		return
 	}
-	type bindData  UserBindResponse
-	c.Data["json"] = bindData{Code: ErrorUnBind, Message: "账号未绑定", Data:UserBind{
-		OpenType:2,
-		OpenId:userInfo.Openid,
+	type bindData UserBindResponse
+	c.Data["json"] = bindData{Code: ErrorUnBind, Message: "账号未绑定", Data: UserBind{
+		OpenType: 2,
+		OpenId:   userInfo.Openid,
 	}}
 	c.ServeJSON()
 	return
@@ -297,7 +297,7 @@ func (c *UserController) BindAccount() {
 		if currentTimestamp > replyUser.ExpireIn {
 			createAccessTicket := utils.CreateAccessValue(replyUser.Username + "#" + strconv.FormatInt(currentTimestamp, 10))
 			var updateReply action.Num
-			expireIn := currentTimestamp + 60 * 1000
+			expireIn := currentTimestamp + 60*1000
 			err = client.Call(beego.AppConfig.String("EtcdURL"), "User", "UpdateById", action.UpdateByIdCond{
 				Id: []int64{replyUser.Id},
 				UpdateList: []action.UpdateValue{
@@ -423,7 +423,7 @@ func (c *UserController) BindAccount() {
 	headUrl := utils.SignURLSample(replyUser.Head, 3600)
 	c.Data["json"] = data{Code: Normal, Message: "登录成功", Data: UserLogin{
 		Username:     replyUser.Username,
-		Head:headUrl,
+		Head:         headUrl,
 		AccessTicket: replyUser.AccessTicket,
 		ExpireIn:     replyUser.ExpireIn,
 	}}
