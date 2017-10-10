@@ -14,6 +14,7 @@ import (
 	schoolFeeMobile "dev.cloud.360baige.com/controllers/mobile/schoolfee"
 	schoolFeeWindow "dev.cloud.360baige.com/controllers/window/schoolfee"
 	personnelWindow "dev.cloud.360baige.com/controllers/window/personnel"
+	safeWindow "dev.cloud.360baige.com/controllers/window/safe"
 )
 
 func init() {
@@ -24,6 +25,7 @@ func init() {
 	schoolFeeMobileRouter() // mobile->缴费管理
 
 	personnelWindowRouter() // window->人事管理
+	safeWindowRouter() //windiw->安全中心
 }
 
 func schoolFeeWindowRouter() {
@@ -184,4 +186,20 @@ func personnelWindowRouter() {
 		),
 	)
 	beego.AddNamespace(personnelWindowRouter)
+}
+
+func safeWindowRouter() {
+	safeWindowRouter := beego.NewNamespace("/cloud/window/safe/v1",
+		beego.NSNamespace("/user",
+			beego.NSInclude(
+				&safeWindow.UserController{},
+			),
+		),
+		beego.NSNamespace("/userPosition",
+			beego.NSInclude(
+				&safeWindow.UserPositionController{},
+			),
+		),
+	)
+	beego.AddNamespace(safeWindowRouter)
 }

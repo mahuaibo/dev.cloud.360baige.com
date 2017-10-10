@@ -90,38 +90,50 @@ func (c *UserController) Login() {
 	return
 }
 
-// @Title 微信登录接口
-// @Description 微信登录接口
+// @Title 第三方登陆
+// @Description 第三方登陆接口
 // @Success 200 {"code":200,"message":"登录成功"}
 // @Param   code     query   string true       ""
 // @Failure 400 {"code":400,"message":"登录失败"}
-// @router /weChatLogin [post]
-func (c *UserController) WeChatLogin() {
+// @router /thirdPartyLogin [post]
+func (c *UserController) ThirdPartyLogin() {
 	type data UserLoginResponse
 	code := c.GetString("code")
-	err := utils.Unable(map[string]string{"code": "string:true"}, c.Ctx.Input)
+	loginType, _ := c.GetInt("loginType")
+
+	err := utils.Unable(map[string]string{"code": "string:true", "loginType": "int:true"}, c.Ctx.Input)
 	if err != nil {
 		c.Data["json"] = data{Code: ErrorLogic, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
 
-	userInfo, err := wechat.GetUserInfo(code)
-	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
-		c.ServeJSON()
-		return
-	}
-	if userInfo.Openid == "" {
-		c.Data["json"] = data{Code: ErrorLogic, Message: "FAIL"}
-		c.ServeJSON()
-		return
+	var openIdType, openId = "", ""
+
+	if loginType == 1 {
+		userInfo, err := wechat.GetUserInfo(code)
+		if err != nil || userInfo.Openid == "" {
+			c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
+			c.ServeJSON()
+			return
+		}
+		openIdType = "wx_open_id"
+		openId = userInfo.Openid
+	} else {
+		userInfo, err := qq.GetUserInfo(code)
+		if err != nil || userInfo.Openid == "" {
+			c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
+			c.ServeJSON()
+			return
+		}
+		openIdType = "qq_open_id"
+		openId = userInfo.Openid
 	}
 
 	var replyUser user.User
 	err = client.Call(beego.AppConfig.String("EtcdURL"), "User", "FindByCond", action.FindByCond{
 		CondList: []action.CondValue{
-			action.CondValue{Type: "And", Key: "wx_open_id", Val: userInfo.Openid},
+			action.CondValue{Type: "And", Key: openIdType, Val: openId},
 			action.CondValue{Type: "And", Key: "status", Val: user.UserStatusNormal},
 		},
 	}, &replyUser)
@@ -145,71 +157,15 @@ func (c *UserController) WeChatLogin() {
 
 	type bindData  UserBindResponse
 	c.Data["json"] = bindData{Code: ErrorUnBind, Message: "账号未绑定", Data:UserBind{
-		OpenType:1,
-		OpenId:userInfo.Openid,
-	}}
-	c.ServeJSON()
-	return
-}
-
-// @Title qq登录接口
-// @Description qq登录接口
-// @Success 200 {"code":200,"message":"登录成功"}
-// @Param   code     query   string true       ""
-// @Failure 400 {"code":400,"message":"登录失败"}
-// @router /qqLogin [post]
-func (c *UserController) QqLogin() {
-	type data UserLoginResponse
-	code := c.GetString("code")
-	if code == "" {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "登录失败"}
-		c.ServeJSON()
-		return
-	}
-
-	userInfo, err := qq.GetUserInfo(code)
-	if err != nil || userInfo.Openid == "" {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "登录失败"}
-		c.ServeJSON()
-		return
-	}
-
-	var replyUser user.User
-	err = client.Call(beego.AppConfig.String("EtcdURL"), "User", "FindByCond", action.FindByCond{
-		CondList: []action.CondValue{
-			action.CondValue{Type: "And", Key: "qq_open_id", Val: userInfo.Openid},
-			action.CondValue{Type: "And", Key: "status", Val: user.UserStatusNormal},
-		},
-	}, &replyUser)
-
-	if err != nil {
-		c.Data["json"] = data{Code: ErrorSystem, Message: "登陆失败"}
-		c.ServeJSON()
-		return
-	}
-	// 判断数据真实有效
-	if replyUser.Id != 0 && replyUser.Status == 0 {
-		headUrl := utils.SignURLSample(replyUser.Head, 3600)
-		c.Data["json"] = data{Code: Normal, Message: "登陆成功", Data:UserLogin{
-			Username:     replyUser.Username,
-			Head:         headUrl,
-			AccessTicket: replyUser.AccessTicket,
-			ExpireIn:     replyUser.ExpireIn,
-		}}
-		c.ServeJSON()
-		return
-	}
-	type bindData  UserBindResponse
-	c.Data["json"] = bindData{Code: ErrorUnBind, Message: "账号未绑定", Data:UserBind{
-		OpenType:2,
-		OpenId:userInfo.Openid,
+		OpenType:loginType,
+		OpenId:openId,
 	}}
 	c.ServeJSON()
 	return
 }
 
 // @Title 账号绑定
-// @Description 微信账号绑定
+// @Description 账号绑定接口
 // @Success 200 {"code":200,"message":"登录成功"}
 // @Param   openId     query   string true       ""
 // @Failure 400 {"code":400,"message":"登录失败"}
