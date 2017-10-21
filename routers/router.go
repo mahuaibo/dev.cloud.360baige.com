@@ -22,7 +22,7 @@ func init() {
 	authorityWindowRouter() //window->登陆管理
 	centerWindowRouter() // window->后台管理
 	centerMobileRouter() // mobile->后台管理
-
+	
 	schoolFeeWindowRouter() // window->缴费管理
 	schoolFeeMobileRouter() // mobile->缴费管理
 
@@ -56,6 +56,11 @@ func schoolFeeMobileRouter() {
 		beego.NSNamespace("/record",
 			beego.NSInclude(
 				&schoolFeeMobile.RecordController{},
+			),
+		),
+		beego.NSNamespace("/order",
+			beego.NSInclude(
+				&schoolFeeMobile.OrderController{},
 			),
 		),
 	)
