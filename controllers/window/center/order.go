@@ -169,7 +169,7 @@ func (c *OrderController) Detail() {
 	type data OrderDetailResponse
 	currentTimestamp := utils.CurrentTimestamp()
 	accessToken := c.GetString("accessToken")
-	orderId, _ := c.GetInt64("id")
+	orderId, _ := c.GetInt64("orderId")
 	err := utils.Unable(map[string]string{"accessToken": "string:true", "orderId": "int:true"}, c.Ctx.Input)
 	if err != nil {
 		c.Data["json"] = data{Code: ErrorLogic, Message: err.Error()}
