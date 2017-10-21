@@ -167,7 +167,7 @@ func Reverse(s string) string {
 	return string(r)
 }
 
-func SignURLSample(objectKey string,validityTime int64) string {
+func SignURLSample(objectKey string, validityTime int64) string {
 	client, err := oss.New("oss-cn-beijing.aliyuncs.com", "ZCPOvqJlByc96mZb", "8MV5VOzaClwYAlJh0eQuI8M1norVAK")
 	if err != nil {
 		sample.HandleError(err)

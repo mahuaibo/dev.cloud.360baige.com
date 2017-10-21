@@ -1,7 +1,7 @@
-package center
+package authority
 
 import (
-	. "dev.model.360baige.com/http/window/center"
+	. "dev.model.360baige.com/http/window/authority"
 	"github.com/astaxie/beego"
 	"dev.cloud.360baige.com/rpc/client"
 	"dev.model.360baige.com/models/user"
@@ -10,7 +10,12 @@ import (
 	"dev.cloud.360baige.com/log"
 	"dev.cloud.360baige.com/utils"
 	"strconv"
+	"dev.model.360baige.com/models/application"
+	"fmt"
 )
+
+var AuthorizeAccessToken string
+var AuthorizeExpireIn int64
 
 //  UserPosition API
 type UserPositionController struct {
@@ -26,7 +31,6 @@ type UserPositionController struct {
 func (c *UserPositionController) PositionList() {
 	type data UserPositionResponse
 	currentTimestamp := utils.CurrentTimestamp()
-	//accessTicket := c.GetString("accessTicket")
 	accessType := c.GetString("accessType", "0")
 	accessValue := c.GetString("accessValue", "(=@*&%^!)")
 
@@ -118,7 +122,7 @@ func (c *UserPositionController) PositionList() {
 			})
 		}
 	}
-
+	fmt.Println("resData", resData)
 	c.Data["json"] = data{Code: Normal, Message: "SUCCESS", Data: resData}
 	c.ServeJSON()
 	return
@@ -215,12 +219,13 @@ func (c *UserPositionController) GetAccessToken() {
 			c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
 			c.ServeJSON()
 			return
-		} else {
-			replyUserPosition.AccessToken = createAccessToken
-			replyUserPosition.ExpireIn = expireIn
 		}
+		replyUserPosition.AccessToken = createAccessToken
+		replyUserPosition.ExpireIn = expireIn
 	}
 
+	AuthorizeAccessToken = replyUserPosition.AccessToken
+	AuthorizeExpireIn = replyUserPosition.ExpireIn
 	c.Data["json"] = data{Code: Normal, Message: "SUCCESS", Data: UserPositionToken{
 		AccessToken: replyUserPosition.AccessToken,
 		ExpireIn:    replyUserPosition.ExpireIn,
@@ -229,59 +234,87 @@ func (c *UserPositionController) GetAccessToken() {
 	return
 }
 
-// @Title 获取访问令牌
-// @Description 获取访问令牌
-// @Success 200 {"code":200,"message":"获取访问令牌成功"}
-// @Param userPositionId     query   string true       "用户身份Id"
-// @Param accessType     query   string true       "访问值类型: 0 accessTicket 1 accessToken 默认为 0"
-// @Param accessValue     query   string true       "访问值"
-// @Failure 400 {"code":400,"message":"获取访问令牌失败"}
-// @router /changeAccessToken [post]
-func (c *UserPositionController) ChangeAccessToken() {
-	type data ChangeAccessTokenResponse
-	currentTimestamp := utils.CurrentTimestamp()
-	accessToken := c.GetString("accessToken", "(=@*&%^!)")
-	err := utils.Unable(map[string]string{"accessToken": "string:true"}, c.Ctx.Input)
+// @Title 授权
+// @Description 授权接口
+// @Success 200 {"code":200,"message":"登录成功"}
+// @Param   username     query   string true       "用户名：百鸽账号、邮箱、手机号码 三种登录方式"
+// @Param   password query   string true       "密码"
+// @Failure 400 {"code":400,"message":"登录失败"}
+// @router /authorize [post]
+func (c *UserPositionController) Authorize() {
+	type data AuthorityResponse
+	redirectUri := c.GetString("redirectUri")
+	err := utils.Unable(map[string]string{"redirectUri": "string:true"}, c.Ctx.Input)
 	if err != nil {
 		c.Data["json"] = data{Code: ErrorLogic, Message: err.Error()}
 		c.ServeJSON()
 		return
 	}
 
-	replyUserPosition, err := utils.UserPosition(accessToken, currentTimestamp)
-	if err != nil {
-		c.Data["json"] = data{Code: ErrorPower, Message: err.Error()}
+	var replyApplicationTpl application.ApplicationTpl
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "ApplicationTpl", "FindByCond", &action.FindByCond{
+		CondList: []action.CondValue{
+			action.CondValue{Type: "And", Key: "site", Val: redirectUri},
+		},
+	}, &replyApplicationTpl)
+	fmt.Println("replyApplicationTpl", replyApplicationTpl)
+	if err != nil || replyApplicationTpl.Id == 0 {
+		c.Data["json"] = data{Code: ErrorPower, Message: "应用未授权"}
 		c.ServeJSON()
 		return
 	}
 
-	if accessToken == replyUserPosition.AccessToken && currentTimestamp >= replyUserPosition.ExpireIn - user.UserPositionTransitExpireIn {
-		// 变更
-		createAccessToken := utils.CreateAccessValue(strconv.FormatInt(replyUserPosition.Id, 10) + "#" + strconv.FormatInt(replyUserPosition.UserId, 10) + "#" + strconv.FormatInt(currentTimestamp, 10))
-		var replyNum action.Num
-		client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "UpdateById", &action.UpdateByIdCond{
-			Id: []int64{replyUserPosition.Id},
-			UpdateList: []action.UpdateValue{
-				action.UpdateValue{"update_time", currentTimestamp},
-				action.UpdateValue{"transit_token", replyUserPosition.AccessToken},
-				action.UpdateValue{"transit_expire_in", replyUserPosition.ExpireIn},
-				action.UpdateValue{"access_token", createAccessToken},
-				action.UpdateValue{"expire_in", replyUserPosition.ExpireIn + user.UserPositionExpireIn},
-			},
-		}, &replyNum)
-		if err != nil {
-			c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
-			c.ServeJSON()
-			return
-		}
-		replyUserPosition.AccessToken = createAccessToken
-		replyUserPosition.ExpireIn = replyUserPosition.ExpireIn + user.UserPositionExpireIn
+	if AuthorizeAccessToken == "" && AuthorizeExpireIn == 0 {
+		c.Data["json"] = data{Code: WaitLogin, Message: "等待登陆"}
+		c.ServeJSON()
+		return
 	}
 
-	c.Data["json"] = data{Code: Normal, Message: "SECCESS", Data: UserPositionToken{
-		AccessToken: replyUserPosition.AccessToken,
-		ExpireIn:    replyUserPosition.ExpireIn,
+	var replyUserPosition user.UserPosition
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "UserPosition", "FindByCond", &action.FindByCond{
+		CondList: []action.CondValue{
+			action.CondValue{Type: "And", Key: "access_token", Val: AuthorizeAccessToken },
+			action.CondValue{Type: "And", Key: "status__gt", Val: -1 },
+		},
+		Fileds:     []string{"id", "user_id", "company_id", "type", "person_id"},
+	}, &replyUserPosition)
+	fmt.Println("replyUserPosition", replyUserPosition)
+	if err != nil {
+		c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
+		c.ServeJSON()
+		return
+	}
+	if replyUserPosition.Id == 0 {
+		c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
+		c.ServeJSON()
+		return
+	}
+	var replyUser user.User
+	err = client.Call(beego.AppConfig.String("EtcdURL"), "User", "FindByCond", action.FindByCond{
+		CondList: []action.CondValue{
+			action.CondValue{Type: "And", Key: "id", Val: replyUserPosition.UserId},
+		},
+	}, &replyUser)
+	if err != nil {
+		c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
+		c.ServeJSON()
+		return
+	}
+	if replyUser.Id == 0 {
+		c.Data["json"] = data{Code: ErrorSystem, Message: "系统异常，请稍后重试"}
+		c.ServeJSON()
+		return
+	}
+
+	headUrl := utils.SignURLSample(replyUser.Head, 3600)
+	c.Data["json"] = data{Code: Normal, Message: "SUCCESS", Data: AuthorityUserPositionToken{
+		Head:headUrl,
+		Username:replyUser.Username,
+		AccessToken: AuthorizeAccessToken,
+		ExpireIn:    AuthorizeExpireIn,
 	}}
 	c.ServeJSON()
+	AuthorizeAccessToken = ""
+	AuthorizeExpireIn = 0
 	return
 }

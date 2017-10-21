@@ -24,7 +24,7 @@ type UserController struct {
 // @Param   username     query   string true       "用户名：百鸽账号、邮箱、手机号码 三种登录方式"
 // @Param   password query   string true       "密码"
 // @Failure 400 {"code":400,"message":"登录失败"}
-// @router /login [post]
+// @router /authority [post]
 func (c *UserController) Login() {
 	type data UserLoginResponse
 	currentTimestamp := utils.CurrentTimestamp()

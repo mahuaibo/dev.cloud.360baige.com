@@ -9,6 +9,7 @@ package routers
 
 import (
 	"github.com/astaxie/beego"
+	authority "dev.cloud.360baige.com/controllers/window/authority"
 	centerWindow "dev.cloud.360baige.com/controllers/window/center"
 	centerMobile "dev.cloud.360baige.com/controllers/mobile/center"
 	schoolFeeMobile "dev.cloud.360baige.com/controllers/mobile/schoolfee"
@@ -18,6 +19,7 @@ import (
 )
 
 func init() {
+	authorityWindowRouter() //window->登陆管理
 	centerWindowRouter() // window->后台管理
 	centerMobileRouter() // mobile->后台管理
 
@@ -60,16 +62,27 @@ func schoolFeeMobileRouter() {
 	beego.AddNamespace(schoolFeeMobileRouter)
 }
 
+func authorityWindowRouter() {
+	schoolFeeMobileRouter := beego.NewNamespace("/cloud/mobile/authority/v1",
+		beego.NSNamespace("/user",
+			beego.NSInclude(
+				&authority.UserController{},
+			),
+		),
+		beego.NSNamespace("/userPosition",
+			beego.NSInclude(
+				&authority.UserPositionController{},
+			),
+		),
+	)
+	beego.AddNamespace(schoolFeeMobileRouter)
+}
+
 func centerWindowRouter() {
 	centerWindowRouter := beego.NewNamespace("/cloud/window/v1",
 		beego.NSNamespace("/user",
 			beego.NSInclude(
 				&centerWindow.UserController{},
-			),
-		),
-		beego.NSNamespace("/userPosition",
-			beego.NSInclude(
-				&centerWindow.UserPositionController{},
 			),
 		),
 		beego.NSNamespace("/company",
@@ -193,11 +206,6 @@ func safeWindowRouter() {
 		beego.NSNamespace("/user",
 			beego.NSInclude(
 				&safeWindow.UserController{},
-			),
-		),
-		beego.NSNamespace("/userPosition",
-			beego.NSInclude(
-				&safeWindow.UserPositionController{},
 			),
 		),
 	)
