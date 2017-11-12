@@ -16,18 +16,20 @@ import (
 	schoolFeeWindow "dev.cloud.360baige.com/controllers/window/schoolfee"
 	personnelWindow "dev.cloud.360baige.com/controllers/window/personnel"
 	safeWindow "dev.cloud.360baige.com/controllers/window/safe"
+	websiteWindow "dev.cloud.360baige.com/controllers/window/website"
 )
 
 func init() {
 	authorityWindowRouter() //window->登陆管理
 	centerWindowRouter() // window->后台管理
 	centerMobileRouter() // mobile->后台管理
-	
+
 	schoolFeeWindowRouter() // window->缴费管理
 	schoolFeeMobileRouter() // mobile->缴费管理
 
 	personnelWindowRouter() // window->人事管理
 	safeWindowRouter() //windiw->安全中心
+	websiteWindowRouter() //windiw->安全中心
 }
 
 func schoolFeeWindowRouter() {
@@ -215,4 +217,35 @@ func safeWindowRouter() {
 		),
 	)
 	beego.AddNamespace(safeWindowRouter)
+}
+
+func websiteWindowRouter() {
+	websiteWindowRouter := beego.NewNamespace("/cloud/window/website/v1",
+		beego.NSNamespace("/user",
+			beego.NSInclude(
+				&websiteWindow.UserController{},
+			),
+		),
+		beego.NSNamespace("/userPositin",
+			beego.NSInclude(
+				&websiteWindow.UserPositionController{},
+			),
+		),
+		beego.NSNamespace("/company",
+			beego.NSInclude(
+				&websiteWindow.CompanyController{},
+			),
+		),
+		beego.NSNamespace("/menu",
+			beego.NSInclude(
+				&websiteWindow.MenuController{},
+			),
+		),
+		beego.NSNamespace("/material",
+			beego.NSInclude(
+				&websiteWindow.MaterialController{},
+			),
+		),
+	)
+	beego.AddNamespace(websiteWindowRouter)
 }
