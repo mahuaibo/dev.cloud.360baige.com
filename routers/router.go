@@ -221,16 +221,6 @@ func safeWindowRouter() {
 
 func websiteWindowRouter() {
 	websiteWindowRouter := beego.NewNamespace("/cloud/window/website/v1",
-		beego.NSNamespace("/user",
-			beego.NSInclude(
-				&websiteWindow.UserController{},
-			),
-		),
-		beego.NSNamespace("/userPositin",
-			beego.NSInclude(
-				&websiteWindow.UserPositionController{},
-			),
-		),
 		beego.NSNamespace("/company",
 			beego.NSInclude(
 				&websiteWindow.CompanyController{},
